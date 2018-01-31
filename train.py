@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import sys
 from src.reader import Reader_YAML
-from ailab.utils import Config
+from nlptools.utils import Config
 
 config = Config('config/chatter_conversations.yml')
 

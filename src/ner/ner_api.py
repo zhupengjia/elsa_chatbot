@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from ailab.text.tokenizer import Segment
+from nlptools.text.tokenizer import Segment
 import re, sys
 
 class Entity:

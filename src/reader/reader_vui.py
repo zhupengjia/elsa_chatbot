@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import glob, os, json, sys, re
-from ailab.utils import setLogger
+from nlptools.utils import setLogger
 from .reader_base import Reader_Base
 
 class Reader_VUI(Reader_Base):
