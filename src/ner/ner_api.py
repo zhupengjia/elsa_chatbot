@@ -46,7 +46,7 @@ class Entity:
                     continue
                 if tokens['tokens'][i].upper() in replace_blacklist:
                     tokens['tokens'][i] = tokens['tokens'][i].upper()
-                if tokens['tokens'][i-1] == '<' and tokens['tokens'][i+1] == '>':
+                if i > 0 and i < len(tokens['tokens'])-1 and tokens['tokens'][i-1] == '<' and tokens['tokens'][i+1] == '>':
                     replaced.append('<' + tokens['tokens'][i].upper() + '>')
                 elif e == 'O' or e == '' or tokens['tokens'][i] in replace_blacklist:
                         replaced.append( tokens['tokens'][i] )

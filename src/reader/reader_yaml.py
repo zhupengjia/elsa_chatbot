@@ -31,6 +31,6 @@ class Reader_YAML(Reader_Base):
                 if len(conv) < 2 :continue
                 convs.append(conv)
         convs = self.predeal(convs)
-
+        return convs
 
 

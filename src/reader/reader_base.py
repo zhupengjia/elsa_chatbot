@@ -11,9 +11,22 @@ class Reader_Base(object):
         self.data = {}
     
     def predeal(self, data):
+        dialogs = []
+        for k in ['utterance', 'response', 'ent_utterance', 'ent_response', 'entities']:
+            self.data[k] = []
         for dialog in data:
+            dialogs.append([])
             for pair in dialog:
-                for sentence in pair:
+                for i, sentence in enumerate(pair):
                     entities, tokens = self.ner.get(sentence.lower())
-                    print(tokens)    
+                    print(entities, tokens)
+                    sys.exit()
+                    if i == 0:
+                        self.data['utterance'].append(tokens)
+                        self.data['ent_utterance'].append(entities)
+                    else:
+                        self.data['response'].append(tokens)
+                        self.data['ent_response'].append(entities)
+
+
 
