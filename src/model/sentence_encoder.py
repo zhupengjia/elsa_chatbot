@@ -21,14 +21,17 @@ class Sentence_Encoder(nn.Module):
                 out_channels = self.cfg['cnn_kernel_num'], \
                 kernel_size = (self.cfg['cnn_kernel_size'], self.vocab.emb_ins.vec_len),\
                 padding = 0)
+        self.dropout = nn.Dropout(self.cfg['dropout'])
         self.pool = nn.AvgPool1d(2)
 
     def conv_and_pool(self, x):
         x = self.embedding(x)
         x = x.unsqueeze(1)
         x = self.conv(x)
+        x = F.relu(x)
         x = x.squeeze(3)
         x = self.pool(x)
+        x = self.dropout(x)
         return x
 
     def forward(self, query):

@@ -11,7 +11,7 @@ response_template:
 ner:
     LANGUAGE: en
     TOKENIZER: spacy
-    stopwords_path: data/en_stopwords.txt
+    stopwords_path: config/en_stopwords.txt
     ner_name_replace:
         person_name: PERSON
         company_name: ORG
