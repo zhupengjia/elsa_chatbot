@@ -3,7 +3,7 @@ import torch, sys
 import torch.nn.functional as F
 import torch.nn as nn
 
-class Dialog_Track(nn.Module):
+class Sentence_Encoder(nn.Module):
     def __init__(self, cfg, vocab):
         super().__init__()
         self.cfg = cfg
@@ -22,8 +22,6 @@ class Dialog_Track(nn.Module):
                 kernel_size = (self.cfg['cnn_kernel_size'], self.vocab.emb_ins.vec_len),\
                 padding = 0)
         self.pool = nn.AvgPool1d(2)
-        self.fc1 = nn.Linear(self.cfg['cnn_kernel_num']*2, 1)
-        self.sigmoid = nn.Sigmoid()
 
     def conv_and_pool(self, x):
         x = self.embedding(x)
@@ -33,7 +31,9 @@ class Dialog_Track(nn.Module):
         x = self.pool(x)
         return x
 
-    def forward(self, data):
-        q = self.conv_and_pool(data['query'])
+    def forward(self, query):
+        q = self.conv_and_pool(query)
+        return q
+
 
 
