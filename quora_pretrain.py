@@ -4,7 +4,7 @@ from ailab.utils import Config, setLogger
 import torch.nn as nn
 import torch.optim as optim
 from src.reader.quora_reader import QuoraReader
-from src.model.dulicate_embedding import Duplicate_Embedding
+from src.model.duplicate_embedding import Duplicate_Embedding
 
 use_gpu = 0 if torch.cuda.is_available() else 0
 cfg = Config('config/quora.yaml')
@@ -21,7 +21,9 @@ if use_gpu:
 
 loss_function = nn.BCELoss()
 
-#model(data[0])
+print(model(data[0]['question1'], data[0]['question2']))
+
+sys.exit()
 
 #optimizer
 optimizer = optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-6)

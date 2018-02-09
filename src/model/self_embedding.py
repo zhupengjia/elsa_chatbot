@@ -2,7 +2,7 @@
 import torch, sys
 import torch.nn.functional as F
 import torch.nn as nn
-from .sentiment_encoder import Sentiment_Encoder
+from .sentence_encoder import Sentence_Encoder
 
 class Self_Embedding(nn.Module):
     def __init__(self, cfg, vocab):
@@ -12,7 +12,7 @@ class Self_Embedding(nn.Module):
         self.network()
 
     def network(self):
-        self.encoder = Sentiment_Encoder(self.cfg, self.vocab)
+        self.encoder = Sentence_Encoder(self.cfg, self.vocab)
         self.encoder.network()
         self.fc1 = nn.Linear(self.cfg['cnn_kernel_num']*2, 1)
         

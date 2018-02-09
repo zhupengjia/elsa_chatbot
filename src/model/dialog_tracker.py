@@ -2,7 +2,7 @@
 import torch, sys
 import torch.nn.functional as F
 import torch.nn as nn
-from .sentiment_encoder import Sentiment_Encoder
+from .sentence_encoder import Sentence_Encoder
 
 class Dialog_Tracker(nn.module):
     def __init__(self, cfg, vocab):
@@ -12,7 +12,7 @@ class Dialog_Tracker(nn.module):
         self.network()
 
     def network(self):
-        self.encoder = Sentiment_Encoder(self.cfg, self.vocab)
+        self.encoder = Sentence_Encoder(self.cfg, self.vocab)
         self.encoder.network()
 
     def forward(self, utterance, entity, mask):
