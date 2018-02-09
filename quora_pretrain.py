@@ -6,28 +6,25 @@ import torch.optim as optim
 from src.reader.quora_reader import QuoraReader
 from src.model.duplicate_embedding import Duplicate_Embedding
 
-use_gpu = 0 if torch.cuda.is_available() else 0
+use_gpu = 1 if torch.cuda.is_available() else 0
 cfg = Config('config/quora.yaml')
 logger = setLogger(cfg)
-
 
 data = QuoraReader(cfg, use_gpu)
 data.shuffle()
 
 model = Duplicate_Embedding(cfg, data.vocab)
 model.network()
+
 if use_gpu:
     model.cuda(use_gpu-1)
 
+#print(model(data[0]['question1'], data[0]['question2']))
+
 loss_function = nn.BCELoss()
 
-print(model(data[0]['question1'], data[0]['question2']))
-
-sys.exit()
-
 #optimizer
-optimizer = optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-6)
-
+optimizer = optim.Adam(model.parameters(), lr=cfg['learning_rate'], weight_decay=cfg['weight_decay'])
 
 #load checkpoint
 if os.path.exists(cfg['saved_model']):
@@ -43,7 +40,7 @@ for epoch in range(300):
     for i, d in enumerate(data):
         model.zero_grad()
           
-        y_probs = model(d)
+        y_probs = model(d['question1'], d['question2'])
         out = loss_function(y_probs, d['match'].view(-1,1))
 
         y_pred = (y_probs >= 0.5).squeeze(1)
