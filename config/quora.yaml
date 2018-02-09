@@ -18,14 +18,14 @@ cached_vocab: data/vocab_en.pkl
 vocab_size: 100000
 
 #model
-cnn_kernel_size: 9
+cnn_kernel_size: 5
 cnn_kernel_num: 20
-dropout: 0.7
+dropout: 0
 batch_size: 4096
-max_seq_len: 32
+max_seq_len: 16
 epochs: 3000
-learning_rate: 0.001
-weight_decay: 0.0001
+learning_rate: 0.0001
+weight_decay: 0.00001
 saved_model: data/quora_model.pt
 
 #0 NOTSET, 10 DEBUG, 20 INFO, 30 WARNING, 40 ERROR, 50 CRITICAL
