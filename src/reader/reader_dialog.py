@@ -12,42 +12,56 @@ class Reader_Dialog(Reader_Base):
         if convs is None:
             convs = []
         for fn in os.listdir(locdir):
-            f = os.path.join(locdir, fn)
-            if os.path.isdir(f):
-                convs = self._read_loop(f, convs)
+            fn = os.path.join(locdir, fn)
+            if os.path.isdir(fn):
+                convs = self._read_loop(fn, convs)
             else:
                 conv = []
-                utterance, response = '', ''
-                with open(f, 'r') as f:
+                utterance, response = [], []
+                linestatus = 0 #0 robot, 1 user, -1 other 
+                with open(fn, 'r') as f:
                     for l in f:
                         l = l.strip()
                         if len(l) < 1 :
+                            linestatus = -1
                             continue
                         elif l[0] == '<':
+                            linestatus = -1
                             continue
                         elif l[0] == '=':
                             if len(conv) > 0:
                                 convs.append(conv)
                                 conv = []
+                            linestatus = -1
                             continue
-                        splitsentence = tuple(re.split(':', l, maxsplit=1))
-                        if len(splitsentence) < 1:
-                            continue
-                        elif len(splitsentence) == 2: 
-                            user, sentence = splitsentence
-                            sentence = sentence.strip()
-                            user = user.strip()
-                            if len(user) < 1 or len(sentence) < 1:
+                        else: 
+                            splitsentence = tuple(re.split(':', l, maxsplit=1))
+                            if len(splitsentence) < 1:
+                                linestatus = -1
                                 continue
-                            if user.lower() == 'robot':
-                                response = sentence
-                                conv.append([utterance, response])
-                            else:
-                                utterance = sentence
-                                response = '<SILENCE>'
-                        else:
-                            continue
-                            #conv.append(['<SILENCE>', l.strip()])
+                            elif len(splitsentence) == 1:
+                                say = l
+                            elif len(splitsentence) == 2:
+                                user, say = splitsentence
+                                user = user.strip()
+                                say = say.strip()
+                                if user.lower() in ['robot']:
+                                    linestatus = 0
+                                else:
+                                    linestatus = 1
+                        if linestatus != 0 and (len(utterance) > 0 or len(response) > 0):
+                            if len(utterance) < 1:
+                                utterance.append('<SILENCE>')
+                            if len(response) < 1:
+                                response.append('<SILENCE>')
+                            conv.append(['\t'.join(utterance), '\t'.join(response)])
+                            utterance, response = [], []
+
+                        if linestatus == 0:
+                            response.append(say)
+                        elif linestatus == 1:
+                            utterance.append(say)
+
                     if len(conv) > 0:
                         convs.append(conv)
                         conv = []
@@ -55,15 +69,13 @@ class Reader_Dialog(Reader_Base):
 
 
     def read(self, locdir):
-        cached_pkl = os.path.join(locdir, 'dialog.pkl')
+        cached_pkl = os.path.join(locdir, 'dialog1.pkl')
         if os.path.exists(cached_pkl):
             convs = zload(cached_pkl)
         else:
             convs = self._read_loop(locdir)
             convs = self.predeal(convs)
-            zdump(convs, cached_pkl)
-        #print(len(convs['template']))
-        print(convs['response'])
+            #zdump(convs, cached_pkl)
         self.data = convs
 
 

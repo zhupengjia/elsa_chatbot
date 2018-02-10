@@ -1,0 +1,2 @@
+Hard: Hard Copy
+Soft: Soft Copy

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import sys, re
-from ailab.text import VecTFIDF
+from nlptools.text import VecTFIDF
 
 class Response_Dict(object):
     def __init__(self, cfg, vocab):

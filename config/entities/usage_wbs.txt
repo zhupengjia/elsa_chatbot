@@ -1,0 +1,23 @@
+Annual: Annual Leave
+Sick: Sick Leave
+Maternity: Maternity Leave
+Paternity: Paternity Leave
+Nursing: Nursing Leave
+Unpaid: Unpaid Leave of absence
+Marriage: Marriage Leave
+Miscarriage: Miscarriage Leave
+Antenatal: Antenatal examination Leave
+Compassionate: Compassionate Leave
+Parental: Parental Leave
+Carer: Carer's Leave
+Caregiver: Caregiver's Leave
+Caesarian: Caesarian Birth Leave
+Illness: Sick Leave
+Hospotalization: Hospitalization Leave
+Childcare: Childcare Leave
+Child: Childcare Leave
+Compassionate: Compassionate Leave
+Religious: Religious Leave
+Service: Long service leave
+compassionate: compassionate leave
+Nursing: Nursing leave

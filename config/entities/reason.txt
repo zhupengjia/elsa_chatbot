@@ -1,0 +1,2 @@
+personal: Personal reason
+business: Business reason
