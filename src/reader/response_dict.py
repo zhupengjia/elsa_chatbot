@@ -4,16 +4,29 @@ from nlptools.text import VecTFIDF
 
 class Response_Dict(object):
     def __init__(self, cfg, vocab):
-        self.response, self.response_ids = [], []
+        self.response, self.response_ids, self.entity_need, self.func_need = [], [], [], []
         self.vocab = vocab
         self.cfg = cfg
         self.__search = VecTFIDF(self.cfg, self.vocab)
 
     def add(self, response):
+        response = [x.strip() for x in response.split('|')]
+        if len(response) < 3:
+            return
+        entity_need, func_need, response = tuple(response)
         response = re.sub('(\{[A-Z]+\})|(\d+)','', response)
         response_ids = self.vocab.sentence2id(response, ngrams=3) 
+        if len(response_ids) < 1:
+            continue
         self.response.append(response)
         self.response_ids.append(response_ids)
+        entity_need = [x.strip() for x in re.split(',', entity_need)]
+        func_need = [x.strip() for x in re.split(',', func_need)]
+        entity_need = [self.vocab.word2id(x) for x in entity_need if len(x) > 0]
+        func_need = [x for x in func_need if len(x) > 0]
+        self.entity_need.append(entity_need)
+        self.func_need.append(func_need)
+
 
     def build_index(self):
         self.__search.load_index(self.response_ids)
