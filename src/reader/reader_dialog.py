@@ -52,9 +52,8 @@ class Reader_Dialog(Reader_Base):
                         if linestatus != 0 and (len(utterance) > 0 or len(response) > 0):
                             if len(utterance) < 1:
                                 utterance.append('<SILENCE>')
-                            if len(response) < 1:
-                                response.append('<SILENCE>')
-                            conv.append(['\t'.join(utterance), '\t'.join(response)])
+                            if len(response) > 0:
+                                conv.append(['\t'.join(utterance), '\t'.join(response)])
                             utterance, response = [], []
 
                         if linestatus == 0:

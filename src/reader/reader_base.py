@@ -1,16 +1,18 @@
 #!/usr/bin/env python
-import sys
+import sys, os
 from nlptools.utils import setLogger
 from nlptools.text.ner import NER
-from nlptools.text import Vocab
+from nlptools.text import Vocab, Embedding
 from .response_dict import Response_Dict
 
 class Reader_Base(object):
     def __init__(self, cfg):
         self.cfg = cfg
         self.logger = setLogger(self.cfg.logger)
+        self.emb = Embedding(self.cfg.ner)
         self.ner = NER(self.cfg.ner)
-        self.vocab = Vocab(cfg, self.ner)
+        self.ner.build_keywords_index(self.emb)
+        self.vocab = Vocab(cfg, self.ner, self.emb)
         self.vocab.addBE()
         self.data = {}
     
@@ -31,7 +33,7 @@ class Reader_Base(object):
             ripe[k] = []
 
         for i_d, dialog in enumerate(data):
-            self.logger.info('predeal dialog {}/{}'.format(i_d, len(data)))
+            #self.logger.info('predeal dialog {}/{}'.format(i_d, len(data)))
             ripe['idrange'].append([len(ripe['utterance']), len(ripe['utterance'])+len(dialog)])
             for i_p, pair in enumerate(dialog):
                 for i_s, sentence in enumerate(pair):
@@ -50,6 +52,8 @@ class Reader_Base(object):
                         if response_id is None:
                             ripe['response'].append(0)
                         else:
+                            print('='*60)
+                            print(sentence,'\n---------------------\n', self.responses.response[response_id])
                             ripe['response'].append(response_id)
         return ripe
 

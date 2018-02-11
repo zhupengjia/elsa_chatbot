@@ -17,13 +17,13 @@ class Response_Dict(object):
         response = re.sub('(\{[A-Z]+\})|(\d+)','', response)
         response_ids = self.vocab.sentence2id(response, ngrams=3) 
         if len(response_ids) < 1:
-            continue
+            return
         self.response.append(response)
         self.response_ids.append(response_ids)
         entity_need = [x.strip() for x in re.split(',', entity_need)]
         func_need = [x.strip() for x in re.split(',', func_need)]
-        entity_need = [self.vocab.word2id(x) for x in entity_need if len(x) > 0]
-        func_need = [x for x in func_need if len(x) > 0]
+        entity_need = [x.upper() for x in entity_need if len(x) > 0]
+        func_need = [x.lower() for x in func_need if len(x) > 0]
         self.entity_need.append(entity_need)
         self.func_need.append(func_need)
 
