@@ -15,6 +15,7 @@ vec_len: 300
 #cached word2vec
 cached_w2v: data/w2v_en.pkl
 cached_vocab: data/vocab_en.pkl
+vec_len: 300
 vocab_size: 100000
 
 #model

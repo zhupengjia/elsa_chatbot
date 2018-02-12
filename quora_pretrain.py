@@ -3,14 +3,14 @@ import sys, torch, os
 from ailab.utils import Config, setLogger
 import torch.nn as nn
 import torch.optim as optim
-from src.reader.quora_reader import QuoraReader
+from src.reader.reader_quora import Reader_Quora
 from src.model.duplicate_embedding import Duplicate_Embedding
 
 use_gpu = 1 if torch.cuda.is_available() else 0
 cfg = Config('config/quora.yaml')
 logger = setLogger(cfg)
 
-data = QuoraReader(cfg, use_gpu)
+data = Reader_Quora(cfg, use_gpu)
 data.shuffle()
 
 model = Duplicate_Embedding(cfg, data.vocab)
