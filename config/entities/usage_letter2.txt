@@ -1,5 +1,6 @@
 Visa: Visa Application
 hu kou: Hu kou transfer
+loan: Loan
 company chop: With company Chop
 HR chop: With HR Chop
 without chop: Without Chop

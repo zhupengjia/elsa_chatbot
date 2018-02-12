@@ -33,7 +33,7 @@ class Reader_Base(object):
             ripe[k] = []
 
         for i_d, dialog in enumerate(data):
-            #self.logger.info('predeal dialog {}/{}'.format(i_d, len(data)))
+            self.logger.info('predeal dialog {}/{}'.format(i_d, len(data)))
             ripe['idrange'].append([len(ripe['utterance']), len(ripe['utterance'])+len(dialog)])
             for i_p, pair in enumerate(dialog):
                 for i_s, sentence in enumerate(pair):
@@ -47,13 +47,17 @@ class Reader_Base(object):
                         ripe['utterance'].append(token_ids)
                         ripe['ent_utterance'].append(entities)
                     else:
-                        response_id = self.responses[tokens]
+                        response_id = self.responses[tokens + list(entities.keys())]
                         ripe['ent_response'].append(entities)
                         if response_id is None:
                             ripe['response'].append(0)
                         else:
-                            print('='*60)
-                            print(sentence,'\n---------------------\n', self.responses.response[response_id])
-                            ripe['response'].append(response_id)
+                            #print('='*60)
+                            #print(response_id)
+                            #print(' '.join(tokens))
+                            #for i in range(min(3, len(response_id))):
+                            #    print('-'*30)
+                            #    print(self.responses.response[response_id[i][0]])
+                            ripe['response'].append(response_id[0][0])
         return ripe
 

@@ -32,12 +32,12 @@ class Response_Dict(object):
         self.__search.load_index(self.response_ids)
     
     def __getitem__(self, response):
-        response_ids = self.vocab.sentence2id(response)
+        response_ids = self.vocab.sentence2id(response, ngrams=3)
         if len(response_ids) < 1:
             return None
-        result = self.__search.search_index(response_ids)
+        result = self.__search.search_index(response_ids, topN=1)
         if len(result) > 0:
-            return result[0][0]
+            return result
         else:
             return None
 

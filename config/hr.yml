@@ -27,8 +27,13 @@ ner:
     keywords:
         USAGE: config/entities/usage.txt
         USAGE_LETTER: config/entities/usage_letter.txt
+        USAGE_LETTER2: config/entities/usage_letter2.txt
         USAGE_EMPLOYMENT: config/entities/usage_employment.txt
         USAGE_WBS: config/entities/usage_wbs.txt
+        USAGE_LEAVE: config/entities/usage_leave.txt
+        USAGE_REASON: config/entities/reason.txt
+        LANGUAGE: config/entities/language.txt
+        LETTER_TYPE: config/entities/letter_type.txt
         COUNTRY: config/entities/country.txt
     regex:  
         EMAIL: '[a-zA-Z\d\.\-]+@[a-zA-Z\d\.\-]+(\.[a-zA-Z\d]{2,3}){1,2}'
