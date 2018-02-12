@@ -1,6 +1,7 @@
 #!/usr/bin/env python
-import sys, re
+import sys, re, numpy
 from nlptools.text import VecTFIDF
+from nlptools.utils import flat_list
 
 class Response_Dict(object):
     def __init__(self, cfg, vocab):
@@ -30,17 +31,25 @@ class Response_Dict(object):
 
     def build_index(self):
         self.__search.load_index(self.response_ids)
-    
+        self.entities = list(set(flat_list(self.entity_need)))
+        self.entities = dict(zip(self.entities, range(len(self.entities))))
+        self.masks = numpy.zeros((len(self.response), len(self.entities)))
+        for i in range(len(self.entity_need)):
+            for e in self.entity_need[i]:
+                self.masks[i, self.entities[e]] = 1
+   
+
     def __getitem__(self, response):
         response_ids = self.vocab.sentence2id(response, ngrams=3)
         if len(response_ids) < 1:
             return None
         result = self.__search.search_index(response_ids, topN=1)
         if len(result) > 0:
-            return result
+            return result[0]
         else:
             return None
 
-
+    def getmask(self):
+        pass
 
 

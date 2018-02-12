@@ -15,5 +15,7 @@ data.get_responses()
 locdir = '/home/pzhu/data/accenture/HR/history'
 data.read(locdir)
 
-
+for d in data:
+    print(d)
+    sys.exit()
 

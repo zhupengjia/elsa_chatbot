@@ -13,6 +13,7 @@ ner:
     TOKENIZER: spacy
     w2v_word2idx: /home/pzhu/data/word2vec/en/word2idx_2000000.pp
     w2v_idx2vec: /home/pzhu/data/word2vec/en/weight_2000000.npy
+    cached_vocab: data/vocab_hr.pkl
     vec_len: 300
     annoy_filter: 0.8
     stopwords_path: config/en_stopwords.txt
@@ -49,6 +50,7 @@ model:
     learning_rate: 0.001
     weight_decay: 0.0001
     epochs: 100
+    N_batch: 1200
     saved_model: 'data/model.pt'
 
 logger:

@@ -74,7 +74,7 @@ USAGE_WBS | | All leave applications need to be submitted via EPS. Select 'Forms
 USAGE_WBS | | An employee must provide a doctor’s certificate corroborating the {USAGE_WBS} for the following situations:\n 1. when the period of {USAGE_WBS} is more than 8 hours, or \n2. the employee has already taken 8 hours of {USAGE_WBS} in the current calendar month.
 USAGE_WBS | | {USAGE_WBS} leave application need to be submitted via EPS. Select 'Forms', then select Application for leave, Days requested, Type of leave as Antenatal examination leave, and the leave dates being requested.
 USAGE_WBS | | Any public holidays that occur during scheduled {USAGE_WBS} will be considered as public holidays.
-USAGE_WBS,CAREER_LEVEL | GETBALANCE | At your current career level {LEVEL},  your may carry over {BALANCE}.
+USAGE_WBS,CAREER_LEVEL | GETBALANCE | At your current career level {CAREERLEVEL},  your may carry over {BALANCE}.
 USAGE_WBS | | A certificate from a legally qualified physician is required for any absences due to illness or injury of 3 consecutive working days or more. The certificate must be submitted to the People Advisor upon return to duty.
 USAGE_WBS | | Company will make every reasonable effort to place the employee in the same/ similar position the employee occupied before taking unpaid leave of absence. If no similar position is available, the employee may be given the opportunity to take on a different position, subject to availability. The compensation may be revised as applicable to the new role.
 USAGE | | Could you tell me what specific {USAGE} do you need?

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, os
+import sys, os, numpy
 from nlptools.utils import setLogger
 from nlptools.text.ner import NER
 from nlptools.text import Vocab, Embedding
@@ -12,7 +12,7 @@ class Reader_Base(object):
         self.emb = Embedding(self.cfg.ner)
         self.ner = NER(self.cfg.ner)
         self.ner.build_keywords_index(self.emb)
-        self.vocab = Vocab(cfg, self.ner, self.emb)
+        self.vocab = Vocab(cfg.ner, self.ner, self.emb)
         self.vocab.addBE()
         self.data = {}
     
@@ -25,7 +25,6 @@ class Reader_Base(object):
                     continue
                 self.responses.add(l)
         self.responses.build_index()
-
     
     def predeal(self, data):
         ripe = {}
@@ -41,14 +40,17 @@ class Reader_Base(object):
                     token_ids = self.vocab.sentence2id(tokens)
                     if len(token_ids) < 1:
                         entities = {}
-                        tokens = ['<SILENCE>']
-                        token_ids = self.vocab.sentence2id(tokens)
+                        tokens = [self.vocab.PAD]
+                        token_ids = [self.vocab._id_PAD]
+                    entity_ids = {}
+                    for e in entities:
+                        entity_ids[e] = [self.vocab.sentence2id(ee) for ee in entities[e]]
                     if i_s == 0:
                         ripe['utterance'].append(token_ids)
-                        ripe['ent_utterance'].append(entities)
+                        ripe['ent_utterance'].append(entity_ids)
                     else:
                         response_id = self.responses[tokens + list(entities.keys())]
-                        ripe['ent_response'].append(entities)
+                        ripe['ent_response'].append(entity_ids)
                         if response_id is None:
                             ripe['response'].append(0)
                         else:
@@ -58,6 +60,46 @@ class Reader_Base(object):
                             #for i in range(min(3, len(response_id))):
                             #    print('-'*30)
                             #    print(self.responses.response[response_id[i][0]])
-                            ripe['response'].append(response_id[0][0])
+                            ripe['response'].append(response_id[0])
+        self.vocab.reduce_vocab()
+        self.vocab.save()
         return ripe
+
+    def __iter__(self):
+        for n in range(self.cfg.model.N_batch):
+            sampleid = numpy.random.randint(len(self.data['idrange']))
+            idrange = self.data['idrange'][sampleid]
+            data = {'mask':[], 'entities':[]}
+            for k in ['utterance', 'response', 'ent_utterance']:
+                data[k] = self.data[k][idrange[0]:idrange[1]]
+            #roll entity gets
+            entities = {} #entity status for each utterance
+            entity_mask = numpy.ones(len(self.responses.entities))
+            for i in range(len(data['utterance'])):
+                for k in data['ent_utterance'][i]:
+                    entities[k] = data['ent_utterance'][i][k][0]
+                    if k in self.responses.entities: 
+                        entity_mask[self.responses.entities[k]] = 0 #mask for response choise
+                    
+                mask = numpy.multiply(self.responses.masks * entity_mask)
+                data['mask'].append(numpy.logical_or(mask))
+                
+                
+                print(self.vocab.id2sentence(data['utterance'][i]))
+                print(self.responses.response[data['response'][i]])
+            
+            print(data['ent_utterance'])
+            print(data['ent_response'])
+            
+
+
+
+            yield 1
+
+
+        
+    
+
+
+
 
