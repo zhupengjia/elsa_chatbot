@@ -33,10 +33,10 @@ class Response_Dict(object):
         self.__search.load_index(self.response_ids)
         self.entities = list(set(flat_list(self.entity_need)))
         self.entities = dict(zip(self.entities, range(len(self.entities))))
-        self.masks = numpy.zeros((len(self.response), len(self.entities)))
+        self.masks = numpy.zeros((len(self.response), len(self.entities)), 'bool_')
         for i in range(len(self.entity_need)):
             for e in self.entity_need[i]:
-                self.masks[i, self.entities[e]] = 1
+                self.masks[i, self.entities[e]] = True
    
 
     def __getitem__(self, response):
@@ -49,7 +49,5 @@ class Response_Dict(object):
         else:
             return None
 
-    def getmask(self):
-        pass
 
 

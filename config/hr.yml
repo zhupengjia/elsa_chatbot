@@ -50,7 +50,7 @@ model:
     learning_rate: 0.001
     weight_decay: 0.0001
     epochs: 100
-    N_batch: 1200
+    batch_size: 30
     saved_model: 'data/model.pt'
 
 logger:
