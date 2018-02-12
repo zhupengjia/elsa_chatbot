@@ -49,12 +49,30 @@ class Dialog_Status:
         return txt
 
     @staticmethod 
-    def torch(dialogs, gpu=False):
+    def torch(cfg, vocab, dialogs):
         data = {}
-        if gpu:
-            data['utterance'] = Variable(torch.LongTensor())
+        totlen = sum([len(d.utterances) for d in dialogs])
+        utterance = numpy.ones((totlen, cfg.model.max_seq_len), 'int')*vocab._id_PAD
+        response = numpy.zeros(totlen, 'int')
+        mask = numpy.zeros((totlen, len(dialogs[0].masks[0])), 'int')
+        starti, endi = 0, 0
+        for dialog in dialogs:
+            endi += len(dialog.utterances)
+            response[starti:endi] = numpy.array(dialog.responses, 'int')
+            for i in range(len(dialog.utterances)):
+                utterance[starti+i, :len(dialog.utterances[i])] = numpy.array(dialog.responses[i])
+                mask[starti+i, :] = dialog.masks[i]
+            starti = endi
+             
+        if cfg.model.use_gpu:
+            utterance = Variable(torch.LongTensor(utterance).cuda(gpu-1))
+            response = Variable(torch.LongTensor(response).cuda(gpu-1))
+            mask = Variable(torch.LongTensor(mask).cuda(gpu-1))
         else:
-            pass
+            utterance = Variable(torch.LongTensor(utterance))
+            response = Variable(torch.LongTensor(response))
+            mask = Variable(torch.LongTensor(mask))
+        return {'utterance': utterance, 'response':response, 'mask':mask}
 
 
 

@@ -14,6 +14,7 @@ ner:
     w2v_word2idx: /home/pzhu/data/word2vec/en/word2idx_2000000.pp
     w2v_idx2vec: /home/pzhu/data/word2vec/en/weight_2000000.npy
     cached_vocab: data/vocab_en.pkl
+    vocab_size: 100000
     cached_w2v: data/w2v_en.pkl
     vec_len: 300
     annoy_filter: 0.8
@@ -47,7 +48,7 @@ ner:
 
 
 model:
-    use_gpu: False
+    use_gpu: 0
     max_seq_len: 10
     dropout: 0
     cnn_kernel_size: 5

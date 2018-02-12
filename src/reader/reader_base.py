@@ -83,10 +83,7 @@ class Reader_Base(object):
                     #mask
                     dialog_status.getmask(self.responses.masks)
                 dialogs.append(dialog_status)
-            yield Dialog_Status.torch(dialogs)
-
-        
-    
+            yield Dialog_Status.torch(self.cfg, self.vocab, dialogs)
 
 
 
