@@ -68,13 +68,13 @@ class Reader_Dialog(Reader_Base):
 
 
     def read(self, locdir):
-        cached_pkl = os.path.join(locdir, 'dialog1.pkl')
+        cached_pkl = os.path.join(locdir, 'dialog.pkl')
         if os.path.exists(cached_pkl):
             convs = zload(cached_pkl)
         else:
             convs = self._read_loop(locdir)
             convs = self.predeal(convs)
-            #zdump(convs, cached_pkl)
+            zdump(convs, cached_pkl)
         self.data = convs
 
 

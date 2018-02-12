@@ -13,9 +13,7 @@ data = Reader_Dialog(config)
 data.get_responses()
 
 locdir = '/home/pzhu/data/accenture/HR/history'
-#locdir = '/home/pzhu/data/accenture/HR/history/2018-01-29'
 data.read(locdir)
-
 
 
 
