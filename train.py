@@ -7,15 +7,12 @@ import torch.optim as optim
 
 config = Config('config/hr.yml')
 data = Reader_Dialog(config)
-data.get_responses()
+data.build_responses()
 
 locdir = '/home/pzhu/data/accenture/HR/history'
 data.read(locdir)
 
-
-sys.exit()
-
-tracker = Dialog_Tracker(config.model, data.vocab)
+tracker = Dialog_Tracker(config.model, data.vocab, len(data))
 tracker.network()
 
 if config.model.use_gpu:

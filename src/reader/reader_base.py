@@ -19,7 +19,8 @@ class Reader_Base(object):
         self.entity_dict = Entity_Dict(cfg, self.vocab)
         self.data = {}
     
-    def get_responses(self):
+    #build response index
+    def build_responses(self):
         self.responses = Response_Dict(self.cfg.response_template, self.vocab, self.entity_dict)
         with open(self.cfg.response_template.data) as f:
             for l in f:
@@ -28,7 +29,21 @@ class Reader_Base(object):
                     continue
                 self.responses.add(l)
         self.responses.build_index()
-    
+
+
+    #total number of responses
+    def __len__(self):
+        return len(self.responses.response)
+
+
+    #return response string by id
+    def get_response(self, responseid, entity=None):
+        response = self.responses.response[resposeid]
+        if entity is None:
+            response = response.format(*entity)
+        return response
+   
+     
     def predeal(self, data):
         ripe = {}
         for k in ['utterance', 'response', 'ent_utterance', 'ent_response', 'idrange']:
@@ -64,6 +79,7 @@ class Reader_Base(object):
                             ripe['response'].append(response_id[0])
         self.vocab.reduce_vocab()
         self.vocab.save()
+        self.emb.save()
         self.entity_dict.save()
         return ripe
 
