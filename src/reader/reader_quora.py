@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from ailab.utils import zload, zdump
+from ailab.utils import zload, zdump,  setLogger
 from ailab.text import Segment, Embedding, Vocab
 import os, pandas, sys, numpy, math, torch
 from torch.autograd import Variable
@@ -10,17 +10,23 @@ class Reader_Quora(object):
         self.gpu = gpu
         self.seg = Segment(self.cfg)
         self.emb = Embedding(self.cfg)
+        self.logger = setLogger(self.cfg)
         self.vocab = Vocab(self.cfg, self.seg, self.emb)
         self.vocab.addBE()
         self.predeal()
 
     def predeal(self):
         if os.path.exists(self.cfg['data_cache']):
+            self.logger.info('loaded quora data from cache')
             self.data = zload(self.cfg['data_cache'])
         else:
+            self.logger.info('read quora data via pandas')
             self.data = pandas.read_csv(self.cfg['data_path'], sep='\t', usecols=['question1', 'question2', 'is_duplicate']).dropna()
+            self.logger.info('sentence2id for question1')
             self.data['question1_id'] = self.data['question1'].apply(self.vocab.sentence2id)
+            self.logger.info('sentence2id for question2')
             self.data['question2_id'] = self.data['question2'].apply(self.vocab.sentence2id)
+            self.logger.info('cache vectors')
             self.vocab.get_id2vec()
             self.vocab.save()
             self.emb.save()
@@ -28,6 +34,7 @@ class Reader_Quora(object):
         self.N_batches = math.ceil(len(self.data['question1_id'])/self.cfg["batch_size"])
 
     def shuffle(self):
+        self.logger.info('shuffle data')
         self.data = self.data.sample(frac=1).reset_index(drop=True)
 
     def __iter__(self):
@@ -35,6 +42,7 @@ class Reader_Quora(object):
             yield self.__getitem__(i)
 
     def __getitem__(self, i):
+        self.logger.info('get batch data {}'.format(i))
         idx = i*self.cfg["batch_size"]
         data_len = min(self.cfg['batch_size'], len(self.data['question1_id'])-idx) 
         data = {'question1': numpy.ones((data_len, self.cfg['max_seq_len']), 'int')*self.vocab._id_PAD,\
