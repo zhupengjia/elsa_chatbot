@@ -11,6 +11,7 @@ w2v_idx2vec: '/home/pzhu/data/word2vec/en/weight_2000000.npy'
 vec_len: 300
 
 #vocab
+TOKENIZER: spacy
 
 #cached word2vec
 cached_w2v: data/w2v_en.pkl
