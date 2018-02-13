@@ -39,4 +39,10 @@ for epoch, d in enumerate(data):
     loss.backward()
     optimizer.step()
     
-
+    if epoch > 0 and epoch%100 == 0: 
+        model_state_dict = tracker.state_dict()
+        optimizer_state_dict = optimizer.state_dict()
+        checkpoint = {
+            'model': model_state_dict,
+            'optimizer': optimizer_state_dict,
+        }
