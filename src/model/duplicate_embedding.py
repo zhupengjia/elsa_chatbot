@@ -3,12 +3,11 @@ import torch, sys
 import torch.nn.functional as F
 import torch.nn as nn
 from .sentence_encoder import Sentence_Encoder
+from .model_base import Model_Base
 
-class Duplicate_Embedding(nn.Module):
+class Duplicate_Embedding(Model_Base):
     def __init__(self, cfg, vocab):
-        super().__init__()
-        self.cfg = cfg
-        self.vocab = vocab
+        super().__init__(cfg, vocab)
         self.network()
 
     def network(self):
@@ -21,10 +20,7 @@ class Duplicate_Embedding(nn.Module):
         q1 = self.encoder(question1)
         q2 = self.encoder(question2)
         #q-q attention
-        M = torch.bmm(q1, q2.transpose(1,2))
-        M_rowsum = M.sum(dim=1)
-        M_colsum = M.sum(dim=2)
-        M_att = torch.cat((M_rowsum, M_colsum), 1)
+        M_att = self.attention(q1, q2)
         out = self.sigmoid(self.fc1(M_att))
         return out 
 

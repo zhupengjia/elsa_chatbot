@@ -3,12 +3,11 @@ import torch, sys
 import torch.nn.functional as F
 import torch.nn as nn
 from .sentence_encoder import Sentence_Encoder
+from .model_base import Model_Base
 
-class Self_Embedding(nn.Module):
+class Self_Embedding(Model_Base):
     def __init__(self, cfg, vocab):
-        super().__init__()
-        self.cfg = cfg
-        self.vocab = vocab
+        super().__init__(cfg, vocab)
         self.network()
 
     def network(self):
@@ -20,10 +19,7 @@ class Self_Embedding(nn.Module):
     def forward(self, question):
         q = self.encoder(question)
         #self attention
-        M = torch.bmm(q, q.transpose(1,2))
-        M_rowsum = M.sum(dim=1)
-        M_colsum = M.sum(dim=2)
-        M_att = torch.cat((M_rowsum, M_colsum), 1)
+        M_att = self.attention(q, q)
         
         #not finished
         return out 

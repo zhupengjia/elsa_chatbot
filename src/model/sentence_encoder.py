@@ -2,12 +2,11 @@
 import torch, sys
 import torch.nn.functional as F
 import torch.nn as nn
+from .model_base import Model_Base
 
-class Sentence_Encoder(nn.Module):
+class Sentence_Encoder(Model_Base):
     def __init__(self, cfg, vocab):
-        super().__init__()
-        self.cfg = cfg
-        self.vocab = vocab
+        super().__init__(cfg, vocab)
         self.network()
     
     def network(self):
