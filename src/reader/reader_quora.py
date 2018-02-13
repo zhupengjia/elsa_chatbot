@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from nlptools.utils import zload, zdump
+from nlptools.utils import zload, zdump, setLogger
 from nlptools.text import Segment, Embedding, Vocab
 import os, pandas, sys, numpy, math, torch
 from torch.autograd import Variable

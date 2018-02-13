@@ -6,7 +6,7 @@ import torch.optim as optim
 from src.reader.reader_quora import Reader_Quora
 from src.model.duplicate_embedding import Duplicate_Embedding
 
-use_gpu = 1 if torch.cuda.is_available() else 0
+use_gpu = 2 if torch.cuda.is_available() else 0
 cfg = Config('config/quora.yaml')
 logger = setLogger(cfg)
 
