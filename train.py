@@ -25,6 +25,13 @@ if config.model.use_gpu:
 loss_function = torch.nn.CrossEntropyLoss()
 optimizer = optim.Adam(tracker.parameters(), lr=config.model.learning_rate, weight_decay=config.model.weight_decay)
 
+
+#load checkpoint
+if os.path.exists(config.model['saved_model']):
+    checkpoint = torch.load(config.model['saved_model'])
+    model.load_state_dict(checkpoint['model'])
+
+
 for epoch, d in enumerate(data):
     tracker.zero_grad()
     y_prob = tracker(d['utterance'], d['entity'], d['mask'])
