@@ -14,9 +14,9 @@ ner:
     TOKENIZER: spacy
     w2v_word2idx: /home/pzhu/data/word2vec/en/word2idx_2000000.pp
     w2v_idx2vec: /home/pzhu/data/word2vec/en/weight_2000000.npy
-    cached_vocab: data/vocab_en.pkl
+    cached_vocab: data/vocab_hr.pkl
     vocab_size: 100000
-    cached_w2v: data/w2v_en.pkl
+    cached_w2v: data/w2v_hr.pkl
     vec_len: 300
     annoy_filter: 0.8
     stopwords_path: config/en_stopwords.txt
@@ -52,7 +52,7 @@ model:
     use_gpu: 2
     max_seq_len: 10
     max_entity_len: 20
-    dropout: 0.5
+    dropout: 0
     cnn_kernel_size: 5
     cnn_kernel_num: 64
     learning_rate: 0.001
