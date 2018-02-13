@@ -8,7 +8,7 @@ import torch.optim as optim
 config = Config('config/hr.yml')
 if not torch.cuda.is_available(): config.model.use_gpu = 0
 
-logger = segLogger(config.logger)
+logger = setLogger(config.logger)
 
 data = Reader_Dialog(config)
 data.build_responses()
