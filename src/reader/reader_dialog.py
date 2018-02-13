@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import glob, os, yaml, sys, re
-from nlptools.utils import setLogger, zload, zdump
+from nlptools.utils import zload, zdump
 from .reader_base import Reader_Base
 
 class Reader_Dialog(Reader_Base):

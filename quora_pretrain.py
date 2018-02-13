@@ -6,18 +6,18 @@ import torch.optim as optim
 from src.reader.reader_quora import Reader_Quora
 from src.model.duplicate_embedding import Duplicate_Embedding
 
-use_gpu = 2 if torch.cuda.is_available() else 0
 cfg = Config('config/quora.yaml')
+if not torch.cuda.is_available(): cfg.use_gpu = 0
 logger = setLogger(cfg)
 
-data = Reader_Quora(cfg, use_gpu)
+data = Reader_Quora(cfg)
 data.shuffle()
 
 model = Duplicate_Embedding(cfg, data.vocab)
 model.network()
 
-if use_gpu:
-    model.cuda(use_gpu-1)
+if cfg.use_gpu:
+    model.cuda(cfg.use_gpu-1)
 
 #print(model(data[0]['question1'], data[0]['question2']))
 

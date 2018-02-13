@@ -5,9 +5,8 @@ import os, pandas, sys, numpy, math, torch
 from torch.autograd import Variable
 
 class Reader_Quora(object):
-    def __init__(self, cfg, gpu=False):
+    def __init__(self, cfg):
         self.cfg = cfg
-        self.gpu = gpu
         self.seg = Segment(self.cfg)
         self.emb = Embedding(self.cfg)
         self.logger = setLogger(self.cfg)
@@ -52,10 +51,10 @@ class Reader_Quora(object):
             data['question1'][i][:q1len] = self.data['question1_id'][idx+i][:q1len]
             data['question2'][i][:q2len] = self.data['question2_id'][idx+i][:q2len]
         data['match'] = self.data['is_duplicate'].as_matrix()[idx:idx+data_len].astype('float')
-        if self.gpu:
-            data['question1'] = Variable(torch.LongTensor(data['question1']).cuda(self.gpu-1))
-            data['question2'] = Variable(torch.LongTensor(data['question2']).cuda(self.gpu-1))
-            data['match'] = Variable(torch.FloatTensor(data['match']).cuda(self.gpu-1))
+        if self.cfg.use_gpu:
+            data['question1'] = Variable(torch.LongTensor(data['question1']).cuda(self.cfg.use_gpu-1))
+            data['question2'] = Variable(torch.LongTensor(data['question2']).cuda(self.cfg.use_gpu-1))
+            data['match'] = Variable(torch.FloatTensor(data['match']).cuda(self.cfg.use_gpu-1))
         else:
             data['question1'] = Variable(torch.LongTensor(data['question1']))
             data['question2'] = Variable(torch.LongTensor(data['question2']))

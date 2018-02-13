@@ -20,9 +20,10 @@ vec_len: 300
 vocab_size: 100000
 
 #model
+use_gpu: 1
 cnn_kernel_size: 5
 cnn_kernel_num: 64
-dropout: 0.2
+dropout: 0.5
 batch_size: 4096
 max_seq_len: 10
 epochs: 3000

@@ -49,10 +49,10 @@ ner:
 
 
 model:
-    use_gpu: 0
+    use_gpu: 2
     max_seq_len: 10
     max_entity_len: 20
-    dropout: 0
+    dropout: 0.5
     cnn_kernel_size: 5
     cnn_kernel_num: 64
     learning_rate: 0.001
@@ -64,6 +64,6 @@ model:
 logger:
     LogLevel_Console:  10
     LogLevel_File: 0
-    LogFile: /tmp/train.log
+    LogFile: data/hr_train.log
     LogFormat: '%(asctime)s | %(levelname)s: %(message)s'
 

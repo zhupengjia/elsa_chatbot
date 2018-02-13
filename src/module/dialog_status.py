@@ -58,7 +58,7 @@ class Dialog_Status:
         utterance = numpy.ones((totlen, cfg.model.max_seq_len), 'int')*vocab._id_PAD
         response = numpy.zeros(totlen, 'int')
         entity = numpy.ones((totlen, cfg.model.max_entity_len), 'int')*vocab._id_PAD
-        mask = numpy.zeros((totlen, len(dialogs[0].masks[0])), 'int') 
+        mask = numpy.zeros((totlen, len(dialogs[0].masks[0])), 'float') 
         starti, endi = 0, 0
         for dialog in dialogs:
             endi += len(dialog.utterances)
@@ -85,12 +85,12 @@ class Dialog_Status:
             utterance = Variable(torch.LongTensor(utterance).cuda(gpu-1))
             response = Variable(torch.LongTensor(response).cuda(gpu-1))
             entity = Variable(torch.LongTensor(entity).cuda(gpu-1))
-            mask = Variable(torch.LongTensor(mask).cuda(gpu-1))
+            mask = Variable(torch.FloatTensor(mask).cuda(gpu-1))
         else:
             utterance = Variable(torch.LongTensor(utterance))
             response = Variable(torch.LongTensor(response))
             entity = Variable(torch.LongTensor(entity))
-            mask = Variable(torch.LongTensor(mask))
+            mask = Variable(torch.FloatTensor(mask))
         return {'utterance': utterance, 'response':response, 'mask':mask, 'entity':entity}
 
 

@@ -22,6 +22,7 @@ class Dialog_Tracker(Model_Base):
         self.pool = nn.AvgPool1d(2)
         self.fc1 = nn.Linear(self.cfg['cnn_kernel_num']*2, self.cfg['cnn_kernel_num'])
         self.fc2 = nn.Linear(self.cfg['cnn_kernel_num']*3, self.Nresponses)
+        self.softmax = nn.LogSoftmax()
 
     def entityencoder(self, x):
         x = self.encoder.embedding(x)
@@ -40,9 +41,9 @@ class Dialog_Tracker(Model_Base):
         utter_att = self.attention(utterance, utterance)
         utter = torch.cat((utter_att, entity), 1) 
         response = self.fc2(utter)
+        response = self.softmax(response)
 
-        print('utter_att', utter_att.data.size())
-        print('entity', entity.data.size())
-        print('utter', utter.data.size())
-        print('response', response.data.size())
-        pass
+        response = response * mask
+
+        return response
+
