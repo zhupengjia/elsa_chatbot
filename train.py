@@ -36,7 +36,7 @@ for epoch, d in enumerate(data):
     
     logger.info('{} {} {} {}'.format(epoch, config.model.epochs, loss.data[0], precision))
 
-    out.backward()
+    loss.backward()
     optimizer.step()
     
 
