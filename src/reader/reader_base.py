@@ -5,6 +5,7 @@ from nlptools.text.ner import NER
 from nlptools.text import Vocab, Embedding
 from ..module.response_dict import Response_Dict
 from ..module.dialog_status import Dialog_Status
+from ..module.entity_dict import Entity_Dict
 
 class Reader_Base(object):
     def __init__(self, cfg):
@@ -15,10 +16,11 @@ class Reader_Base(object):
         self.ner.build_keywords_index(self.emb)
         self.vocab = Vocab(cfg.ner, self.ner, self.emb)
         self.vocab.addBE()
+        self.entity_dict = Entity_Dict(cfg, self.vocab)
         self.data = {}
     
     def get_responses(self):
-        self.responses = Response_Dict(self.cfg.response_template, self.vocab)
+        self.responses = Response_Dict(self.cfg.response_template, self.vocab, self.entity_dict)
         with open(self.cfg.response_template.data) as f:
             for l in f:
                 l = l.strip()
@@ -43,9 +45,7 @@ class Reader_Base(object):
                         entities = {}
                         tokens = [self.vocab.PAD]
                         token_ids = [self.vocab._id_PAD]
-                    entity_ids = {}
-                    for e in entities:
-                        entity_ids[e] = [self.vocab.sentence2id(ee) for ee in entities[e]]
+                    entity_ids = self.entity_dict(entities)
                     if i_s == 0:
                         ripe['utterance'].append(token_ids)
                         ripe['ent_utterance'].append(entity_ids)
@@ -64,6 +64,7 @@ class Reader_Base(object):
                             ripe['response'].append(response_id[0])
         self.vocab.reduce_vocab()
         self.vocab.save()
+        self.entity_dict.save()
         return ripe
 
     def __iter__(self):
@@ -72,18 +73,15 @@ class Reader_Base(object):
             for n in range(self.cfg.model.batch_size):
                 sampleid = numpy.random.randint(len(self.data['idrange']))
                 idrange = self.data['idrange'][sampleid]
-                data = {'mask':[], 'entities':[]}
-                for k in ['utterance', 'response', 'ent_utterance']:
-                    data[k] = self.data[k][idrange[0]:idrange[1]]
                 #roll entity gets
-                dialog_status = Dialog_Status(self.vocab, self.responses.entities)
+                dialog_status = Dialog_Status(self.vocab, self.entity_dict)
                 for i in range(idrange[0], idrange[1]):
                     #add to dialog status
                     dialog_status.add(self.data['utterance'][i], self.data['response'][i], self.data['ent_utterance'][i], self.responses.func_need[self.data['response'][i]])
                     #mask
                     dialog_status.getmask(self.responses.masks)
                 dialogs.append(dialog_status)
-            yield Dialog_Status.torch(self.cfg, self.vocab, dialogs, shuffle=True)
+            yield Dialog_Status.torch(self.cfg, self.vocab, self.entity_dict, dialogs, shuffle=True)
 
 
 

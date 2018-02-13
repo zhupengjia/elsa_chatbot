@@ -75,6 +75,7 @@ class Reader_Dialog(Reader_Base):
             convs = self._read_loop(locdir)
             convs = self.predeal(convs)
             zdump(convs, cached_pkl)
+        self.responses.build_mask()
         self.data = convs
 
 

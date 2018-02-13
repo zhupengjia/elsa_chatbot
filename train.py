@@ -11,7 +11,6 @@ data.get_responses()
 locdir = '/home/pzhu/data/accenture/HR/history'
 data.read(locdir)
 
-
 #tracker = Dialog_Tracker(cfg, data.vocab)
 #tracker.network()
 #

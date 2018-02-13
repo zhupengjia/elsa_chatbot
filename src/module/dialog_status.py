@@ -7,9 +7,9 @@ from nlptools.utils import flat_list
 class Dialog_Status:
     def __init__(self, vocab, entitydict):
         self.vocab = vocab
-        self.entitydict =entitydict
-        self.entity = {}
-        self.entity_mask = numpy.ones((len(entitydict),1), 'bool_')
+        self.entitydict = entitydict #for response mask
+        self.entity = {} #for current entity 
+        self.entity_mask = numpy.ones((len(entitydict.entity_maskdict),1), 'bool_') #for response mask
         self.utterances, self.responses, self.entities, self.masks = [], [], [], []
 
     def add(self, utterance, response, entities, funcneeds):
@@ -23,15 +23,16 @@ class Dialog_Status:
         self.entities.insert(0, self.entity)
         #entity status and response mask
         for e in entities:
-            if e in self.entitydict:
-                self.entity_mask[self.entitydict[e], 0] = False #mask for response choose
+            if e in self.entitydict.entity_maskdict:
+                self.entity_mask[self.entitydict.entity_maskdict[e], 0] = False #mask for response choose
 
 
     #apply function and put result to entities 
     def applyfunc(self, func):
         entities_get = func(self.entity)
         for e in entities_get:
-            self.entity[e] = self.vocab.sentence2id(entities_get[e])
+            e_id = self.entitydict.name2id(e)
+            self.entity[e_id] = self.entitydict.value2id(e_id, entities_get[e])
 
 
     #mask for each turn of response
@@ -51,20 +52,23 @@ class Dialog_Status:
         return txt
 
     @staticmethod 
-    def torch(cfg, vocab, dialogs, shuffle=False):
+    def torch(cfg, vocab, entitydict, dialogs, shuffle=False):
         data = {}
         totlen = sum([len(d.utterances) for d in dialogs])
         utterance = numpy.ones((totlen, cfg.model.max_seq_len), 'int')*vocab._id_PAD
         response = numpy.zeros(totlen, 'int')
-        mask = numpy.zeros((totlen, len(dialogs[0].masks[0])), 'int')
-
+        entity = numpy.ones((totlen, cfg.model.max_entity_len), 'int')*vocab._id_PAD
+        mask = numpy.zeros((totlen, len(dialogs[0].masks[0])), 'int') 
         starti, endi = 0, 0
         for dialog in dialogs:
             endi += len(dialog.utterances)
             response[starti:endi] = numpy.array(dialog.responses, 'int')
-            print(dialog.entity.values())
             for i in range(len(dialog.utterances)):
-                utterance[starti+i, :len(dialog.utterances[i])] = numpy.array(dialog.responses[i])
+                entities = list(dialog.entities[i].keys()) + flat_list([entitydict.entity_value[dialog.entities[i][x]] for x in dialog.entities[i] if entitydict.entity_type[x]==0]) #all entity names and string type entity values
+                seqlen = min(cfg.model.max_seq_len, len(dialog.utterances[i]))
+                entitylen = min(cfg.model.max_entity_len, len(entities))
+                utterance[starti+i, :seqlen] = numpy.array(dialog.utterances[i])[:seqlen]
+                entity[starti+i, :entitylen] = numpy.array(entities)[:entitylen]
                 mask[starti+i, :] = dialog.masks[i]
             starti = endi
         
@@ -72,19 +76,22 @@ class Dialog_Status:
         if shuffle:
             ids = numpy.arange(totlen)
             numpy.random.shuffle(ids)
-            utterance = utterance[ids, :]
             response = response[ids]
+            utterance = utterance[ids, :]
+            entity = entity[ids, :]
             mask = mask[ids, :]
              
         if cfg.model.use_gpu:
             utterance = Variable(torch.LongTensor(utterance).cuda(gpu-1))
             response = Variable(torch.LongTensor(response).cuda(gpu-1))
+            entity = Variable(torch.LongTensor(entity).cuda(gpu-1))
             mask = Variable(torch.LongTensor(mask).cuda(gpu-1))
         else:
             utterance = Variable(torch.LongTensor(utterance))
             response = Variable(torch.LongTensor(response))
+            entity = Variable(torch.LongTensor(entity))
             mask = Variable(torch.LongTensor(mask))
-        return {'utterance': utterance, 'response':response, 'mask':mask}
+        return {'utterance': utterance, 'response':response, 'mask':mask, 'entity':entity}
 
 
 

@@ -42,7 +42,6 @@ class Reader_Quora(object):
             yield self.__getitem__(i)
 
     def __getitem__(self, i):
-        self.logger.info('get batch data {}'.format(i))
         idx = i*self.cfg["batch_size"]
         data_len = min(self.cfg['batch_size'], len(self.data['question1_id'])-idx) 
         data = {'question1': numpy.ones((data_len, self.cfg['max_seq_len']), 'int')*self.vocab._id_PAD,\

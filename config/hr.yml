@@ -7,6 +7,7 @@ response_template:
     data: data/template.txt
     cached_index: data/template.index
 
+entity_dict: data/entity.dict
 
 ner:
     LANGUAGE: en
@@ -50,6 +51,7 @@ ner:
 model:
     use_gpu: 0
     max_seq_len: 10
+    max_entity_len: 20
     dropout: 0
     cnn_kernel_size: 5
     cnn_kernel_num: 20
