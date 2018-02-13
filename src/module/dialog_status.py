@@ -82,10 +82,10 @@ class Dialog_Status:
             mask = mask[ids, :]
              
         if cfg.model.use_gpu:
-            utterance = Variable(torch.LongTensor(utterance).cuda(gpu-1))
-            response = Variable(torch.LongTensor(response).cuda(gpu-1))
-            entity = Variable(torch.LongTensor(entity).cuda(gpu-1))
-            mask = Variable(torch.FloatTensor(mask).cuda(gpu-1))
+            utterance = Variable(torch.LongTensor(utterance).cuda(cfg.model.use_gpu-1))
+            response = Variable(torch.LongTensor(response).cuda(cfg.model.use_gpu-1))
+            entity = Variable(torch.LongTensor(entity).cuda(cfg.model.use_gpu-1))
+            mask = Variable(torch.FloatTensor(mask).cuda(cfg.model.use_gpu-1))
         else:
             utterance = Variable(torch.LongTensor(utterance))
             response = Variable(torch.LongTensor(response))
