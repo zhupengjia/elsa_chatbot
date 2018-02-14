@@ -44,7 +44,8 @@ class Entity_Dict:
             self.entity_value[vid] = value
             self.entity_type[entity_nameid] = 1 #number entity
         else:
-            self.entity_value[vid] = self.vocab.sentence2id(value)
+            #self.entity_value[vid] = self.vocab.sentence2id(value)
+            self.entity_value[vid] = value
             self.entity_type[entity_nameid] = 0 #string entity
         self.entity_dict[value] = vid
         return vid

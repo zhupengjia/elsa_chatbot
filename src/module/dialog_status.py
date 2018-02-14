@@ -64,7 +64,8 @@ class Dialog_Status:
             endi += len(dialog.utterances)
             response[starti:endi] = numpy.array(dialog.responses, 'int')
             for i in range(len(dialog.utterances)):
-                entities = list(dialog.entities[i].keys()) + flat_list([entitydict.entity_value[dialog.entities[i][x]] for x in dialog.entities[i] if entitydict.entity_type[x]==0]) #all entity names and string type entity values
+                #entities = list(dialog.entities[i].keys()) + flat_list([entitydict.entity_value[dialog.entities[i][x]] for x in dialog.entities[i] if entitydict.entity_type[x]==0]) #all entity names and string type entity values
+                entities = list(dialog.entities[i].keys()) #all entity names
                 seqlen = min(cfg.model.max_seq_len, len(dialog.utterances[i]))
                 entitylen = min(cfg.model.max_entity_len, len(entities))
                 utterance[starti+i, :seqlen] = numpy.array(dialog.utterances[i])[:seqlen]
