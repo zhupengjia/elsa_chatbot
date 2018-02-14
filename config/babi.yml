@@ -6,6 +6,9 @@ APPNAME: END2END_DEMO
 response_template: 
     data: data/babi/template.txt
     cached_index: data/babi/template.index
+    cached_vocab: data/babi/vocab_template.pkl
+    vocab_size: 100000
+    ngrams: 3
 
 entity_dict: data/babi/entity.dict
 

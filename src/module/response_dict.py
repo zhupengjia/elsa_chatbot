@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 import sys, re, numpy
-from nlptools.text import VecTFIDF
+from nlptools.text import VecTFIDF, Vocab
 from nlptools.utils import flat_list
 
 class Response_Dict(object):
-    def __init__(self, cfg, vocab, entity_dict):
+    def __init__(self, cfg, tokenizer, entity_dict):
         self.response, self.response_ids, self.entity_need, self.func_need = [], [], [], []
-        self.vocab = vocab
+        self.vocab = Vocab(cfg, tokenizer)
         self.cfg = cfg
         self.entity_dict = entity_dict
         self.__search = VecTFIDF(self.cfg, self.vocab)
@@ -18,7 +18,7 @@ class Response_Dict(object):
             return
         entity_need, func_need, response = tuple(response)
         response = re.sub('(\{[A-Z]+\})|(\d+)','', response)
-        response_ids = self.vocab.sentence2id(response, ngrams=3) 
+        response_ids = self.vocab.sentence2id(response) 
         if len(response_ids) < 1:
             return
         self.response.append(response)
@@ -34,6 +34,7 @@ class Response_Dict(object):
 
     def build_index(self):
         self.__search.load_index(self.response_ids)
+        self.vocab.save()
 
     def build_mask(self):
         entity_maskdict = sorted(list(set(flat_list(self.entity_need))))
@@ -46,7 +47,7 @@ class Response_Dict(object):
    
 
     def __getitem__(self, response):
-        response_ids = self.vocab.sentence2id(response, ngrams=3)
+        response_ids = self.vocab.sentence2id(response)
         if len(response_ids) < 1:
             return None
         result = self.__search.search_index(response_ids, topN=1)

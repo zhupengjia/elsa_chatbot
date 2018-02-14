@@ -21,7 +21,7 @@ class Reader_Base(object):
     
     #build response index
     def build_responses(self):
-        self.responses = Response_Dict(self.cfg.response_template, self.vocab, self.entity_dict)
+        self.responses = Response_Dict(self.cfg.response_template, self.ner, self.entity_dict)
         with open(self.cfg.response_template.data) as f:
             for l in f:
                 l = l.strip()
