@@ -4,19 +4,19 @@
 APPNAME: END2END_DEMO
 
 response_template: 
-    data: data/template.txt
-    cached_index: data/template.index
+    data: data/hr/template.txt
+    cached_index: data/hr/template.index
 
-entity_dict: data/entity.dict
+entity_dict: data/hr/entity.dict
 
 ner:
     LANGUAGE: en
     TOKENIZER: spacy
     w2v_word2idx: /home/pzhu/data/word2vec/en/word2idx_2000000.pp
     w2v_idx2vec: /home/pzhu/data/word2vec/en/weight_2000000.npy
-    cached_vocab: data/vocab_hr.pkl
+    cached_vocab: data/hr/vocab_hr.pkl
     vocab_size: 100000
-    cached_w2v: data/w2v_hr.pkl
+    cached_w2v: data/hr/w2v_hr.pkl
     vec_len: 300
     annoy_filter: 0.8
     stopwords_path: config/en_stopwords.txt
@@ -29,16 +29,16 @@ ner:
         time: TIME
     ner:
     keywords:
-        USAGE: config/entities/usage.txt
-        USAGE_LETTER: config/entities/usage_letter.txt
-        USAGE_LETTER2: config/entities/usage_letter2.txt
-        USAGE_EMPLOYMENT: config/entities/usage_employment.txt
-        USAGE_WBS: config/entities/usage_wbs.txt
-        USAGE_LEAVE: config/entities/usage_leave.txt
-        USAGE_REASON: config/entities/reason.txt
-        LANGUAGE: config/entities/language.txt
-        LETTER_TYPE: config/entities/letter_type.txt
-        COUNTRY: config/entities/country.txt
+        USAGE: config/hr/entities/usage.txt
+        USAGE_LETTER: config/hr/entities/usage_letter.txt
+        USAGE_LETTER2: config/hr/entities/usage_letter2.txt
+        USAGE_EMPLOYMENT: config/hr/entities/usage_employment.txt
+        USAGE_WBS: config/hr/entities/usage_wbs.txt
+        USAGE_LEAVE: config/hr/entities/usage_leave.txt
+        USAGE_REASON: config/hr/entities/reason.txt
+        LANGUAGE: config/hr/entities/language.txt
+        LETTER_TYPE: config/hr/entities/letter_type.txt
+        COUNTRY: config/hr/entities/country.txt
     regex:  
         EMAIL: '[a-zA-Z\d\.\-]+@[a-zA-Z\d\.\-]+(\.[a-zA-Z\d]{2,3}){1,2}'
         PASSPORT: 'G\d{8}'
