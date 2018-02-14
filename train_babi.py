@@ -11,14 +11,16 @@ if not torch.cuda.is_available(): config.model.use_gpu = 0
 logger = setLogger(config.logger)
 
 data = Reader_Babi(config)
-data.build_responses()
+#data.build_responses()
 
 
-sys.exit()
 
 datafile = '/home/pzhu/data/dialog/babi/dialog-babi-task5-full-dialogs-trn.txt'
 data.read(datafile)
 
+
+
+sys.exit()
 
 tracker = Dialog_Tracker(config.model, data.vocab, len(data))
 tracker.network()

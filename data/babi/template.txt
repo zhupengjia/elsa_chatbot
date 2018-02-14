@@ -1,0 +1,16 @@
+-PRON- re welcome
+any preference on type of cuisine
+api_call {CUISINE} {LOCATION} {PARTY_SIZE} {REST_TYPE}
+be there anything can help -PRON- with
+great let -PRON- do the reservation
+hello what can help -PRON- with today
+here -PRON- be {INFO_ADDRESS}
+here -PRON- be {INFO_PHONE}
+how many people would be in -PRON- party
+ok let -PRON- look into some option for -PRON-
+on -PRON-
+sure be there anything else to update
+sure let -PRON- find an other option for -PRON-
+what do -PRON- think of this option {RESTAURANT}
+where should -PRON- be
+which price range be look for

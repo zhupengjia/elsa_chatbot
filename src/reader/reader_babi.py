@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import glob, os, yaml, sys, re
-from nlptools.utils import zload, zdump
+from nlptools.utils import zload, zdump, flat_list
 from .reader_base import Reader_Base
 
 class Reader_Babi(Reader_Base):
@@ -29,6 +29,7 @@ class Reader_Babi(Reader_Base):
                             conv = []
                     else:
                         conv.append([l[0], l[1]])
+            
             convs = self.predeal(convs)
             zdump(convs, cached_pkl)
         self.responses.build_mask()
