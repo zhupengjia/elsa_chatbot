@@ -90,12 +90,13 @@ class Reader_Base(object):
                 sampleid = numpy.random.randint(len(self.data['idrange']))
                 idrange = self.data['idrange'][sampleid]
                 #roll entity gets
-                dialog_status = Dialog_Status(self.vocab, self.entity_dict)
+                dialog_status = Dialog_Status(self.vocab, self.entity_dict, self.responses)
                 for i in range(idrange[0], idrange[1]):
                     #add to dialog status
                     dialog_status.add(self.data['utterance'][i], self.data['response'][i], self.data['ent_utterance'][i], self.responses.func_need[self.data['response'][i]])
                     #mask
                     dialog_status.getmask(self.responses.masks)
+                #print(dialog_status)
                 dialogs.append(dialog_status)
             yield Dialog_Status.torch(self.cfg, self.vocab, self.entity_dict, dialogs, shuffle=True)
 

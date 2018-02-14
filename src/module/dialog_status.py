@@ -5,22 +5,23 @@ from ..hook.behaviors import Behaviors
 from nlptools.utils import flat_list
 
 class Dialog_Status:
-    def __init__(self, vocab, entitydict):
+    def __init__(self, vocab, entitydict, response_dict):
         self.vocab = vocab
+        self.response_dict = response_dict
         self.entitydict = entitydict #for response mask
         self.entity = {} #for current entity 
         self.entity_mask = numpy.ones((len(entitydict.entity_maskdict),1), 'bool_') #for response mask
         self.utterances, self.responses, self.entities, self.masks = [], [], [], []
 
     def add(self, utterance, response, entities, funcneeds):
-        self.utterances.insert(0, utterance)
-        self.responses.insert(0, response)
+        self.utterances.append(utterance)
+        self.responses.append(response)
         for e in entities:
             self.entity[e] = entities[e][0]
         for funcname in funcneeds:
             func = getattr(Behaviors, funcname)
             self.applyfunc(func)
-        self.entities.insert(0, self.entity)
+        self.entities.append(self.entity)
         #entity status and response mask
         for e in entities:
             if e in self.entitydict.entity_maskdict:
@@ -47,8 +48,9 @@ class Dialog_Status:
         txt += 'entity mask: ' + str(self.entity_mask.reshape(1, -1)[0]) + '\n'
         for i in range(len(self.utterances)):
             txt += '-'*20 + str(i) + '-'*20 + '\n'
-            txt += 'dialog: ' + str(self.utterances[i]) + ' ' + str(self.responses[i]) + '\n'
-            #txt += 'mask: ' + str(self.masks[i]) + '\n'
+            txt += 'utterance: ' + self.vocab.id2sentence(self.utterances[i]) + '\n'
+            txt += 'response: ' + self.response_dict.response[self.responses[i]] + '\n'
+            txt += 'mask: ' + str(self.masks[i]) + '\n'
         return txt
 
     @staticmethod 
