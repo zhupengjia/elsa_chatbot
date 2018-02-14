@@ -1,16 +1,16 @@
--PRON- re welcome
-any preference on type of cuisine
-api_call {CUISINE} {LOCATION} {PARTY_SIZE} {REST_TYPE}
-be there anything can help -PRON- with
-great let -PRON- do the reservation
-hello what can help -PRON- with today
-here -PRON- be {INFO_ADDRESS}
-here -PRON- be {INFO_PHONE}
-how many people would be in -PRON- party
-ok let -PRON- look into some option for -PRON-
-on -PRON-
-sure be there anything else to update
-sure let -PRON- find an other option for -PRON-
-what do -PRON- think of this option {RESTAURANT}
-where should -PRON- be
-which price range be look for
+ | | You are welcome.
+ | | Any preference on type of cuisine?
+CUISINE,LOCATION,PARTY_SIZE,REST_TYPE | | api_call {CUISINE} {LOCATION} {PARTY_SIZE} {REST_TYPE}
+ | | Is there anything i can help you with?
+CUISINE,LOCATION,PARTY_SIZE,REST_TYPE | | Great! Let me do the reservation.
+ | | Hello, what can i help you with today?
+CUISINE,LOCATION,PARTY_SIZE,REST_TYPE | | Here it is: {INFO_ADDRESS}.
+CUISINE,LOCATION,PARTY_SIZE,REST_TYPE | | Here it is: {INFO_PHONE}.
+ | | How many people would be in your party?
+CUISINE,LOCATION,PARTY_SIZE,REST_TYPE | | Ok, let me look into some option for you.
+ | | I'm on it.
+ | | Sure, is there anything else to update?
+CUISINE,LOCATION,PARTY_SIZE,REST_TYPE | | Sure, let me find an other option for you.
+CUISINE,LOCATION,PARTY_SIZE,REST_TYPE| | What do you think of this option: {RESTAURANT}
+ | | Where should it be?
+ | | Which price range are looking for?
