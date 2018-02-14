@@ -43,7 +43,7 @@ class Dialog_Tracker(Model_Base):
         response = self.fc2(utter)
         response = self.softmax(response)
 
-        #response = response * mask
+        response = response * mask
 
         return response
 
