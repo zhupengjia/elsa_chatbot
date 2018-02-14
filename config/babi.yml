@@ -1,0 +1,60 @@
+%YAML 1.2
+---
+#app setting
+APPNAME: END2END_DEMO
+
+response_template: 
+    data: data/babi/template.txt
+    cached_index: data/babi/template.index
+
+entity_dict: data/babi/entity.dict
+
+ner:
+    LANGUAGE: en
+    TOKENIZER: spacy
+    w2v_word2idx: /home/pzhu/data/word2vec/en/word2idx_2000000.pp
+    w2v_idx2vec: /home/pzhu/data/word2vec/en/weight_2000000.npy
+    cached_vocab: data/babi/vocab.pkl
+    vocab_size: 100000
+    cached_w2v: data/babi/w2v.pkl
+    vec_len: 300
+    annoy_filter: 0.8
+    stopwords_path: config/en_stopwords.txt
+    ner_name_replace:
+        person_name: PERSON
+        company_name: ORG
+        product_name: PRODUCT
+        org_name: NORP
+        location: LOC
+        time: TIME
+    ner:
+    keywords:
+        USAGE: data/babi/entities/usage.txt
+    regex:  
+        EMAIL: '[a-zA-Z\d\.\-]+@[a-zA-Z\d\.\-]+(\.[a-zA-Z\d]{2,3}){1,2}'
+        PASSPORT: 'G\d{8}'
+        WBS: '(\d{1,3}x\d{1,3})|(a\d{6})'
+        EID: '(?<=\s)[a-z]{1,10}(\.[a-z]{1,10}){1,3}(?=[\s\.])'
+        DATE: '(\d{2,4}年)?\d{1,2}月\d{1,2}[日号]|(\d{2,4}\-)?\d{1,2}\-\d{1,2}|(\d{2,4}\.)?\d{1,2}\.\d{1,2}|(\d{2,4}\/)?\d{1,2}\/\d{1,4}'
+        #NUMBER: '\d{1,5}(\,\d{1,5})?'
+
+
+model:
+    use_gpu: 2
+    max_seq_len: 10
+    max_entity_len: 20
+    dropout: 0
+    cnn_kernel_size: 5
+    cnn_kernel_num: 64
+    learning_rate: 0.0001
+    weight_decay: 0.00001
+    epochs: 100000
+    batch_size: 1000
+    saved_model: 'data/model.pt'
+
+logger:
+    LogLevel_Console:  10
+    LogLevel_File: 0
+    LogFile: data/babi/train.log
+    LogFormat: '%(asctime)s | %(levelname)s: %(message)s'
+
