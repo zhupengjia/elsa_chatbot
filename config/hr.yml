@@ -29,16 +29,16 @@ ner:
         time: TIME
     ner:
     keywords:
-        USAGE: config/hr/entities/usage.txt
-        USAGE_LETTER: config/hr/entities/usage_letter.txt
-        USAGE_LETTER2: config/hr/entities/usage_letter2.txt
-        USAGE_EMPLOYMENT: config/hr/entities/usage_employment.txt
-        USAGE_WBS: config/hr/entities/usage_wbs.txt
-        USAGE_LEAVE: config/hr/entities/usage_leave.txt
-        USAGE_REASON: config/hr/entities/reason.txt
-        LANGUAGE: config/hr/entities/language.txt
-        LETTER_TYPE: config/hr/entities/letter_type.txt
-        COUNTRY: config/hr/entities/country.txt
+        USAGE: data/hr/entities/usage.txt
+        USAGE_LETTER: data/hr/entities/usage_letter.txt
+        USAGE_LETTER2: data/hr/entities/usage_letter2.txt
+        USAGE_EMPLOYMENT: data/hr/entities/usage_employment.txt
+        USAGE_WBS: data/hr/entities/usage_wbs.txt
+        USAGE_LEAVE: data/hr/entities/usage_leave.txt
+        USAGE_REASON: data/hr/entities/reason.txt
+        LANGUAGE: data/hr/entities/language.txt
+        LETTER_TYPE: data/hr/entities/letter_type.txt
+        COUNTRY: data/hr/entities/country.txt
     regex:  
         EMAIL: '[a-zA-Z\d\.\-]+@[a-zA-Z\d\.\-]+(\.[a-zA-Z\d]{2,3}){1,2}'
         PASSPORT: 'G\d{8}'
