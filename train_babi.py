@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, torch
+import sys, torch, os
 from src.reader.reader_babi import Reader_Babi
 from src.model.dialog_tracker import Dialog_Tracker
 from nlptools.utils import Config, setLogger
@@ -11,16 +11,10 @@ if not torch.cuda.is_available(): config.model.use_gpu = 0
 logger = setLogger(config.logger)
 
 data = Reader_Babi(config)
-#data.build_responses()
-
-
+data.build_responses()
 
 datafile = '/home/pzhu/data/dialog/babi/dialog-babi-task5-full-dialogs-trn.txt'
 data.read(datafile)
-
-
-
-sys.exit()
 
 tracker = Dialog_Tracker(config.model, data.vocab, len(data))
 tracker.network()

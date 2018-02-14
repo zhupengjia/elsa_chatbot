@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, torch
+import sys, torch, os
 from src.reader import Reader_Dialog
 from src.model.dialog_tracker import Dialog_Tracker
 from nlptools.utils import Config, setLogger
