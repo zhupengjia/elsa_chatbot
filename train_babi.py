@@ -29,10 +29,11 @@ optimizer = optim.Adam(tracker.parameters(), lr=config.model.learning_rate, weig
 #load checkpoint
 if os.path.exists(config.model['saved_model']):
     checkpoint = torch.load(config.model['saved_model'])
-    model.load_state_dict(checkpoint['model'])
+    tracker.load_state_dict(checkpoint['model'])
 
 
 for epoch, d in enumerate(data):
+    continue
     tracker.zero_grad()
     y_prob = tracker(d['utterance'], d['entity'], d['mask'])
     loss = loss_function(y_prob, d['response'])
