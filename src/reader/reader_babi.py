@@ -18,17 +18,28 @@ class Reader_Babi(Reader_Base):
             convs = []
             with open(filename) as f:
                 conv = []
+                utterance, response = '', ''
                 for l in f:
                     l = l.strip()
                     l = self.rm_index(l.split('\t'))
                     if l[0][:6] == 'resto_':
+                        utterance, response = '', ''
                         continue
                     if len(l) < 2:
                         if len(conv) > 0 :
                             convs.append(conv)
                             conv = []
+                        utterance, response = '', ''
                     else:
-                        conv.append([l[0], l[1]])
+                        if len(utterance) > 0 and len(response) > 0 :
+                            conv.append([utterance, response])
+                        utterance, response = '', ''
+                        utterance = l[0]
+                        response = l[1]
+                if len(utterance) > 0 and len(response) > 0 :
+                    conv.append([utterance, response])
+                if len(conv) > 0:
+                    convs.append(conv)
             
             convs = self.predeal(convs)
             zdump(convs, cached_pkl)
