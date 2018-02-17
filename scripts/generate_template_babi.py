@@ -25,6 +25,8 @@ with open(datafile) as f:
             utterance, response = '', ''
             continue
         if len(l) < 2:
+            if len(utterance) > 0 and len(response) > 0 :
+                conv.append([utterance, response])
             if len(conv) > 0 :
                 convs.append(conv)
                 conv = []
@@ -39,16 +41,21 @@ with open(datafile) as f:
                 utterance, response = '', ''
                 utterance = l[0]
                 response = l[1]
+               # print(utterance, '|||', response)
     if len(utterance) > 0 and len(response) > 0 :
         conv.append([utterance, response])
     if len(conv) > 0:
         convs.append(conv)
 
+
 responses = []
 for conv in convs:
+    print('='*60)
     for l in conv:
         entities, tokens = ner.get(l[1])
         responses.append(' '.join(tokens))
+        print('-'*30)
+        print(l[0],'\n', l[1])
 responses = sorted(list(set(responses)))
 with open('template.txt', 'w') as f:
     for i, r in enumerate(responses):

@@ -26,16 +26,22 @@ class Reader_Babi(Reader_Base):
                         utterance, response = '', ''
                         continue
                     if len(l) < 2:
+                        if len(utterance) > 0 and len(response) > 0 :
+                            conv.append([utterance, response])
                         if len(conv) > 0 :
                             convs.append(conv)
                             conv = []
                         utterance, response = '', ''
                     else:
-                        if len(utterance) > 0 and len(response) > 0 :
-                            conv.append([utterance, response])
-                        utterance, response = '', ''
-                        utterance = l[0]
-                        response = l[1]
+                        if l[0] == '<SILENCE>' :
+                            if l[1][:8] != 'api_call':
+                                response += '\n' + l[1]
+                        else:
+                            if len(utterance) > 0 and len(response) > 0 :
+                                conv.append([utterance, response])
+                            utterance, response = '', ''
+                            utterance = l[0]
+                            response = l[1]
                 if len(utterance) > 0 and len(response) > 0 :
                     conv.append([utterance, response])
                 if len(conv) > 0:
