@@ -31,9 +31,7 @@ ner:
         CUISINE: data/babi/entities/cuisine.txt
         REST_TYPE: data/babi/entities/rest_type.txt
     regex:  
-        INFO_PHONE: 'resto_\w*phone\w*'
-        INFO_ADDRESS: 'resto_\w*address\w*'
-        RESTAURANT: 'resto_\w*'
+        REST_INFO: 'resto_\w*'
 
 
 model:

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import numpy, torch
+import numpy, torch, copy
 from torch.autograd import Variable
 from ..hook.behaviors import Behaviors
 from nlptools.utils import flat_list
@@ -21,7 +21,7 @@ class Dialog_Status:
         for funcname in funcneeds:
             func = getattr(Behaviors, funcname)
             self.applyfunc(func)
-        self.entities.append(self.entity)
+        self.entities.append(copy.deepcopy(self.entity))
         #entity status and response mask
         for e in entities:
             if e in self.entitydict.entity_maskdict:
@@ -50,6 +50,7 @@ class Dialog_Status:
             txt += '-'*20 + str(i) + '-'*20 + '\n'
             txt += 'utterance: ' + self.vocab.id2sentence(self.utterances[i]) + '\n'
             txt += 'response: ' + self.response_dict.response[self.responses[i]] + '\n'
+            txt += 'entities: ' + self.vocab.id2sentence(list(self.entities[i].keys())) + '\n'
             txt += 'mask: ' + str(self.masks[i]) + '\n'
         return txt
 

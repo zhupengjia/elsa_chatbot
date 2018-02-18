@@ -33,7 +33,6 @@ if os.path.exists(config.model['saved_model']):
 
 
 for epoch, d in enumerate(data):
-    #continue
     tracker.zero_grad()
     y_prob = tracker(d['utterance'], d['entity'], d['mask'])
     loss = loss_function(y_prob, d['response'])

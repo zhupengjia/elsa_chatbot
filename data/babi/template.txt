@@ -1,13 +1,12 @@
- | | Is there anything i can help you with?
-CUISINE,LOCATION,PARTY_SIZE,REST_TYPE | | Great! let me do the reservation.
  | | Hello, what can i help you with today?
-CUISINE,LOCATION,PARTY_SIZE,REST_TYPE | | Here it is: {INFO_ADDRESS}
-CUISINE,LOCATION,PARTY_SIZE,REST_TYPE | | Here it is: {INFO_PHONE}
  | | I'm on it. How many people would be in your party?
  | | I'm on it. Any preference on a type of cuisine ? 
-CUISINE,LOCATION,PARTY_SIZE,REST_TYPE | | Ok, let me look into some option for you.
- | | Sure. Is there anything else to update?
-CUISINE,LOCATION,PARTY_SIZE,REST_TYPE | | Sure. Let me find an other option for you. What do you think of this option : {RESTAURANT}
  | | I'm on it. Where should it be?
  | | I'm on it. Which price range are looking for?
+CUISINE,LOCATION,PARTY_SIZE,REST_TYPE | | Great! let me do the reservation.
+CUISINE,LOCATION,PARTY_SIZE,REST_TYPE | | Here it is: {REST_INFO}
+CUISINE,LOCATION,PARTY_SIZE,REST_TYPE | | Ok, let me look into some option for you.
+CUISINE,LOCATION,PARTY_SIZE,REST_TYPE | | Sure. Let me find an other option for you. What do you think of this option : {REST_INFO}
+ | | Sure. Is there anything else to update?
+ | | Is there anything i can help you with?
  | | You are welcome.

@@ -96,9 +96,9 @@ class Reader_Base(object):
                     dialog_status.add(self.data['utterance'][i], self.data['response'][i], self.data['ent_utterance'][i], self.responses.func_need[self.data['response'][i]])
                     #mask
                     dialog_status.getmask(self.responses.masks)
-#                print(dialog_status)
+                print(dialog_status)
                 dialogs.append(dialog_status)
-            yield Dialog_Status.torch(self.cfg, self.vocab, self.entity_dict, dialogs, shuffle=True)
+            yield Dialog_Status.torch(self.cfg, self.vocab, self.entity_dict, dialogs, shuffle=False)
 
 
 
