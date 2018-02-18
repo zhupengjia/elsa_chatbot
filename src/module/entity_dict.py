@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from bidict import bidict
 from nlptools.utils import zload, zdump
-import os
+import os, numpy
 
 class Entity_Dict:
     def __init__(self, cfg, vocab):
@@ -25,7 +25,14 @@ class Entity_Dict:
 
     #entity name to id
     def name2id(self, entityname):
-        return self.vocab.word2id(entityname)
+        if entityname in self.entity_namedict:
+            return self.entity_namedict[entityname]
+        if len(self.entity_namedict) > 0:
+            eid = max(self.entity_namedict.values()) + 1
+        else:
+            eid = 0
+        self.entity_namedict[entityname] = eid
+        return eid
 
     #entity value to id
     def value2id(self, entity_nameid, value):
@@ -53,15 +60,29 @@ class Entity_Dict:
 
     def load(self):
         if os.path.exists(self.cfg.entity_dict):
-            self.entity_dict, self.entity_value, self.entity_type \
+            self.entity_namedict, self.entity_dict, self.entity_value, self.entity_type \
                     = zload(self.cfg.entity_dict)
         else:
+            self.entity_namedict = bidict() #entity name to id 
             self.entity_dict = bidict() #entity value to id 
             self.entity_value = {} # entity id to value
             self.entity_type = {} #check if entity is a string(0) or value(1)
-    
+
+
     def save(self):
-        zdump((self.entity_dict, self.entity_value, self.entity_type), self.cfg.entity_dict)
+        zdump((self.entity_namedict, self.entity_dict, self.entity_value, self.entity_type), self.cfg.entity_dict)
+
+
+    def name2onehot(self, entitynameids):
+        data = numpy.zeros(self.cfg.max_entity_types, 'int')
+        for e in entitynameids:
+            if e > self.cfg.max_entity_types - 1:
+                continue
+            data[e] += 1
+        return data
+
+
+
 
 
 

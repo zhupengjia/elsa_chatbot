@@ -11,6 +11,7 @@ response_template:
     ngrams: 3
 
 entity_dict: data/babi/entity.dict
+max_entity_types: 5
 
 ner:
     LANGUAGE: en
@@ -37,7 +38,6 @@ ner:
 model:
     use_gpu: 1
     max_seq_len: 10
-    max_entity_len: 10
     dropout: 0
     cnn_kernel_size: 5
     cnn_kernel_num: 16

@@ -50,7 +50,7 @@ class Dialog_Status:
             txt += '-'*20 + str(i) + '-'*20 + '\n'
             txt += 'utterance: ' + self.vocab.id2sentence(self.utterances[i]) + '\n'
             txt += 'response: ' + self.response_dict.response[self.responses[i]] + '\n'
-            txt += 'entities: ' + self.vocab.id2sentence(list(self.entities[i].keys())) + '\n'
+            txt += 'entities: ' + ' '.join([self.entitydict.entity_namedict.inv[e] for e in self.entities[i].keys()]) + '\n'
             txt += 'mask: ' + str(self.masks[i]) + '\n'
         return txt
 
@@ -60,7 +60,7 @@ class Dialog_Status:
         totlen = sum([len(d.utterances) for d in dialogs])
         utterance = numpy.ones((totlen, cfg.model.max_seq_len), 'int')*vocab._id_PAD
         response = numpy.zeros(totlen, 'int')
-        entity = numpy.ones((totlen, cfg.model.max_entity_len), 'int')*vocab._id_PAD
+        entity = numpy.ones((totlen, cfg.max_entity_types), 'int')
         mask = numpy.zeros((totlen, len(dialogs[0].masks[0])), 'float') 
         starti, endi = 0, 0
         for dialog in dialogs:
@@ -68,11 +68,10 @@ class Dialog_Status:
             response[starti:endi] = numpy.array(dialog.responses, 'int')
             for i in range(len(dialog.utterances)):
                 #entities = list(dialog.entities[i].keys()) + flat_list([entitydict.entity_value[dialog.entities[i][x]] for x in dialog.entities[i] if entitydict.entity_type[x]==0]) #all entity names and string type entity values
-                entities = list(dialog.entities[i].keys()) #all entity names
+                entities = entitydict.name2onehot(dialog.entities[i].keys()) #all entity names
                 seqlen = min(cfg.model.max_seq_len, len(dialog.utterances[i]))
-                entitylen = min(cfg.model.max_entity_len, len(entities))
                 utterance[starti+i, :seqlen] = numpy.array(dialog.utterances[i])[:seqlen]
-                entity[starti+i, :entitylen] = numpy.array(entities)[:entitylen]
+                entity[starti+i, :] = numpy.array(entities)
                 mask[starti+i, :] = dialog.masks[i]
             starti = endi
         
