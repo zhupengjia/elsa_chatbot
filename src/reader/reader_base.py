@@ -98,7 +98,7 @@ class Reader_Base(object):
                     dialog_status.getmask(self.responses.masks)
                 #print(dialog_status)
                 dialogs.append(dialog_status)
-            yield Dialog_Status.torch(self.cfg, self.vocab, self.entity_dict, dialogs, shuffle=False)
+            yield Dialog_Status.torch(self.cfg, self.vocab, self.entity_dict, dialogs, shuffle=True)
 
 
 

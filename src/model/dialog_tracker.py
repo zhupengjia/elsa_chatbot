@@ -20,20 +20,14 @@ class Dialog_Tracker(Model_Base):
                 padding = 0)
         self.dropout = nn.Dropout(self.cfg['dropout'])
         self.pool = nn.AvgPool1d(2)
-        self.fc1 = nn.Linear(self.cfg['cnn_kernel_num']*2, self.cfg['cnn_kernel_num'])
-        self.fc2 = nn.Linear(self.cfg['cnn_kernel_num']*3, self.Nresponses)
+        self.fc1 = nn.Linear(self.cfg['max_entity_len']*2, self.cfg['max_entity_len'])
+        self.fc2 = nn.Linear(self.cfg['cnn_kernel_num']*2 + self.cfg['max_entity_len'], self.Nresponses)
         self.softmax = nn.LogSoftmax()
 
     def entityencoder(self, x):
         x = self.encoder.embedding(x)
-        x = x.unsqueeze(1)
-        x = self.conv(x)
-        x = F.relu(x)
-        x = x.squeeze(3)
-        x = self.pool(x)
-        x = self.dropout(x)
-        x_att = self.attention(x, x)
-        return self.fc1(x_att)
+        x = self.attention(x, x)
+        return self.fc1(x)
 
     def forward(self, utterance, entity, mask):
         utterance = self.encoder(utterance)
