@@ -16,7 +16,7 @@ class Reader_Base(object):
         self.ner.build_keywords_index(self.emb)
         self.vocab = Vocab(cfg.ner, self.ner, self.emb)
         self.vocab.addBE()
-        self.entity_dict = Entity_Dict(cfg, self.vocab)
+        self.entity_dict = Entity_Dict(cfg.ner, self.vocab)
         self.data = {}
     
     #build response index

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import numpy, torch, copy
 from torch.autograd import Variable
+from torch import functional as F
 from ..hook.behaviors import Behaviors
 from nlptools.utils import flat_list
 
@@ -60,7 +61,7 @@ class Dialog_Status:
         totlen = sum([len(d.utterances) for d in dialogs])
         utterance = numpy.ones((totlen, cfg.model.max_seq_len), 'int')*vocab._id_PAD
         response = numpy.zeros(totlen, 'int')
-        entity = numpy.ones((totlen, cfg.max_entity_types), 'int')
+        entity = numpy.zeros((totlen, cfg.model.max_entity_types), 'float')
         mask = numpy.zeros((totlen, len(dialogs[0].masks[0])), 'float') 
         starti, endi = 0, 0
         for dialog in dialogs:
@@ -87,12 +88,12 @@ class Dialog_Status:
         if cfg.model.use_gpu:
             utterance = Variable(torch.LongTensor(utterance).cuda(cfg.model.use_gpu-1))
             response = Variable(torch.LongTensor(response).cuda(cfg.model.use_gpu-1))
-            entity = Variable(torch.LongTensor(entity).cuda(cfg.model.use_gpu-1))
+            entity = Variable(torch.FloatTensor(entity).cuda(cfg.model.use_gpu-1))
             mask = Variable(torch.FloatTensor(mask).cuda(cfg.model.use_gpu-1))
         else:
             utterance = Variable(torch.LongTensor(utterance))
             response = Variable(torch.LongTensor(response))
-            entity = Variable(torch.LongTensor(entity))
+            entity = Variable(torch.FloatTensor(entity))
             mask = Variable(torch.FloatTensor(mask))
         return {'utterance': utterance, 'response':response, 'mask':mask, 'entity':entity}
 

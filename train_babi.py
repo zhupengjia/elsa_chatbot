@@ -22,7 +22,7 @@ tracker.network()
 if config.model.use_gpu:
     tracker.cuda(config.model.use_gpu-1)
 
-loss_function = torch.nn.CrossEntropyLoss()
+loss_function = torch.nn.NLLLoss()
 optimizer = optim.Adam(tracker.parameters(), lr=config.model.learning_rate, weight_decay=config.model.weight_decay)
 
 

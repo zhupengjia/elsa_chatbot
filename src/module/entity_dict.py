@@ -74,7 +74,7 @@ class Entity_Dict:
 
 
     def name2onehot(self, entitynameids):
-        data = numpy.zeros(self.cfg.max_entity_types, 'int')
+        data = numpy.zeros(self.cfg.max_entity_types, 'float')
         for e in entitynameids:
             if e > self.cfg.max_entity_types - 1:
                 continue
