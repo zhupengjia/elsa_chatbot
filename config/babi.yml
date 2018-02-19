@@ -38,7 +38,7 @@ ner:
 model:
     use_gpu: 1
     max_seq_len: 10
-    dropout: 0
+    dropout: 0.5
     max_entity_types: 5
     cnn_kernel_size: 5
     cnn_kernel_num: 16

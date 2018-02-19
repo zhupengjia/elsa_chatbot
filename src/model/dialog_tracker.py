@@ -23,7 +23,7 @@ class Dialog_Tracker(Model_Base):
         self.fc1 = nn.Linear(self.cfg['max_entity_types'],self.cfg['max_entity_types'])
         self.fc2 = nn.Linear(self.cfg['max_entity_types'],self.cfg['max_entity_types'])
         self.fc3 = nn.Linear(self.cfg['cnn_kernel_num']*2 + self.cfg['max_entity_types'], self.Nresponses)
-        self.softmax = nn.Softmax()
+        self.softmax = nn.Softmax(dim=1)
 
     def entityencoder(self, x):
         x = self.fc1(x)
@@ -38,5 +38,6 @@ class Dialog_Tracker(Model_Base):
         response = self.softmax(response)
         response = response * mask
         response = torch.log(response + 1e-15)
+
         return response
 
