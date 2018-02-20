@@ -38,8 +38,8 @@ class Reader_Base(object):
 
     #return response string by id
     def get_response(self, responseid, entity=None):
-        response = self.responses.response[resposeid]
-        if entity is None:
+        response = self.responses.response[responseid]
+        if entity is not None:
             response = response.format(*entity)
         return response
    
@@ -83,6 +83,11 @@ class Reader_Base(object):
         self.entity_dict.save()
         return ripe
 
+    #return a new dialog status instant
+    def new_dialog(self):
+        return  Dialog_Status(self.cfg, self.vocab, self.entity_dict, self.responses)
+
+    #tracker train iterator
     def __iter__(self):
         for epoch in range(self.cfg.model.epochs):
             dialogs = []
@@ -90,12 +95,12 @@ class Reader_Base(object):
                 sampleid = numpy.random.randint(len(self.data['idrange']))
                 idrange = self.data['idrange'][sampleid]
                 #roll entity gets
-                dialog_status = Dialog_Status(self.vocab, self.entity_dict, self.responses)
+                dialog_status = self.new_dialog()
                 for i in range(idrange[0], idrange[1]):
                     #add to dialog status
                     dialog_status.add(self.data['utterance'][i], self.data['response'][i], self.data['ent_utterance'][i], self.responses.func_need[self.data['response'][i]])
                     #mask
-                    dialog_status.getmask(self.responses.masks)
+                    dialog_status.getmask()
                 #print(dialog_status)
                 dialogs.append(dialog_status)
             yield Dialog_Status.torch(self.cfg, self.vocab, self.entity_dict, dialogs, shuffle=True)

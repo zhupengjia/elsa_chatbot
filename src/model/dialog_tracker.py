@@ -27,6 +27,7 @@ class Dialog_Tracker(Model_Base):
 
     def entityencoder(self, x):
         x = self.fc1(x)
+        x = self.dropout(x)
         return self.fc2(x)
 
     def forward(self, utterance, entity, mask):
@@ -35,6 +36,7 @@ class Dialog_Tracker(Model_Base):
         utter_att = self.attention(utterance, utterance)
         utter = torch.cat((utter_att, entity), 1) 
         response = self.fc3(utter)
+        response = self.dropout(respinse)
         response = self.softmax(response)
         response = response * mask
         response = torch.log(response + 1e-15)

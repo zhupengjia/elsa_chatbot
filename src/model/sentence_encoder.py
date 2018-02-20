@@ -14,7 +14,7 @@ class Sentence_Encoder(Model_Base):
                 embedding_dim = self.vocab.emb_ins.vec_len, \
                 padding_idx = self.vocab._id_PAD)
 
-        self.embedding.weight.data = torch.FloatTensor(self.vocab.dense_vectors())
+        #self.embedding.weight.data = torch.FloatTensor(self.vocab.dense_vectors())
         #self.embedding.weight.requires_grad = False
         self.conv = nn.Conv2d(in_channels = 1, \
                 out_channels = self.cfg['cnn_kernel_num'], \

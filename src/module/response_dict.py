@@ -32,10 +32,13 @@ class Response_Dict(object):
         self.func_need.append(func_need)
 
 
+    #build search index for response template
     def build_index(self):
         self.__search.load_index(self.response_ids)
         self.vocab.save()
 
+
+    #build entity mask of response template
     def build_mask(self):
         entity_maskdict = sorted(list(set(flat_list(self.entity_need))))
         entity_maskdict = dict(zip(entity_maskdict, range(len(entity_maskdict))))
@@ -46,6 +49,7 @@ class Response_Dict(object):
                 self.masks[i, entity_maskdict[e]] = True
    
 
+    #get most closed response id from templates
     def __getitem__(self, response):
         response_ids = self.vocab.sentence2id(response)
         if len(response_ids) < 1:

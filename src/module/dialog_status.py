@@ -6,40 +6,54 @@ from ..hook.behaviors import Behaviors
 from nlptools.utils import flat_list
 
 class Dialog_Status:
-    def __init__(self, vocab, entitydict, response_dict):
+    def __init__(self, cfg, vocab, entity_dict, response_dict):
+        self.cfg = cfg
         self.vocab = vocab
         self.response_dict = response_dict
-        self.entitydict = entitydict #for response mask
+        self.entity_dict = entity_dict #for response mask
         self.entity = {} #for current entity 
-        self.entity_mask = numpy.ones((len(entitydict.entity_maskdict),1), 'bool_') #for response mask
+        self.entity_mask = numpy.ones((len(entity_dict.entity_maskdict),1), 'bool_') #for response mask
         self.utterances, self.responses, self.entities, self.masks = [], [], [], []
 
+
+    #add a  pair of dialog to status
     def add(self, utterance, response, entities, funcneeds):
+        self.add_utterance(utterance, entities)
+        self.add_response(response, funcneeds)
+
+    # add utterance to status
+    def add_utterance(self, utterance, entities):
         self.utterances.append(utterance)
-        self.responses.append(response)
         for e in entities:
             self.entity[e] = entities[e][0]
+            #entity status and response mask
+            if e in self.entity_dict.entity_maskdict:
+                self.entity_mask[self.entity_dict.entity_maskdict[e], 0] = False #mask for response choose
+        self.entities.append(copy.deepcopy(self.entity))
+
+
+    def add_response(self, response, funcneeds):
+        self.responses.append(response)
         for funcname in funcneeds:
             func = getattr(Behaviors, funcname)
             self.applyfunc(func)
-        self.entities.append(copy.deepcopy(self.entity))
-        #entity status and response mask
-        for e in entities:
-            if e in self.entitydict.entity_maskdict:
-                self.entity_mask[self.entitydict.entity_maskdict[e], 0] = False #mask for response choose
 
 
     #apply function and put result to entities 
     def applyfunc(self, func):
         entities_get = func(self.entity)
         for e in entities_get:
-            e_id = self.entitydict.name2id(e)
-            self.entity[e_id] = self.entitydict.value2id(e_id, entities_get[e])
+            e_id = self.entity_dict.name2id(e)
+            self.entity[e_id] = self.entity_dict.value2id(e_id, entities_get[e])
+            self.entities[-1][e_id] = copy.deepcopy(self.entity[e_id])
+            #entity status and response mask
+            if e_id in self.entity_dict.entity_maskdict:
+                self.entity_mask[self.entity_dict.entity_maskdict[e], 0] = False #mask for response choose
 
 
     #mask for each turn of response
-    def getmask(self, response_masks):
-        mask = numpy.matmul(response_masks, self.entity_mask).reshape(1,-1)[0]
+    def getmask(self):
+        mask = numpy.matmul(self.response_dict.masks, self.entity_mask).reshape(1,-1)[0]
         self.masks.append(numpy.logical_not(mask))
 
 
@@ -51,12 +65,45 @@ class Dialog_Status:
             txt += '-'*20 + str(i) + '-'*20 + '\n'
             txt += 'utterance: ' + self.vocab.id2sentence(self.utterances[i]) + '\n'
             txt += 'response: ' + self.response_dict.response[self.responses[i]] + '\n'
-            txt += 'entities: ' + ' '.join([self.entitydict.entity_namedict.inv[e] for e in self.entities[i].keys()]) + '\n'
+            txt += 'entities: ' + ' '.join([self.entity_dict.entity_namedict.inv[e] for e in self.entities[i].keys()]) + '\n'
             txt += 'mask: ' + str(self.masks[i]) + '\n'
-        return txt
+        return txt    
 
+
+    #convert an utterance to tracker input
+    def __call__(self, utterance):
+        entities, tokens = self.vocab.seg_ins.get(utterance.lower())
+        token_ids = self.vocab.sentence2id(tokens)
+        if len(token_ids) < 1:
+            return None
+        entity_ids =  self.entity_dict(entities)
+        self.add_utterance(token_ids, entity_ids)
+        self.getmask()
+
+        utterance = numpy.ones((1, self.cfg.model.max_seq_len), 'int')*self.vocab._id_PAD
+        entity = numpy.zeros((1, self.cfg.model.max_entity_types), 'float')
+        mask = numpy.zeros((1, len(self.masks[0])), 'float') 
+        seqlen = min(self.cfg.model.max_seq_len, len(token_ids))
+        utterance[0, :seqlen] = numpy.array(token_ids)[:seqlen]
+        entity[0, :] = numpy.array(self.entity_dict.name2onehot(entity_ids))
+        mask[0,:] = self.masks[-1] 
+        
+        if self.cfg.model.use_gpu:
+            utterance = Variable(torch.LongTensor(utterance).cuda(cfg.model.use_gpu-1))
+            entity = Variable(torch.FloatTensor(entity).cuda(cfg.model.use_gpu-1))
+            mask = Variable(torch.FloatTensor(mask).cuda(cfg.model.use_gpu-1))
+        else:
+            utterance = Variable(torch.LongTensor(utterance))
+            entity = Variable(torch.FloatTensor(entity))
+            mask = Variable(torch.FloatTensor(mask))
+        
+        return {'utterance': utterance, 'entity':entity, 'mask': mask}
+         
+
+
+    #convert to dialogs to batch
     @staticmethod 
-    def torch(cfg, vocab, entitydict, dialogs, shuffle=False):
+    def torch(cfg, vocab, entity_dict, dialogs, shuffle=False):
         data = {}
         totlen = sum([len(d.utterances) for d in dialogs])
         utterance = numpy.ones((totlen, cfg.model.max_seq_len), 'int')*vocab._id_PAD
@@ -68,8 +115,8 @@ class Dialog_Status:
             endi += len(dialog.utterances)
             response[starti:endi] = numpy.array(dialog.responses, 'int')
             for i in range(len(dialog.utterances)):
-                #entities = list(dialog.entities[i].keys()) + flat_list([entitydict.entity_value[dialog.entities[i][x]] for x in dialog.entities[i] if entitydict.entity_type[x]==0]) #all entity names and string type entity values
-                entities = entitydict.name2onehot(dialog.entities[i].keys()) #all entity names
+                #entities = list(dialog.entities[i].keys()) + flat_list([entity_dict.entity_value[dialog.entities[i][x]] for x in dialog.entities[i] if entity_dict.entity_type[x]==0]) #all entity names and string type entity values
+                entities = entity_dict.name2onehot(dialog.entities[i].keys()) #all entity names
                 seqlen = min(cfg.model.max_seq_len, len(dialog.utterances[i]))
                 utterance[starti+i, :seqlen] = numpy.array(dialog.utterances[i])[:seqlen]
                 entity[starti+i, :] = numpy.array(entities)
@@ -96,7 +143,6 @@ class Dialog_Status:
             entity = Variable(torch.FloatTensor(entity))
             mask = Variable(torch.FloatTensor(mask))
         return {'utterance': utterance, 'response':response, 'mask':mask, 'entity':entity}
-
 
 
 
