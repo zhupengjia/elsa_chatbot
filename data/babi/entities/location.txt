@@ -8,3 +8,6 @@ london
 madrid
 seoul
 tokyo
+shanghai
+guangzhou
+hongkong
