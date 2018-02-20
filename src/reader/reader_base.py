@@ -98,9 +98,10 @@ class Reader_Base(object):
                 dialog_status = self.new_dialog()
                 for i in range(idrange[0], idrange[1]):
                     #add to dialog status
-                    dialog_status.add(self.data['utterance'][i], self.data['response'][i], self.data['ent_utterance'][i], self.responses.func_need[self.data['response'][i]])
+                    dialog_status.add_utterance(self.data['utterance'][i], self.data['ent_utterance'][i])
                     #mask
                     dialog_status.getmask()
+                    dialog_status.add_response(self.data['response'][i])
                 #print(dialog_status)
                 dialogs.append(dialog_status)
             yield Dialog_Status.torch(self.cfg, self.vocab, self.entity_dict, dialogs, shuffle=True)

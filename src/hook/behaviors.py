@@ -17,4 +17,6 @@ class Behaviors:
     def getrestinfo(entities):
         return {'REST_INFO': 'RESERVED_REST_INFO'}
 
-
+    @staticmethod
+    def bookcuisine(entities):
+        return {'BOOK_CUISINE': 'DONE!'}

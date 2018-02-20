@@ -54,7 +54,17 @@ class InteractiveSession():
                 _, y_pred = torch.max(y_prob.data, 1)
                 y_pred = y_pred.numpy()[0]
                 response = self.reader.get_response(y_pred)
+                dialog_status.add_response(y_pred)
                 print(response)
+                if y_pred == 11:
+                    print('======= ' + 'information got:')
+                    for eid in dialog_status.entity:
+                        entity = dialog_status.entity_dict.entity_namedict.inv[eid]
+                        value = dialog_status.entity_dict.entity_dict.inv[dialog_status.entity[eid]]
+                        print(entity + ': ' + value)
+                    dialog_status = self.reader.new_dialog()
+                    
+
 
 
 if __name__ == '__main__':

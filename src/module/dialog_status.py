@@ -16,11 +16,6 @@ class Dialog_Status:
         self.utterances, self.responses, self.entities, self.masks = [], [], [], []
 
 
-    #add a  pair of dialog to status
-    def add(self, utterance, response, entities, funcneeds):
-        self.add_utterance(utterance, entities)
-        self.add_response(response, funcneeds)
-
     # add utterance to status
     def add_utterance(self, utterance, entities):
         self.utterances.append(utterance)
@@ -32,8 +27,10 @@ class Dialog_Status:
         self.entities.append(copy.deepcopy(self.entity))
 
 
-    def add_response(self, response, funcneeds):
+    #add response and apply function
+    def add_response(self, response):
         self.responses.append(response)
+        funcneeds = self.response_dict.func_need[response]
         for funcname in funcneeds:
             func = getattr(Behaviors, funcname)
             self.applyfunc(func)

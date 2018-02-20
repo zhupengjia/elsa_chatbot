@@ -18,9 +18,9 @@ class Entity_Dict:
             entity_ids[k_id] = []
             for e in entities[k]:
                 #value to id
-                e_id = self.value2id(k_id, e)
-                if e_id is not None:
-                    entity_ids[k_id].append(e_id)
+                vid = self.value2id(k_id, e)
+                if vid is not None:
+                    entity_ids[k_id].append(vid)
         return entity_ids
 
     #entity name to id
