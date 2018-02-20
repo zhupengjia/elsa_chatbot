@@ -7,6 +7,6 @@ CUISINE,LOCATION,PARTY_SIZE,REST_TYPE,REST_INFO | | Great! let me do the reserva
 CUISINE,LOCATION,PARTY_SIZE,REST_TYPE | GETRESTINFO | Here it is: {REST_INFO}
 CUISINE,LOCATION,PARTY_SIZE,REST_TYPE | GETRESTINFO | Ok, let me look into some option for you.
 CUISINE,LOCATION,PARTY_SIZE,REST_TYPE | GETRESTINFO | Sure. Let me find an other option for you. What do you think of this option : {REST_INFO}
-RESTINFO | | Sure. Is there anything else to update?
-RESTINFO | | Is there anything i can help you with?
-RESTINFO | | You are welcome.
+REST_INFO | | Sure. Is there anything else to update?
+REST_INFO | | Is there anything i can help you with?
+REST_INFO | | You are welcome.
