@@ -36,7 +36,7 @@ class Dialog_Tracker(Model_Base):
         utter_att = self.attention(utterance, utterance)
         utter = torch.cat((utter_att, entity), 1) 
         response = self.fc3(utter)
-        response = self.dropout(respinse)
+        response = self.dropout(response)
         response = self.softmax(response)
         response = response * mask
         response = torch.log(response + 1e-15)

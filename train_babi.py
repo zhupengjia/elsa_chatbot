@@ -20,7 +20,7 @@ tracker = Dialog_Tracker(config.model, data.vocab, len(data))
 tracker.network()
 
 #use pretrained word2vec
-tracker.embedding.weight.data = torch.FloatTensor(tracker.vocab.dense_vectors())
+tracker.encoder.embedding.weight.data = torch.FloatTensor(tracker.vocab.dense_vectors())
 
 if config.model.use_gpu:
     tracker.cuda(config.model.use_gpu-1)
