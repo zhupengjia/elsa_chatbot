@@ -11,7 +11,7 @@ if not torch.cuda.is_available(): config.model.use_gpu = 0
 logger = setLogger(config.logger)
 
 data = Reader_Babi(config)
-data.build_responses()
+data.build_responses() #build response template index 
 
 datafile = '/home/pzhu/data/dialog/babi/dialog-babi-task5-full-dialogs-trn.txt'
 data.read(datafile)

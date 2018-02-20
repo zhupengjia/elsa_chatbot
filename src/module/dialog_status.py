@@ -48,7 +48,7 @@ class Dialog_Status:
             self.entities[-1][e_id] = copy.deepcopy(self.entity[e_id])
             #entity status and response mask
             if e_id in self.entity_dict.entity_maskdict:
-                self.entity_mask[self.entity_dict.entity_maskdict[e], 0] = False #mask for response choose
+                self.entity_mask[self.entity_dict.entity_maskdict[e_id], 0] = False #mask for response choose
 
 
     #mask for each turn of response
