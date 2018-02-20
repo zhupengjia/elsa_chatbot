@@ -64,7 +64,8 @@ class Dialog_Status:
         for i in range(len(self.utterances)):
             txt += '-'*20 + str(i) + '-'*20 + '\n'
             txt += 'utterance: ' + self.vocab.id2sentence(self.utterances[i]) + '\n'
-            txt += 'response: ' + self.response_dict.response[self.responses[i]] + '\n'
+            if i < len(self.responses):
+                txt += 'response: ' + self.response_dict.response[self.responses[i]] + '\n'
             txt += 'entities: ' + ' '.join([self.entity_dict.entity_namedict.inv[e] for e in self.entities[i].keys()]) + '\n'
             txt += 'mask: ' + str(self.masks[i]) + '\n'
         return txt    

@@ -13,6 +13,8 @@ class Behaviors:
     def getbalance(entities):
         return {'BALANCE':10}
 
-
+    @staticmethod
+    def getrestinfo(entities):
+        return {'REST_INFO': 'RESERVED_REST_INFO'}
 
 
