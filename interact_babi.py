@@ -49,7 +49,7 @@ class InteractiveSession():
                 data = dialog_status(u)
                 if data is None:
                     continue
-                print(dialog_status)
+                #print(dialog_status)
                 y_prob = self.tracker(data['utterance'], data['entity'], data['mask'])
                 _, y_pred = torch.max(y_prob.data, 1)
                 y_pred = y_pred.numpy()[0]
