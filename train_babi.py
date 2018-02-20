@@ -11,10 +11,10 @@ if not torch.cuda.is_available(): config.model.use_gpu = 0
 logger = setLogger(config.logger)
 
 data = Reader_Babi(config)
-data.build_responses() #build response template index 
+data.build_responses() #build response template index, will read response template and create entity need for each response template every time, but not search index.
 
 datafile = '/home/pzhu/data/dialog/babi/dialog-babi-task5-full-dialogs-trn.txt'
-data.read(datafile)
+data.read(datafile) #read data and predeal, will directly use cached data if existed, but will build mask every time
 
 tracker = Dialog_Tracker(config.model, data.vocab, len(data))
 tracker.network()

@@ -53,8 +53,11 @@ class Dialog_Status:
 
     #mask for each turn of response
     def getmask(self):
-        mask = numpy.matmul(self.response_dict.masks, self.entity_mask).reshape(1,-1)[0]
-        self.masks.append(numpy.logical_not(mask))
+        mask_need = numpy.matmul(self.response_dict.masks['need'], self.entity_mask).reshape(1,-1)[0]
+        mask_need = numpy.logical_not(mask_need)
+        mask_notneed = numpy.matmul(self.response_dict.masks['notneed'], numpy.logical_not(self.entity_mask)).reshape(1,-1)[0]
+        mask_notneed = numpy.logical_not(mask_notneed)
+        self.masks.append(mask_need * mask_notneed)
 
 
     def __str__(self):
