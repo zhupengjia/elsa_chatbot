@@ -3,7 +3,7 @@ import numpy, torch, copy
 from torch.autograd import Variable
 from torch import functional as F
 from ..hook.behaviors import Behaviors
-from nlptools.utils import flat_list
+from ailab.utils import flat_list
 
 class Dialog_Status:
     def __init__(self, cfg, vocab, entity_dict, response_dict):

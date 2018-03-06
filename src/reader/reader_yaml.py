@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import glob, os, yaml, sys, re
-from nlptools.utils import setLogger
+from ailab.utils import setLogger
 from .reader_base import Reader_Base
 
 class Reader_YAML(Reader_Base):

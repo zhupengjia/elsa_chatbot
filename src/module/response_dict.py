@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import sys, re, numpy
-from nlptools.text import VecTFIDF, Vocab
-from nlptools.utils import flat_list
+from ailab.text import VecTFIDF, Vocab
+from ailab.utils import flat_list
 
 class Response_Dict(object):
     def __init__(self, cfg, tokenizer, entity_dict):

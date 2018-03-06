@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from bidict import bidict
-from nlptools.utils import zload, zdump
+from ailab.utils import zload, zdump
 import os, numpy
 
 class Entity_Dict:
