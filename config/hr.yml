@@ -23,6 +23,7 @@ ner:
     annoy_filter: 0.8
     stopwords_path: config/en_stopwords.txt
     entity_dict: data/hr/entity.dict
+    max_entity_types: 17
     ner_name_replace:
         person_name: PERSON
         company_name: ORG
@@ -54,7 +55,7 @@ ner:
 model:
     use_gpu: 1
     max_seq_len: 10
-    max_entity_len: 20
+    max_entity_types: 17
     dropout: 0.5
     cnn_kernel_size: 5
     cnn_kernel_num: 64

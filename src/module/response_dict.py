@@ -18,7 +18,14 @@ class Response_Dict(object):
         if len(response) < 3:
             return
         entity_need = {}
-        entity_need['need'], entity_need['notneed'], func_need, response = tuple(response)
+        try:
+            entity_need['need'], entity_need['notneed'], func_need, response = tuple(response)
+        except Exception as err:
+            print("Error: Template error!!")
+            print("Error sentence: " + ' | '.join(response))
+            print("The format should be: needentity | notneedentity | func | response")
+            sys.exit()
+
         response = re.sub('(\{[A-Z]+\})|(\d+)','', response)
         response_ids = self.vocab.sentence2id(response) 
         if len(response_ids) < 1:

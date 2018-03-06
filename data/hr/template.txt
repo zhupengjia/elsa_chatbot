@@ -22,7 +22,7 @@ USAGE | | | Please clarify more about the usage of the WBS.
 # Letter
 USAGE | | | Thank you!  Could you tell me what kind of {USAGE} do you need? Employment Letter, Exit Reference Letter or Business License ? 
 USAGE_LETTER | | | Thank you, you need the {USAGE_LETTER}, is that correct?
-USAGE | | Please specify the type of letter that you need.
+USAGE | | | Please specify the type of letter that you need.
 USAGE_LETTER | | | Please specify the usage the {USAGE_LETTER}.
 
 USAGE_LETTER | | | Thank you, we need to record your purposes. Please input the usage of {USAGE_LETTER}
@@ -125,7 +125,7 @@ USAGE_WBS | | | Over your entitlement full paid {USAGE_WBS} days and up to 20 wo
 USAGE_WBS | | | \n•         Permanent employees who are currently working and is not taking {USAGE_WBS} at the commencement of the {USAGE_WBS} period	\n•         A minimum of 12 months service with the XXX ANZ prior to the date of birth of the child.	\n•         Must be the birth mother or adoption mother in a case of adoption leave of the child	\n•         Must take the leave for an unbroken period and on full-time basis	\n•         Cannot take more than 8 weeks {USAGE_WBS} concurrently with parental leave taken by the spouse or partner
 USAGE_WBS | | | Please either reply to the agent who sent you {USAGE_WBS} memo or directly send your request to demo@demo.com.
 USAGE_WBS | | | Please go to myRequest, Select<Leave of Absence>-<Apply for a Leave of Absence>-<Maternity>, enter your {USAGE_WBS} Start on Time and Expected Return Time, your personal Phone/Email, leave approver email address.
- | | Please indicate your vacation destination country, thank you.
+ | | | Please indicate your vacation destination country, thank you.
 USAGE_WBS | | | Please refer to {USAGE_WBS} Memo which would be sent to you when you have successfully submitted your {USAGE_WBS} request.
 USAGE | | | Please specify what Leave Support do you need, such as 'Annual Leave', 'Maternity Leave','Paternity Leave', 'Nursing Leave','Unpaid Leave','Marriage Leave', etc.
 USAGE_WBS | | | Please submit your {USAGE_WBS} application in EPS  prior to the expected date of the birth of the child. A certificate from a medical practitioner confirming the pregnancy and the expected date of birth of the child, and the planned leave start and end dates should be included in the notice.	{USAGE_WBS} cannot commence more than 6 weeks before the expected date of birth of the child, unless in cases of a pregnancy-related condition
