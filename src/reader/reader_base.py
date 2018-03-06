@@ -102,7 +102,7 @@ class Reader_Base(object):
                     #mask
                     dialog_status.getmask()
                     dialog_status.add_response(self.data['response'][i])
-                #print(dialog_status)
+                self.logger.debug(dialog_status)
                 dialogs.append(dialog_status)
             yield Dialog_Status.torch(self.cfg, self.vocab, self.entity_dict, dialogs, shuffle=True)
 
