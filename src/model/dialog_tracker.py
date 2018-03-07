@@ -49,25 +49,35 @@ class Dialog_Tracker(Model_Base):
         
 
     def dialog_embedding(self, utterance, entity,  response_prev):
-        utterance = self.encoder(utterance)
-        entity = self.entityencoder(entity)
-        utter_att = self.attention(utterance, utterance)
+        #utterance embedding
+        utterance = self.encoder(utterance) 
+        utter_att = self.attention(utterance, utterance) 
+        #entity name embedding
+        entity = self.entityencoder(entity) 
+        #previous response embedding
         response_prev = self.responseencoder(response_prev)
+        #concat together and apply linear
         utter = torch.cat((utter_att, entity, response_prev), 1)
         utter = self.fc_dialog(utter) 
         return self.softmax(utter)
 
+    def get_response(dialog):
+        #first get dialog embedding
+        dialog_emb = self.dialog_embedding(d['utterance'], d['entity'], d['response_prev'])
+        #dialog embedding to lstm as dialog tracker
+        lstm_out, _ = self.lstm(dialog_emb.view(len(dialog_emb),1,-1), self.lstm_hidden)
+        lstm_out = lstm_out.view(len(dialog_emb), -1)
+        #output to softmax
+        lstm_softmax = self.softmax(lstm_out)
+        response = lstm_softmax * d['mask']
+        response = torch.log(response + 1e-15)
+    
 
     def forward(self, dialogs):
         responses = []
         for d in dialogs:
-            dialog_emb = self.dialog_embedding(d['utterance'], d['entity'], d['response_prev'])
-            lstm_out, _ = self.lstm(dialog_emb.view(len(dialog_emb),1,-1), self.lstm_hidden)
-            lstm_out = lstm_out.view(len(dialog_emb), -1)
-            lstm_softmax = self.softmax(lstm_out)
-            response = lstm_softmax * d['mask']
-            response = torch.log(response + 1e-15)
-            responses.append(response)
+            responses.append(self.get_response(d))
+        #concat all dialogs output together
         responses = torch.cat(responses, 0)
         return responses
 
