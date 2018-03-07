@@ -63,13 +63,13 @@ class Dialog_Tracker(Model_Base):
 
     def get_response(self, dialog):
         #first get dialog embedding
-        dialog_emb = self.dialog_embedding(d['utterance'], d['entity'], d['response_prev'])
+        dialog_emb = self.dialog_embedding(dialog['utterance'], dialog['entity'], dialog['response_prev'])
         #dialog embedding to lstm as dialog tracker
         lstm_out, _ = self.lstm(dialog_emb.view(len(dialog_emb),1,-1), self.lstm_hidden)
         lstm_out = lstm_out.view(len(dialog_emb), -1)
         #output to softmax
         lstm_softmax = self.softmax(lstm_out)
-        response = lstm_softmax * d['mask']
+        response = lstm_softmax * dialog['mask']
         response = torch.log(response + 1e-15)
     
 
