@@ -2,6 +2,7 @@
 import torch, sys
 import torch.nn.functional as F
 import torch.nn as nn
+import torch.autograd as autograd
 from .sentence_encoder import Sentence_Encoder
 from .model_base import Model_Base
 
@@ -20,26 +21,53 @@ class Dialog_Tracker(Model_Base):
                 padding = 0)
         self.dropout = nn.Dropout(self.cfg['dropout'])
         self.pool = nn.AvgPool1d(2)
-        self.fc1 = nn.Linear(self.cfg['max_entity_types'],self.cfg['max_entity_types'])
-        self.fc2 = nn.Linear(self.cfg['max_entity_types'],self.cfg['max_entity_types'])
-        self.fc3 = nn.Linear(self.cfg['cnn_kernel_num']*2 + self.cfg['max_entity_types'], self.Nresponses)
+        self.fc_entity1 = nn.Linear(self.cfg['max_entity_types'],self.cfg['max_entity_types'])
+        self.fc_entity2 = nn.Linear(self.cfg['max_entity_types'],self.cfg['max_entity_types'])
+        self.fc_response1 = nn.Linear(self.Nresponses, self.cfg['fc_response1'])
+        self.fc_response2 = nn.Linear(self.cfg['fc_response1'], self.cfg['fc_response2'])
+        fc1_input_size = self.cfg['cnn_kernel_num']*2 + self.cfg['max_entity_types'] + self.cfg['fc_response2']
+        self.fc_dialog = nn.Linear(fc1_input_size, self.cfg['dialog_emb_size'])
+        self.lstm = nn.LSTM(self.cfg['dialog_emb_size'], self.Nresponses)
         self.softmax = nn.Softmax(dim=1)
+        self.lstm_hidden = self.init_hidden()
 
     def entityencoder(self, x):
-        x = self.fc2(self.fc1(x))
+        x = self.fc_entity1(x)
+        x = self.fc_entity2(x)
         x = self.dropout(x)
         return x
 
-    def forward(self, utterance, entity, mask):
+    def responseencoder(self, x):
+        x = self.fc_response1(x)
+        x = self.fc_response2(x)
+        x = self.dropout(x)
+        return x
+
+    def init_hidden(self):
+        return (autograd.Variable(torch.zeros(1, 1, self.Nresponses)),
+                autograd.Variable(torch.zeros(1, 1, self.Nresponses)))
+        
+
+    def dialog_embedding(self, utterance, entity,  response_prev):
         utterance = self.encoder(utterance)
         entity = self.entityencoder(entity)
         utter_att = self.attention(utterance, utterance)
-        utter = torch.cat((utter_att, entity), 1) 
-        response = self.fc3(utter)
-        #response = self.dropout(response)
-        response = self.softmax(response)
-        response = response * mask
-        response = torch.log(response + 1e-15)
+        response_prev = self.responseencoder(response_prev)
+        utter = torch.cat((utter_att, entity, response_prev), 1)
+        utter = self.fc_dialog(utter) 
+        return self.softmax(utter)
 
-        return response
+
+    def forward(self, dialogs):
+        responses = []
+        for d in dialogs:
+            dialog_emb = self.dialog_embedding(d['utterance'], d['entity'], d['response_prev'])
+            lstm_out, _ = self.lstm(dialog_emb.view(len(dialog_emb),1,-1), self.lstm_hidden)
+            lstm_out = lstm_out.view(len(dialog_emb), -1)
+            lstm_softmax = self.softmax(lstm_out)
+            response = lstm_softmax * d['mask']
+            response = torch.log(response + 1e-15)
+            responses.append(response)
+        responses = torch.cat(responses, 0)
+        return responses
 

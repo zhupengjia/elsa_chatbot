@@ -104,46 +104,37 @@ class Dialog_Status:
 
     #convert to dialogs to batch
     @staticmethod 
-    def torch(cfg, vocab, entity_dict, dialogs, shuffle=False):
-        data = {}
-        totlen = sum([len(d.utterances) for d in dialogs])
-        utterance = numpy.ones((totlen, cfg.model.max_seq_len), 'int')*vocab._id_PAD
-        response = numpy.zeros(totlen, 'int')
-        entity = numpy.zeros((totlen, cfg.model.max_entity_types), 'float')
-        mask = numpy.zeros((totlen, len(dialogs[0].masks[0])), 'float') 
-        starti, endi = 0, 0
-        for dialog in dialogs:
-            endi += len(dialog.utterances)
-            response[starti:endi] = numpy.array(dialog.responses, 'int')
-            for i in range(len(dialog.utterances)):
-                #entities = list(dialog.entities[i].keys()) + flat_list([entity_dict.entity_value[dialog.entities[i][x]] for x in dialog.entities[i] if entity_dict.entity_type[x]==0]) #all entity names and string type entity values
-                entities = entity_dict.name2onehot(dialog.entities[i].keys()) #all entity names
-                seqlen = min(cfg.model.max_seq_len, len(dialog.utterances[i]))
-                utterance[starti+i, :seqlen] = numpy.array(dialog.utterances[i])[:seqlen]
-                entity[starti+i, :] = numpy.array(entities)
-                mask[starti+i, :] = dialog.masks[i]
-            starti = endi
-        
-        #shuffle
-        if shuffle:
-            ids = numpy.arange(totlen)
-            numpy.random.shuffle(ids)
-            response = response[ids]
-            utterance = utterance[ids, :]
-            entity = entity[ids, :]
-            mask = mask[ids, :]
-             
+    def torch(cfg, vocab, entity_dict, dialog):
+        dialoglen = len(dialog.utterances)
+        response = numpy.array(dialog.responses, 'int')
+        response_prev = numpy.zeros((dialoglen, len(dialog.response_dict)), 'float') #previous response, onehot
+        utterance = numpy.ones((dialoglen, cfg.model.max_seq_len), 'int')*vocab._id_PAD
+        entity = numpy.zeros((dialoglen, cfg.model.max_entity_types), 'float')
+        mask = numpy.zeros((dialoglen, len(dialog.masks[0])), 'float') 
+
+        for i in range(dialoglen):
+            entities = entity_dict.name2onehot(dialog.entities[i].keys()) #all entity names
+            seqlen = min(cfg.model.max_seq_len, len(dialog.utterances[i]))
+            utterance[i, :seqlen] = numpy.array(dialog.utterances[i])[:seqlen]
+            entity[i, :] = numpy.array(entities)
+            mask[i, :] = dialog.masks[i]
+            if i > 0:
+                response_prev[i, response[i-1]] = 1
+
         if cfg.model.use_gpu:
             utterance = Variable(torch.LongTensor(utterance).cuda(cfg.model.use_gpu-1))
             response = Variable(torch.LongTensor(response).cuda(cfg.model.use_gpu-1))
+            response_prev = Variable(torch.FloatTensor(response_prev).cuda(cfg.model.use_gpu-1))
             entity = Variable(torch.FloatTensor(entity).cuda(cfg.model.use_gpu-1))
             mask = Variable(torch.FloatTensor(mask).cuda(cfg.model.use_gpu-1))
         else:
             utterance = Variable(torch.LongTensor(utterance))
             response = Variable(torch.LongTensor(response))
+            response_prev = Variable(torch.FloatTensor(response_prev))
             entity = Variable(torch.FloatTensor(entity))
             mask = Variable(torch.FloatTensor(mask))
-        return {'utterance': utterance, 'response':response, 'mask':mask, 'entity':entity}
+        dialog_torch = {'utterance': utterance, 'response':response, 'response_prev':response_prev, 'mask':mask, 'entity':entity}
+        return dialog_torch
 
 
 

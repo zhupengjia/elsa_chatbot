@@ -42,6 +42,9 @@ model:
     max_entity_types: 6
     cnn_kernel_size: 5
     cnn_kernel_num: 16
+    fc_response1: 8
+    fc_response2: 4
+    dialog_emb_size: 30
     learning_rate: 0.001
     weight_decay: 0.0001
     epochs: 10000
@@ -49,7 +52,7 @@ model:
     saved_model: 'data/babi/model.pt'
 
 logger:
-    LogLevel_Console:  10
+    LogLevel_Console:  20
     LogLevel_File: 0
     LogFile: data/babi/train.log
     LogFormat: '%(asctime)s | %(levelname)s: %(message)s'

@@ -31,19 +31,25 @@ optimizer = optim.Adam(tracker.parameters(), lr=config.model.learning_rate, weig
 
 #load checkpoint
 if os.path.exists(config.model['saved_model']):
-    checkpoint = torch.load(config.model['saved_model'])
+    if config.model.use_gpu:
+        checkpoint = torch.load(config.model['saved_model'])
+    else:
+        checkpoint = torch.load(config.model['saved_model'], map_location={'cuda:0': 'cpu'})
     tracker.load_state_dict(checkpoint['model'])
 
 
 for epoch, d in enumerate(data):
     #continue
     tracker.zero_grad()
-    y_prob = tracker(d['utterance'], d['entity'], d['mask'])
-    loss = loss_function(y_prob, d['response'])
+    responses = [dd['response'] for dd in d]
+    responses = torch.cat(responses, 0)
+    y_prob = tracker(d)
+
+    loss = loss_function(y_prob, responses)
 
     #precision
     _, y_pred = torch.max(y_prob.data, 1)
-    precision = y_pred.eq(d['response'].data).sum()/d['response'].numel()
+    precision = y_pred.eq(responses.data).sum()/responses.numel()
     
     logger.info('{} {} {} {}'.format(epoch, config.model.epochs, loss.data[0], precision))
 
@@ -58,3 +64,4 @@ for epoch, d in enumerate(data):
             'optimizer': optimizer_state_dict,
         }
         torch.save(checkpoint, config.model['saved_model'])
+

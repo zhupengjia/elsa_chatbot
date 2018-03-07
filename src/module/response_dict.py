@@ -48,6 +48,9 @@ class Response_Dict(object):
         self.__search.load_index(self.response_ids)
         self.vocab.save()
 
+    #get number of responses
+    def __len__(self):
+        return len(self.response)
 
     #build entity mask of response template
     def build_mask(self):
@@ -62,7 +65,12 @@ class Response_Dict(object):
         for i in range(len(self.entity_need['notneed'])):
             for e in self.entity_need['notneed'][i]:
                 self.masks['notneed'][i, entity_maskdict[e]] = True
-   
+  
+
+    def response2onehot(self, response_id):
+        response = numpy.zeros(len(self.response), 'float')
+        response[response_id] = 1
+        return response
 
     #get most closed response id from templates
     def __getitem__(self, response):
