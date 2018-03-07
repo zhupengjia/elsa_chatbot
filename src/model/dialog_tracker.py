@@ -61,7 +61,7 @@ class Dialog_Tracker(Model_Base):
         utter = self.fc_dialog(utter) 
         return self.softmax(utter)
 
-    def get_response(dialog):
+    def get_response(self, dialog):
         #first get dialog embedding
         dialog_emb = self.dialog_embedding(d['utterance'], d['entity'], d['response_prev'])
         #dialog embedding to lstm as dialog tracker
