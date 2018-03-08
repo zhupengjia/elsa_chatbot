@@ -44,7 +44,6 @@ model:
     cnn_kernel_num: 16
     fc_response1: 8
     fc_response2: 4
-    dialog_emb_size: 30
     learning_rate: 0.001
     weight_decay: 0.0001
     epochs: 10000
