@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import time
 import torch, sys
 import torch.nn.functional as F
 import torch.nn as nn
@@ -62,16 +63,18 @@ class Dialog_Tracker(Model_Base):
         response_prev = self.responseencoder(response_prev)
         #concat together and apply linear
         utter = torch.cat((utter_att, entity, response_prev), 1)
-        return self.fc_dialog(utter) 
+        emb = self.fc_dialog(utter)
+        return emb
+
 
     def get_response(self, dialog):
         #first get dialog embedding
         dialog_emb = self.dialog_embedding(dialog['utterance'], dialog['entity'], dialog['response_prev'])
         #dialog embedding to lstm as dialog tracker
-        lstm_out, _ = self.lstm(dialog_emb.view(len(dialog_emb),1,-1), self.lstm_hidden)
-        lstm_out = self.dropout(lstm_out)
-        lstm_out = lstm_out.view(len(dialog_emb), -1)
-        #lstm_out = dialog_emb
+        #lstm_out, _ = self.lstm(dialog_emb.view(len(dialog_emb),1,-1), self.lstm_hidden)
+        #lstm_out = self.dropout(lstm_out)
+        #lstm_out = lstm_out.view(len(dialog_emb), -1)
+        lstm_out = dialog_emb
         #output to softmax
         lstm_softmax = self.softmax(lstm_out)
         #apply mask 
@@ -84,6 +87,7 @@ class Dialog_Tracker(Model_Base):
         responses = []
         for d in dialogs:
             responses.append(self.get_response(d))
+        sys.exit()
         #concat all dialogs output together
         responses = torch.cat(responses, 0)
         return responses
