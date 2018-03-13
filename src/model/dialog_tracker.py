@@ -4,6 +4,7 @@ import torch, sys
 import torch.nn.functional as F
 import torch.nn as nn
 import torch.autograd as autograd
+from torch.nn.utils.rnn import PackedSequence
 from .sentence_encoder import Sentence_Encoder
 from .model_base import Model_Base
 
@@ -28,7 +29,7 @@ class Dialog_Tracker(Model_Base):
         self.fc_response2 = nn.Linear(self.cfg['fc_response1'], self.cfg['fc_response2'])
         fc1_input_size = self.cfg['cnn_kernel_num']*2 + self.cfg['max_entity_types'] + self.cfg['fc_response2']
         self.fc_dialog = nn.Linear(fc1_input_size, self.Nresponses)
-        self.lstm = nn.LSTM(self.Nresponses, self.Nresponses, num_layers=1)
+        self.lstm = nn.LSTM(self.Nresponses, self.Nresponses, num_layers=1, dropout = self.cfg['dropout'])
         self.softmax = nn.Softmax(dim=1)
         self.lstm_hidden = self.init_hidden()
 
@@ -67,28 +68,17 @@ class Dialog_Tracker(Model_Base):
         return emb
 
 
-    def get_response(self, dialog):
+    def forward(self, dialogs):
         #first get dialog embedding
-        dialog_emb = self.dialog_embedding(dialog['utterance'], dialog['entity'], dialog['response_prev'])
+        dialog_emb = self.dialog_embedding(dialogs['utterance'], dialogs['entity'], dialogs['response_prev'])
+        dialog_emb = PackedSequence(dialog_emb, dialogs['batch_sizes'])
         #dialog embedding to lstm as dialog tracker
-        #lstm_out, _ = self.lstm(dialog_emb.view(len(dialog_emb),1,-1), self.lstm_hidden)
-        #lstm_out = self.dropout(lstm_out)
-        #lstm_out = lstm_out.view(len(dialog_emb), -1)
-        lstm_out = dialog_emb
+        lstm_out, (ht, ct) = self.lstm(dialog_emb)
         #output to softmax
-        lstm_softmax = self.softmax(lstm_out)
+        lstm_softmax = self.softmax(lstm_out.data)
         #apply mask 
-        response = lstm_softmax * dialog['mask']
+        response = lstm_softmax * dialogs['mask']
         response = torch.log(response + 1e-15)
         return response
 
-
-    def forward(self, dialogs):
-        responses = []
-        for d in dialogs:
-            responses.append(self.get_response(d))
-        sys.exit()
-        #concat all dialogs output together
-        responses = torch.cat(responses, 0)
-        return responses
 

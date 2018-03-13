@@ -4,6 +4,7 @@ from torch.autograd import Variable
 from torch import functional as F
 from ..hook.behaviors import Behaviors
 from ailab.utils import flat_list
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 class Dialog_Status:
     def __init__(self, cfg, vocab, entity_dict, response_dict):
@@ -81,7 +82,7 @@ class Dialog_Status:
         self.add_utterance(token_ids, entity_ids)
         self.getmask()
 
-        utterance = numpy.ones((1, self.cfg.model.max_seq_len), 'int')*self.vocab._id_PAD
+        utterance = numpy.zeros((1, self.cfg.model.max_seq_len), 'int')
         entity = numpy.zeros((1, self.cfg.model.max_entity_types), 'float')
         mask = numpy.zeros((1, len(self.masks[0])), 'float') 
         seqlen = min(self.cfg.model.max_seq_len, len(token_ids))
@@ -104,36 +105,54 @@ class Dialog_Status:
 
     #convert to dialogs to batch
     @staticmethod 
-    def torch(cfg, vocab, entity_dict, dialog):
-        dialoglen = len(dialog.utterances)
-        response = numpy.array(dialog.responses, 'int')
-        response_prev = numpy.zeros((dialoglen, len(dialog.response_dict)), 'float') #previous response, onehot
-        utterance = numpy.ones((dialoglen, cfg.model.max_seq_len), 'int')*vocab._id_PAD
-        entity = numpy.zeros((dialoglen, cfg.model.max_entity_types), 'float')
-        mask = numpy.zeros((dialoglen, len(dialog.masks[0])), 'float') 
-
-        for i in range(dialoglen):
-            entities = entity_dict.name2onehot(dialog.entities[i].keys()) #all entity names
-            seqlen = min(cfg.model.max_seq_len, len(dialog.utterances[i]))
-            utterance[i, :seqlen] = numpy.array(dialog.utterances[i])[:seqlen]
-            entity[i, :] = numpy.array(entities)
-            mask[i, :] = dialog.masks[i]
-            if i > 0:
-                response_prev[i, response[i-1]] = 1
-
+    def torch(cfg, vocab, entity_dict, dialogs):
         if cfg.model.use_gpu:
-            utterance = Variable(torch.LongTensor(utterance).cuda(cfg.model.use_gpu-1))
-            response = Variable(torch.LongTensor(response).cuda(cfg.model.use_gpu-1))
-            response_prev = Variable(torch.FloatTensor(response_prev).cuda(cfg.model.use_gpu-1))
-            entity = Variable(torch.FloatTensor(entity).cuda(cfg.model.use_gpu-1))
-            mask = Variable(torch.FloatTensor(mask).cuda(cfg.model.use_gpu-1))
+            float_tensor = torch.cuda.FloatTensor
+            long_tensor = torch.cuda.LongTensor
         else:
-            utterance = Variable(torch.LongTensor(utterance))
-            response = Variable(torch.LongTensor(response))
-            response_prev = Variable(torch.FloatTensor(response_prev))
-            entity = Variable(torch.FloatTensor(entity))
-            mask = Variable(torch.FloatTensor(mask))
-        dialog_torch = {'utterance': utterance, 'response':response, 'response_prev':response_prev, 'mask':mask, 'entity':entity}
+            float_tensor = torch.FloatTensor
+            long_tensor = torch.LongTensor
+        
+        dialog_lengths = numpy.array([len(d.utterances) for d in dialogs], 'int')
+        perm_idx = dialog_lengths.argsort()[::-1]
+        dialog_lengths = dialog_lengths[perm_idx]
+        max_dialog_len = int(dialog_lengths[0])
+        
+        utterance = long_tensor(cfg.model.batch_size, max_dialog_len, cfg.model.max_seq_len).zero_()
+        response = long_tensor(cfg.model.batch_size, max_dialog_len).zero_()
+        entity = float_tensor(cfg.model.batch_size, max_dialog_len, cfg.model.max_entity_types).zero_()
+        mask = float_tensor(cfg.model.batch_size, max_dialog_len, len(dialogs[0].masks[0])).zero_()
+        response_prev = float_tensor(cfg.model.batch_size, max_dialog_len, len(dialogs[0].response_dict)).zero_() #previous response, onehot
+
+        for j, idx in enumerate(perm_idx):
+            dialog = dialogs[idx]
+            response[j, :len(dialog.responses)] = long_tensor(dialog.responses)
+            for i in range(dialog_lengths[j]):
+                entities = entity_dict.name2onehot(dialog.entities[i].keys()) #all entity names
+                seqlen = min(cfg.model.max_seq_len, len(dialog.utterances[i]))
+                utterance[j, i, :seqlen] = long_tensor(dialog.utterances[i])[:seqlen]
+                entity[j, i, :] = float_tensor(entities)
+                mask[j, i, :] = float_tensor(dialog.masks[i])
+                if i > 0:
+                    response_prev[j, i, response[j, i-1]] = 1
+        
+        #to variable
+        utterance = Variable(utterance)
+        response = Variable(response)
+        entity = Variable(entity)
+        mask = Variable(mask)
+        response_prev = Variable(response_prev)
+
+        #pack them up
+        utterance = pack_padded_sequence(utterance, dialog_lengths, batch_first=True)
+        response = pack_padded_sequence(response, dialog_lengths, batch_first=True).data
+        entity = pack_padded_sequence(entity, dialog_lengths, batch_first=True).data
+        mask = pack_padded_sequence(mask, dialog_lengths, batch_first=True).data
+        response_prev = pack_padded_sequence(response_prev, dialog_lengths, batch_first=True).data
+        batch_sizes = utterance.batch_sizes
+        utterance = utterance.data
+
+        dialog_torch = {'utterance': utterance, 'response':response, 'response_prev':response_prev, 'mask':mask, 'entity':entity, 'batch_sizes':batch_sizes}
         return dialog_torch
 
 

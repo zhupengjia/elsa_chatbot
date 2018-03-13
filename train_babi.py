@@ -39,12 +39,10 @@ if os.path.exists(config.model['saved_model']):
 
 
 for epoch, d in enumerate(data):
-    #continue
     tracker.zero_grad()
-    responses = [dd['response'] for dd in d]
-    responses = torch.cat(responses, 0)
     y_prob = tracker(d)
 
+    responses = d['response']
     loss = loss_function(y_prob, responses)
 
     #precision
