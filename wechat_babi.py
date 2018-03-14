@@ -48,14 +48,15 @@ class WechatSession(werobot.WeRoBot):
         else:
             if self.dialog_status[sessionid].add_utterance(u) is None:
                 return ':)'
-            self.dialog_status.getmask()
-            data = Dialog_Status.torch(self.cfg, self.reader.vocab, self.reader.entity_dict, [dialog_status])
+            self.dialog_status[sessionid].getmask()
+            data = Dialog_Status.torch(self.cfg, self.reader.vocab, self.reader.entity_dict, [self.dialog_status[sessionid]])
             if data is None:
                 return ':)'
             y_prob = self.tracker(data)
             _, y_pred = torch.max(y_prob.data, 1)
             y_pred = int(y_pred.numpy()[-1])
             response = self.reader.get_response(y_pred)
+            
             self.dialog_status[sessionid].add_response(y_pred)
 
             if y_pred == 11:
