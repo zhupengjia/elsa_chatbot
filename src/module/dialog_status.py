@@ -106,47 +106,48 @@ class Dialog_Status:
     #convert to dialogs to batch
     @staticmethod 
     def torch(cfg, vocab, entity_dict, dialogs):
-        t1 = time.time()
         dialog_lengths = numpy.array([len(d.utterances) for d in dialogs], 'int')
         perm_idx = dialog_lengths.argsort()[::-1]
         dialog_lengths = dialog_lengths[perm_idx]
         max_dialog_len = int(dialog_lengths[0])
         
-        utterance = torch.LongTensor(cfg.model.batch_size, max_dialog_len, cfg.model.max_seq_len).zero_()
-        response = torch.LongTensor(cfg.model.batch_size, max_dialog_len).zero_()
-        entity = torch.FloatTensor(cfg.model.batch_size, max_dialog_len, cfg.model.max_entity_types).zero_()
-        mask = torch.FloatTensor(cfg.model.batch_size, max_dialog_len, len(dialogs[0].masks[0])).zero_()
-        response_prev = torch.FloatTensor(cfg.model.batch_size, max_dialog_len, len(dialogs[0].response_dict)).zero_() #previous response, onehot
+        utterance = numpy.zeros((cfg.model.batch_size, max_dialog_len, cfg.model.max_seq_len), 'int')
+        response = numpy.zeros((cfg.model.batch_size, max_dialog_len), 'int')
+        entity = numpy.zeros((cfg.model.batch_size, max_dialog_len, cfg.model.max_entity_types), 'float')
+        mask = numpy.zeros((cfg.model.batch_size, max_dialog_len, len(dialogs[0].masks[0])), 'float')
+        response_prev = numpy.zeros((cfg.model.batch_size, max_dialog_len, len(dialogs[0].response_dict)), 'float') #previous response, onehot
 
-        t2 = time.time()
         for j, idx in enumerate(perm_idx):
             dialog = dialogs[idx]
             response[j, :len(dialog.responses)] = torch.LongTensor(dialog.responses)
             for i in range(dialog_lengths[j]):
                 entities = entity_dict.name2onehot(dialog.entities[i].keys()) #all entity names
                 seqlen = min(cfg.model.max_seq_len, len(dialog.utterances[i]))
-                utterance[j, i, :seqlen] = torch.LongTensor(dialog.utterances[i])[:seqlen]
-                entity[j, i, :] = torch.FloatTensor(entities)
-                mask[j, i, :] = torch.FloatTensor(dialog.masks[i].astype('float'))
+                utterance[j, i, :seqlen] = numpy.array(dialog.utterances[i])[:seqlen]
+                entity[j, i, :] = entities
+                mask[j, i, :] = dialog.masks[i].astype('float')
                 if i > 0:
                     response_prev[j, i, response[j, i-1]] = 1
-
-
+        
         #to variable
-        t3 = time.time()
+        utterance = torch.LongTensor(utterance)
+        response = torch.LongTensor(response)
+        entity = torch.FloatTensor(entity)
+        mask = torch.FloatTensor(mask)
+        response_prev = torch.FloatTensor(response_prev)
         if cfg.model.use_gpu:
-            utterance = utterance.cuda()
-            response = response.cuda()
-            entity = entity.cuda()
-            mask = mask.cuda()
-            response_prev = response_prev.cuda()
+            utterance = utterance.cuda(cfg.model.use_gpu-1)
+            response = response.cuda(cfg.model.use_gpu-1)
+            entity = entity.cuda(cfg.model.use_gpu-1)
+            mask = mask.cuda(cfg.model.use_gpu-1)
+            response_prev = response_prev.cuda(cfg.model.use_gpu-1)
         utterance = Variable(utterance)
         response = Variable(response)
         entity = Variable(entity)
         mask = Variable(mask)
         response_prev = Variable(response_prev)
 
-        #pack them up
+        #pack them up for different dialogs
         utterance = pack_padded_sequence(utterance, dialog_lengths, batch_first=True)
         response = pack_padded_sequence(response, dialog_lengths, batch_first=True).data
         entity = pack_padded_sequence(entity, dialog_lengths, batch_first=True).data
@@ -156,8 +157,6 @@ class Dialog_Status:
         utterance = utterance.data
 
         dialog_torch = {'utterance': utterance, 'response':response, 'response_prev':response_prev, 'mask':mask, 'entity':entity, 'batch_sizes':batch_sizes}
-        t4 = time.time()
-        #print(t4-t1, t2-t1, t3-t2, t4-t3)
         return dialog_torch
 
 

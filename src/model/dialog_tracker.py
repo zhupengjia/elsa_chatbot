@@ -29,7 +29,7 @@ class Dialog_Tracker(Model_Base):
         self.fc_response2 = nn.Linear(self.cfg['fc_response1'], self.cfg['fc_response2'])
         fc1_input_size = self.cfg['cnn_kernel_num']*2 + self.cfg['max_entity_types'] + self.cfg['fc_response2']
         self.fc_dialog = nn.Linear(fc1_input_size, self.Nresponses)
-        self.lstm = nn.LSTM(self.Nresponses, self.Nresponses, num_layers=1, dropout = self.cfg['dropout'])
+        self.lstm = nn.LSTM(self.Nresponses, self.Nresponses, num_layers=1, dropout = self.cfg['dropout'], batch_first=True)
         self.softmax = nn.Softmax(dim=1)
 
     def entityencoder(self, x):
@@ -62,10 +62,9 @@ class Dialog_Tracker(Model_Base):
     def forward(self, dialogs):
         #first get dialog embedding
         dialog_emb = self.dialog_embedding(dialogs['utterance'], dialogs['entity'], dialogs['response_prev'])
-        dialog_emb = PackedSequence(dialog_emb, dialogs['batch_sizes'])
+        dialog_emb = PackedSequence(dialog_emb, dialogs['batch_sizes']) #feed batch_size and pack to packedsequence
         #dialog embedding to lstm as dialog tracker
         lstm_out, (ht, ct) = self.lstm(dialog_emb)
-        #lstm_out = dialog_emb
         #output to softmax
         lstm_softmax = self.softmax(lstm_out.data)
         #apply mask 
