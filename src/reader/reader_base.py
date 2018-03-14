@@ -98,7 +98,8 @@ class Reader_Base(object):
                 dialog_status = self.new_dialog()
                 for i in range(idrange[0], idrange[1]):
                     #add to dialog status
-                    dialog_status.add_utterance(self.data['utterance'][i], self.data['ent_utterance'][i])
+                    if dialog_status.add_utterance(self.data['utterance'][i], self.data['ent_utterance'][i]) is None:
+                        continue
                     #mask
                     dialog_status.getmask()
                     dialog_status.add_response(self.data['response'][i])

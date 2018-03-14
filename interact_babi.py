@@ -2,6 +2,7 @@
 import sys, torch, os
 from src.reader.reader_babi import Reader_Babi
 from src.model.dialog_tracker import Dialog_Tracker
+from src.module.dialog_status import Dialog_Status
 from nlptools.utils import Config
 import torch.optim as optim
 
@@ -9,7 +10,7 @@ import torch.optim as optim
 class InteractiveSession():
     def __init__(self):
         self.cfg = Config('config/babi.yml')
-        if not torch.cuda.is_available(): self.cfg.model.use_gpu = 0
+        self.cfg.model.use_gpu = 0 #use cpu
         self.cfg.model.dropout = 0 #no dropout while predict
 
         self.reader = Reader_Babi(self.cfg)
@@ -46,13 +47,16 @@ class InteractiveSession():
                 break
         
             else:
-                data = dialog_status(u)
+                if dialog_status.add_utterance(u) is None:
+                    continue
+                dialog_status.getmask()
+                data = Dialog_Status.torch(self.cfg, self.reader.vocab, self.reader.entity_dict, [dialog_status])
                 if data is None:
                     continue
                 #print(dialog_status)
-                y_prob = self.tracker(data['utterance'], data['entity'], data['mask'])
+                y_prob = self.tracker(data)
                 _, y_pred = torch.max(y_prob.data, 1)
-                y_pred = y_pred.numpy()[0]
+                y_pred = int(y_pred.numpy()[-1])
                 response = self.reader.get_response(y_pred)
                 dialog_status.add_response(y_pred)
                 print(response)

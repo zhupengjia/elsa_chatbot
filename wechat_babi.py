@@ -2,6 +2,7 @@
 import sys, torch, os, werobot
 from src.reader.reader_babi import Reader_Babi
 from src.model.dialog_tracker import Dialog_Tracker
+from src.module.dialog_status import Dialog_Status
 from nlptools.utils import Config
 import torch.optim as optim
 
@@ -45,14 +46,18 @@ class WechatSession(werobot.WeRoBot):
             return 'reset the dialog'
 
         else:
-            data = self.dialog_status[sessionid](u)
+            if self.dialog_status[sessionid].add_utterance(u) is None:
+                return ':)'
+            self.dialog_status.getmask()
+            data = Dialog_Status.torch(self.cfg, self.reader.vocab, self.reader.entity_dict, [dialog_status])
             if data is None:
                 return ':)'
-            y_prob = self.tracker(data['utterance'], data['entity'], data['mask'])
+            y_prob = self.tracker(data)
             _, y_pred = torch.max(y_prob.data, 1)
-            y_pred = y_pred.numpy()[0]
+            y_pred = int(y_pred.numpy()[-1])
             response = self.reader.get_response(y_pred)
             self.dialog_status[sessionid].add_response(y_pred)
+
             if y_pred == 11:
                 response += '\n======= ' + 'information got:'
                 for eid in self.dialog_status[sessionid].entity:

@@ -2,6 +2,7 @@ british
 cantonese
 french
 indian
+chinese
 italian
 japanese
 korean

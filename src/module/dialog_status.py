@@ -18,14 +18,24 @@ class Dialog_Status:
 
 
     # add utterance to status
-    def add_utterance(self, utterance, entities):
-        self.utterances.append(utterance)
-        for e in entities:
-            self.entity[e] = entities[e][0]
+    def add_utterance(self, utterance, entity_ids=None):
+        if isinstance(utterance, str):
+            #predeal utterance
+            entities, tokens = self.vocab.seg_ins.get(utterance.lower())
+            utterance_ids = self.vocab.sentence2id(tokens)
+            if len(utterance_ids) < 1:
+                return None
+            entity_ids =  self.entity_dict(entities)
+        else:
+            utterance_ids = utterance
+        self.utterances.append(utterance_ids)
+        for e in entity_ids:
+            self.entity[e] = entity_ids[e][0]
             #entity status and response mask
             if e in self.entity_dict.entity_maskdict:
                 self.entity_mask[self.entity_dict.entity_maskdict[e], 0] = False #mask for response choose
         self.entities.append(copy.deepcopy(self.entity))
+        return True
 
 
     #add response and apply function
@@ -72,50 +82,21 @@ class Dialog_Status:
         return txt    
 
 
-    #convert an utterance to tracker input
-    def __call__(self, utterance):
-        entities, tokens = self.vocab.seg_ins.get(utterance.lower())
-        token_ids = self.vocab.sentence2id(tokens)
-        if len(token_ids) < 1:
-            return None
-        entity_ids =  self.entity_dict(entities)
-        self.add_utterance(token_ids, entity_ids)
-        self.getmask()
-
-        utterance = numpy.zeros((1, self.cfg.model.max_seq_len), 'int')
-        entity = numpy.zeros((1, self.cfg.model.max_entity_types), 'float')
-        mask = numpy.zeros((1, len(self.masks[0])), 'float') 
-        seqlen = min(self.cfg.model.max_seq_len, len(token_ids))
-        utterance[0, :seqlen] = numpy.array(token_ids)[:seqlen]
-        entity[0, :] = numpy.array(self.entity_dict.name2onehot(entity_ids))
-        mask[0,:] = self.masks[-1] 
-        
-        if self.cfg.model.use_gpu:
-            utterance = Variable(torch.LongTensor(utterance).cuda(cfg.model.use_gpu-1))
-            entity = Variable(torch.FloatTensor(entity).cuda(cfg.model.use_gpu-1))
-            mask = Variable(torch.FloatTensor(mask).cuda(cfg.model.use_gpu-1))
-        else:
-            utterance = Variable(torch.LongTensor(utterance))
-            entity = Variable(torch.FloatTensor(entity))
-            mask = Variable(torch.FloatTensor(mask))
-        
-        return {'utterance': utterance, 'entity':entity, 'mask': mask}
-         
-
-
-    #convert to dialogs to batch
+    #convert dialogs to batch
     @staticmethod 
     def torch(cfg, vocab, entity_dict, dialogs):
         dialog_lengths = numpy.array([len(d.utterances) for d in dialogs], 'int')
         perm_idx = dialog_lengths.argsort()[::-1]
+        N_dialogs = len(dialogs)
         dialog_lengths = dialog_lengths[perm_idx]
         max_dialog_len = int(dialog_lengths[0])
         
-        utterance = numpy.zeros((cfg.model.batch_size, max_dialog_len, cfg.model.max_seq_len), 'int')
-        response = numpy.zeros((cfg.model.batch_size, max_dialog_len), 'int')
-        entity = numpy.zeros((cfg.model.batch_size, max_dialog_len, cfg.model.max_entity_types), 'float')
-        mask = numpy.zeros((cfg.model.batch_size, max_dialog_len, len(dialogs[0].masks[0])), 'float')
-        response_prev = numpy.zeros((cfg.model.batch_size, max_dialog_len, len(dialogs[0].response_dict)), 'float') #previous response, onehot
+        utterance = numpy.zeros((N_dialogs, max_dialog_len, cfg.model.max_seq_len), 'int')
+        response = numpy.zeros((N_dialogs, max_dialog_len), 'int')
+        entity = numpy.zeros((N_dialogs, max_dialog_len, cfg.model.max_entity_types), 'float')
+        mask = numpy.zeros((N_dialogs, max_dialog_len, len(dialogs[0].masks[0])), 'float')
+        response_prev = numpy.zeros((N_dialogs, max_dialog_len, len(dialogs[0].response_dict)), 'float') #previous response, onehot
+
 
         for j, idx in enumerate(perm_idx):
             dialog = dialogs[idx]
@@ -146,6 +127,7 @@ class Dialog_Status:
         entity = Variable(entity)
         mask = Variable(mask)
         response_prev = Variable(response_prev)
+
 
         #pack them up for different dialogs
         utterance = pack_padded_sequence(utterance, dialog_lengths, batch_first=True)
