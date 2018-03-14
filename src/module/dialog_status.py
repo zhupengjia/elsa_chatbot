@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import numpy, torch, copy
+import numpy, torch, copy, time, sys
 from torch.autograd import Variable
 from torch import functional as F
 from ..hook.behaviors import Behaviors
@@ -106,37 +106,40 @@ class Dialog_Status:
     #convert to dialogs to batch
     @staticmethod 
     def torch(cfg, vocab, entity_dict, dialogs):
-        if cfg.model.use_gpu:
-            float_tensor = torch.cuda.FloatTensor
-            long_tensor = torch.cuda.LongTensor
-        else:
-            float_tensor = torch.FloatTensor
-            long_tensor = torch.LongTensor
-        
+        t1 = time.time()
         dialog_lengths = numpy.array([len(d.utterances) for d in dialogs], 'int')
         perm_idx = dialog_lengths.argsort()[::-1]
         dialog_lengths = dialog_lengths[perm_idx]
         max_dialog_len = int(dialog_lengths[0])
         
-        utterance = long_tensor(cfg.model.batch_size, max_dialog_len, cfg.model.max_seq_len).zero_()
-        response = long_tensor(cfg.model.batch_size, max_dialog_len).zero_()
-        entity = float_tensor(cfg.model.batch_size, max_dialog_len, cfg.model.max_entity_types).zero_()
-        mask = float_tensor(cfg.model.batch_size, max_dialog_len, len(dialogs[0].masks[0])).zero_()
-        response_prev = float_tensor(cfg.model.batch_size, max_dialog_len, len(dialogs[0].response_dict)).zero_() #previous response, onehot
+        utterance = torch.LongTensor(cfg.model.batch_size, max_dialog_len, cfg.model.max_seq_len).zero_()
+        response = torch.LongTensor(cfg.model.batch_size, max_dialog_len).zero_()
+        entity = torch.FloatTensor(cfg.model.batch_size, max_dialog_len, cfg.model.max_entity_types).zero_()
+        mask = torch.FloatTensor(cfg.model.batch_size, max_dialog_len, len(dialogs[0].masks[0])).zero_()
+        response_prev = torch.FloatTensor(cfg.model.batch_size, max_dialog_len, len(dialogs[0].response_dict)).zero_() #previous response, onehot
 
+        t2 = time.time()
         for j, idx in enumerate(perm_idx):
             dialog = dialogs[idx]
-            response[j, :len(dialog.responses)] = long_tensor(dialog.responses)
+            response[j, :len(dialog.responses)] = torch.LongTensor(dialog.responses)
             for i in range(dialog_lengths[j]):
                 entities = entity_dict.name2onehot(dialog.entities[i].keys()) #all entity names
                 seqlen = min(cfg.model.max_seq_len, len(dialog.utterances[i]))
-                utterance[j, i, :seqlen] = long_tensor(dialog.utterances[i])[:seqlen]
-                entity[j, i, :] = float_tensor(entities)
-                mask[j, i, :] = float_tensor(dialog.masks[i])
+                utterance[j, i, :seqlen] = torch.LongTensor(dialog.utterances[i])[:seqlen]
+                entity[j, i, :] = torch.FloatTensor(entities)
+                mask[j, i, :] = torch.FloatTensor(dialog.masks[i].astype('float'))
                 if i > 0:
                     response_prev[j, i, response[j, i-1]] = 1
-        
+
+
         #to variable
+        t3 = time.time()
+        if cfg.model.use_gpu:
+            utterance = utterance.cuda()
+            response = response.cuda()
+            entity = entity.cuda()
+            mask = mask.cuda()
+            response_prev = response_prev.cuda()
         utterance = Variable(utterance)
         response = Variable(response)
         entity = Variable(entity)
@@ -153,6 +156,8 @@ class Dialog_Status:
         utterance = utterance.data
 
         dialog_torch = {'utterance': utterance, 'response':response, 'response_prev':response_prev, 'mask':mask, 'entity':entity, 'batch_sizes':batch_sizes}
+        t4 = time.time()
+        #print(t4-t1, t2-t1, t3-t2, t4-t3)
         return dialog_torch
 
 

@@ -74,6 +74,7 @@ class Dialog_Tracker(Model_Base):
         dialog_emb = PackedSequence(dialog_emb, dialogs['batch_sizes'])
         #dialog embedding to lstm as dialog tracker
         lstm_out, (ht, ct) = self.lstm(dialog_emb)
+        #lstm_out = dialog_emb
         #output to softmax
         lstm_softmax = self.softmax(lstm_out.data)
         #apply mask 
