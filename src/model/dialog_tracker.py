@@ -31,7 +31,6 @@ class Dialog_Tracker(Model_Base):
         self.fc_dialog = nn.Linear(fc1_input_size, self.Nresponses)
         self.lstm = nn.LSTM(self.Nresponses, self.Nresponses, num_layers=1, dropout = self.cfg['dropout'])
         self.softmax = nn.Softmax(dim=1)
-        self.lstm_hidden = self.init_hidden()
 
     def entityencoder(self, x):
         x = self.fc_entity1(x)
@@ -45,14 +44,6 @@ class Dialog_Tracker(Model_Base):
         x = self.dropout(x)
         return x
 
-    def init_hidden(self):
-        if self.cfg.use_gpu:
-            return (autograd.Variable(torch.zeros(1, 1, self.Nresponses).cuda(self.cfg.use_gpu-1)),\
-                    autograd.Variable(torch.zeros(1, 1, self.Nresponses).cuda(self.cfg.use_gpu-1)))
-        else:
-            return (autograd.Variable(torch.zeros(1, 1, self.Nresponses)),\
-                   autograd.Variable(torch.zeros(1, 1, self.Nresponses)))
-        
 
     def dialog_embedding(self, utterance, entity,  response_prev):
         #utterance embedding
