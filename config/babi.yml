@@ -39,7 +39,7 @@ model:
     use_gpu: 1
     max_seq_len: 10
     max_dialog_len: 20
-    dropout: 0.7
+    dropout: 0.8
     max_entity_types: 6
     cnn_kernel_size: 5
     cnn_kernel_num: 16
