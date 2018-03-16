@@ -1,8 +1,7 @@
 # Entity  extraction
 
 Provided from ailab package:  
-ailab.text.ner.py  
-
+ailab.text.ner.py
 
 
 ## Keywords
@@ -11,7 +10,15 @@ Related config:
 ner:  
 	keywords:  
 		entity_name1: keyword_list1  
-		...
+		...  
+	annoy_filter: filter threshold (for vector search)  
+  
+Related code:  
+ailab/text/ner.py  
+Class NER_Base:  
+	get_keywords  
+  
+The keywords search will also migrate to regex search in the code  
 
 ## Regex
 
@@ -19,7 +26,12 @@ Related config:
 ner:  
 	regex:  
 		entity_name1: regex1  
-		....
+		....  
+  
+Related code:  
+ailab/text/ner.py  
+Class NER_Base:  
+	get_regex
 
 ## NER
 
@@ -27,7 +39,12 @@ Related config:
 ner:  
 	ner:  
 			entity_name1:entity_raw_name_from_extraction  
-		....
+		....  
+  
+Related code:  
+ailab/text/ner.py  
+Class NER_Base:  
+	get_ner
 
 
 # Entity dictionary
@@ -259,6 +276,5 @@ not implemented
 ## Embedded functions
 
 Location:  
-src/hook/behaviors.py  
-
+src/hook/behaviors.py
 
