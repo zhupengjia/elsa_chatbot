@@ -3,12 +3,29 @@ import glob, os, json, sys, re
 from ailab.utils import setLogger
 from .reader_base import Reader_Base
 
+'''
+    Author: Pengjia Zhu (zhupengjia@gmail.com)
+'''
+
 class Reader_VUI(Reader_Base):
+    '''
+        Read from VUI json files (compatible with old api.ai format), inherit from Reader_Base 
+
+        Input:
+            - cfg: dictionary or ailab.utils.config object
+                - needed keys: Please check needed keys in Reader_Base
+    '''
     def __init__(self, cfg):
         Reader_Base.__init__(self, cfg)
         self.data = []
 
-    def jsonparse(self, data):
+    def _jsonparse(self, data):
+        '''
+            Parse the json data
+
+            Input:
+                - data: list of json format string
+        '''
         intents, intent_names, texts, entities, metas, responses  = [], [], [], [], [], []
         handlers = {}
         for d in data:
@@ -53,11 +70,15 @@ class Reader_VUI(Reader_Base):
         return {'intents':intents, 'intent_names':intent_names,  'texts': texts, 'entities': entities, 'metas': metas, 'handlers':handlers, 'responses':responses}
 
     def read(self, jsondir):
+        '''
+            Input:
+                - jsondir: dictionary of json files
+        '''
         data = []
         for fn in glob.glob(os.path.join(jsondir, '*.json')):
             with open(fn, 'r') as f:
                 data.append(json.load(f))
-            print(self.jsonparse(data))
+            print(self._jsonparse(data))
             sys.exit()
 
 

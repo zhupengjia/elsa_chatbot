@@ -3,14 +3,29 @@ import glob, os, yaml, sys, re
 from ailab.utils import zload, zdump, flat_list
 from .reader_base import Reader_Base
 
+'''
+    Author: Pengjia Zhu (zhupengjia@gmail.com)
+'''
+
 class Reader_Babi(Reader_Base):
+    '''
+        Read from babi training data, inherit from Reader_Base
+
+        Input:
+            - cfg: dictionary or ailab.utils.config object
+                - needed keys: Please check needed keys in Reader_Base
+    '''
     def __init__(self, cfg):
         Reader_Base.__init__(self, cfg)
      
-    def rm_index(self, row):
+    def _rm_index(self, row):
         return [' '.join(row[0].split(' ')[1:])] + row[1:]
 
     def read(self, filename):
+        '''
+            Input:
+                - filename: the path of training file
+        '''
         cached_pkl = filename + '.pkl'
         if os.path.exists(cached_pkl):
             convs = zload(cached_pkl)
@@ -21,7 +36,7 @@ class Reader_Babi(Reader_Base):
                 utterance, response = '', ''
                 for l in f:
                     l = l.strip()
-                    l = self.rm_index(l.split('\t'))
+                    l = self._rm_index(l.split('\t'))
                     if l[0][:6] == 'resto_':
                         utterance, response = '', ''
                         continue

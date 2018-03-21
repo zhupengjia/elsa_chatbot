@@ -3,7 +3,19 @@ import torch, sys
 import torch.nn.functional as F
 import torch.nn as nn
 
+'''
+    Author: Pengjia Zhu (zhupengjia@gmail.com)
+'''
+
 class Model_Base(nn.Module):
+    '''
+        Base Model class
+
+        Input:
+            - cfg: dictionary or ailab.utils.config object
+                - needed keys: Please check your subclass 
+            - vocab: instance of ailab.text.vocab
+    '''
     def __init__(self, cfg, vocab):
         super().__init__()
         self.cfg = cfg

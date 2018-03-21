@@ -4,7 +4,14 @@ from ailab.text import Segment, Embedding, Vocab
 import os, pandas, sys, numpy, math, torch
 from torch.autograd import Variable
 
+'''
+    Author: Pengjia Zhu (zhupengjia@gmail.com)
+'''
+
 class Reader_Quora(object):
+    '''
+        Reader for quora's duplicated QA. Used for training the sentence embedding with supervised learning, use __getitem__ method or iterator to get the data
+    '''
     def __init__(self, cfg):
         self.cfg = cfg
         self.seg = Segment(self.cfg)
@@ -15,6 +22,9 @@ class Reader_Quora(object):
         self.predeal()
 
     def predeal(self):
+        '''
+            Predeal the data. No input needed
+        '''
         if os.path.exists(self.cfg['data_cache']):
             self.logger.info('loaded quora data from cache')
             self.data = zload(self.cfg['data_cache'])
@@ -33,6 +43,9 @@ class Reader_Quora(object):
         self.N_batches = math.ceil(len(self.data['question1_id'])/self.cfg["batch_size"])
 
     def shuffle(self):
+        '''
+            Shuffle the data
+        '''
         self.logger.info('shuffle data')
         self.data = self.data.sample(frac=1).reset_index(drop=True)
 
@@ -41,6 +54,9 @@ class Reader_Quora(object):
             yield self.__getitem__(i)
 
     def __getitem__(self, i):
+        '''
+            Return torch variables for training
+        '''
         idx = i*self.cfg["batch_size"]
         data_len = min(self.cfg['batch_size'], len(self.data['question1_id'])-idx) 
         data = {'question1': numpy.ones((data_len, self.cfg['max_seq_len']), 'int')*self.vocab._id_PAD,\
@@ -62,5 +78,8 @@ class Reader_Quora(object):
         return data 
 
     def __len__(self):
+        '''
+            Return the batch size
+        '''
         return self.N_batches
 

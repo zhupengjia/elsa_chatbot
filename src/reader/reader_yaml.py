@@ -3,11 +3,27 @@ import glob, os, yaml, sys, re
 from ailab.utils import setLogger
 from .reader_base import Reader_Base
 
+'''
+    Author: Pengjia Zhu (zhupengjia@gmail.com)
+'''
+
 class Reader_YAML(Reader_Base):
+    '''
+        Read from yaml dialogs, inherit from Reader_Base
+
+        Input:
+            - cfg: dictionary or ailab.utils.config object
+                - needed keys: Please check needed keys in Reader_Base
+    '''
     def __init__(self, cfg):
         Reader_Base.__init__(self, cfg)
 
     def read(self, yamlfile, bidirectional=False):
+        '''
+            Input:
+                - yamlfile: the yaml file path
+                - bidirectional: bool, check if train bidirectional dialog, default is False
+        '''
         with open(yamlfile, 'r') as f:
             data = yaml.load(f)
         key = ''.join(data['categories'])

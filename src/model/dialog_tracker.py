@@ -8,14 +8,37 @@ from torch.nn.utils.rnn import PackedSequence
 from .sentence_encoder import Sentence_Encoder
 from .model_base import Model_Base
 
+'''
+    Author: Pengjia Zhu (zhupengjia@gmail.com)
+'''
+
 class Dialog_Tracker(Model_Base):
+    '''
+        dialog tracker for end2end chatbot 
+
+        Input:
+            - cfg: dictionary or ailab.utils.config object
+                - needed keys:
+                    - cnn_kernel_num
+                    - cnn_kernel_size
+                    - dropout
+                    - max_entity_types
+                    - fc_response1
+                    - fc_response2
+            - vocab: instance of ailab.text.vocab
+            - Nresponses: number of available responses
+            
+    '''
     def __init__(self, cfg, vocab, Nresponses):
         super().__init__(cfg, vocab)
         self.Nresponses = Nresponses
         self.network()
 
     def network(self):
-        self.encoder = Sentence_Encoder(self.cfg, self.vocab)
+        '''
+            Define the network modules
+        '''
+        self.encoder = Sentence_Encoder(self.cfg, self.vocab) # sentence encoder for utterance embedding
         self.encoder.network()
         self.conv = nn.Conv2d(in_channels = 1, \
                 out_channels = self.cfg['cnn_kernel_num'], \
@@ -33,12 +56,26 @@ class Dialog_Tracker(Model_Base):
         self.softmax = nn.Softmax(dim=1)
 
     def entityencoder(self, x):
+        '''
+            entity encoder, model framwork:
+                - linear + linear 
+
+            Input:
+                - onehot present of entity names
+        '''
         x = self.fc_entity1(x)
         x = self.fc_entity2(x)
         x = self.dropout(x)
         return x
 
     def responseencoder(self, x):
+        '''
+            response encoder, model framework:
+                - linear + linear 
+
+            Input:
+                - onehot present of response
+        '''
         x = self.fc_response1(x)
         x = self.fc_response2(x)
         x = self.dropout(x)
@@ -46,6 +83,18 @@ class Dialog_Tracker(Model_Base):
 
 
     def dialog_embedding(self, utterance, entity,  response_prev):
+        '''
+            Model framework:
+                - utterance_embedding + entityname_embedding + prev_response embedding -> linear
+
+            Get dialog embedding from utterance, entity, response_prev
+
+            Input:
+                - utterance, entity, response_prev are from three related keys of dialog_status.torch output
+
+            Output:
+                - dialog embedding
+        '''
         #utterance embedding
         utterance = self.encoder(utterance) 
         utter_att = self.attention(utterance, utterance) 
@@ -60,6 +109,16 @@ class Dialog_Tracker(Model_Base):
 
 
     def forward(self, dialogs):
+        '''
+            Model framework:
+                - dialogs -> dialog_embedding -> lstm -> softmax*mask -> logsoftmax
+            
+            Input:
+                - dialogs: output from dialog_status.torch
+            
+            output:
+                - logsoftmax
+        '''
         #first get dialog embedding
         dialog_emb = self.dialog_embedding(dialogs['utterance'], dialogs['entity'], dialogs['response_prev'])
         dialog_emb = PackedSequence(dialog_emb, dialogs['batch_sizes']) #feed batch_size and pack to packedsequence

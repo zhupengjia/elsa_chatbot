@@ -4,7 +4,14 @@ import torch.nn.functional as F
 import torch.nn as nn
 from .model_base import Model_Base
 
+'''
+    Author: Pengjia Zhu (zhupengjia@gmail.com)
+'''
+
 class Sentence_Encoder(Model_Base):
+    '''
+        sentence encoder to get the sentence embedding, use CNN. 
+    '''
     def __init__(self, cfg, vocab):
         super().__init__(cfg, vocab)
         self.network()

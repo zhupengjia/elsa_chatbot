@@ -7,20 +7,42 @@ from ..module.response_dict import Response_Dict
 from ..module.dialog_status import Dialog_Status
 from ..module.entity_dict import Entity_Dict
 
+'''
+    Author: Pengjia Zhu (zhupengjia@gmail.com)
+'''
+
 class Reader_Base(object):
+    '''
+       Reader base class to predeal the dialogs 
+
+       Input:
+           - cfg: dictionary or ailab.utils.config object
+               - needed keys:
+                    - ner:
+                        - any keys needed in ailab.text.vocab, ailab.text.ner, ailab.text.embedding, ailab.utils.logger, 
+                    - response_template: file path for the response template
+                    - model:
+                        - batch_size: int, batch_size for iterator
+
+        Special method supported:
+            - len(): return total number of responses in template
+            - iterator: return data in pytorch Variable used in tracker
+    '''
     def __init__(self, cfg):
         self.cfg = cfg
         self.logger = setLogger(self.cfg.logger)
         self.emb = Embedding(self.cfg.ner)
         self.ner = NER(self.cfg.ner)
         self.ner.build_keywords_index(self.emb)
-        self.vocab = Vocab(cfg.ner, self.ner, self.emb)
+        self.vocab = Vocab(self.cfg.ner, self.ner, self.emb)
         self.vocab.addBE()
-        self.entity_dict = Entity_Dict(cfg.ner, self.vocab)
+        self.entity_dict = Entity_Dict(self.cfg.ner, self.vocab)
         self.data = {}
     
-    #build response index
     def build_responses(self):
+        '''
+            build response index for response_template
+        '''
         self.responses = Response_Dict(self.cfg.response_template, self.ner, self.entity_dict)
         with open(self.cfg.response_template.data) as f:
             for l in f:
@@ -31,13 +53,24 @@ class Reader_Base(object):
         self.responses.build_index()
 
 
-    #total number of responses
     def __len__(self):
+        '''
+            return total number of responses in template
+        '''
         return len(self.responses)
 
 
-    #return response string by id
     def get_response(self, responseid, entity=None):
+        '''
+            return response string by id
+
+            Input:
+                - responseid: int
+                - entity: entity dictionary to format the output response
+
+            Output:
+                - response, string
+        '''
         response = self.responses.response[responseid]
         if entity is not None:
             response = response.format(*entity)
@@ -45,6 +78,24 @@ class Reader_Base(object):
    
      
     def predeal(self, data):
+        '''
+            Predeal the dialog. Please use it with your read function.
+            
+            Input:
+                - data: dialog data, format as [[[utterance, response], ...],... ]
+            
+            Output:
+                - {  
+	            'utterance': [utterance token_ids],  
+	            'response': [response ids]  
+	            'ent_utterance':[utterance entity ids]  
+	            'idrange':[  
+		        [dialog_startid, dialog_endid],  
+		        ...  
+	            ]  
+                   }  
+
+        '''
         ripe = {}
         for k in ['utterance', 'response', 'ent_utterance', 'ent_response', 'idrange']:
             ripe[k] = []
@@ -83,12 +134,18 @@ class Reader_Base(object):
         self.entity_dict.save()
         return ripe
 
-    #return a new dialog status instant
+
     def new_dialog(self):
+        '''
+            return a new dialog status instance
+        '''
         return  Dialog_Status(self.cfg, self.vocab, self.entity_dict, self.responses)
 
-    #tracker train iterator
+
     def __iter__(self):
+        '''
+            tracker train iterator
+        '''
         for epoch in range(self.cfg.model.epochs):
             dialogs = []
             for n in range(self.cfg.model.batch_size):

@@ -3,7 +3,34 @@ import sys, re, numpy
 from ailab.text import VecTFIDF, Vocab
 from ailab.utils import flat_list
 
+
+'''
+    Author: Pengjia Zhu (zhupengjia@gmail.com)
+'''
+
 class Response_Dict(object):
+    '''
+        Response dictionary. Used to index the response template and get the most closed response_template from a response string. 
+        
+        First you need a response template file, the format in each line is:  
+            - needed_entity | notneeded_entity | func_call | response  
+                - needed_entity means this response is available only those entities existed  
+                - notneeded_entity means this response is not available if those entities existed  
+                - func_call is the needed function call  before return the response. The available func_call is in src/hook/behaviors. In the future will support web hooks  
+  
+        The class will build a tf-idf index for template, the __getitem__ method is to get the most closed response via the tf-idf algorithm.(only used for training, the response string in training data will convert to a response id via tfidf search)  
+
+        Input:
+            - cfg: dictionary or ailab.utils.config object
+                - needed keys:
+                    - any keys used in ailab.text.vocab, ailab.text.vectfidf
+            - tokenizer: instance of ailab.text.segment
+            - entity_dict: instance of src/module/entity_dict
+
+        Special usage:
+            - len(): return number of responses in template
+            - __getitem__ : get most closed response id for response, input is response string
+    '''
     def __init__(self, cfg, tokenizer, entity_dict):
         self.response, self.response_ids, self.func_need = [], [], []
         self.entity_need = {'need':[], 'notneed':[]}
@@ -14,6 +41,12 @@ class Response_Dict(object):
 
 
     def add(self, response):
+        '''
+            add a response to dictionary, only used when building the dictionary
+
+            Input:
+                - response: string, usually from response_template
+        '''
         response = [x.strip() for x in response.split('|')]
         if len(response) < 3:
             return
@@ -43,17 +76,25 @@ class Response_Dict(object):
         self.func_need.append(func_need)
 
 
-    #build search index for response template
     def build_index(self):
+        '''
+            build search index for response template. no input needed. Use it after added all responses
+        '''
         self.__search.load_index(self.response_ids)
         self.vocab.save()
 
-    #get number of responses
+
     def __len__(self):
+        '''
+            get number of responses
+        '''
         return len(self.response)
 
-    #build entity mask of response template
+
     def build_mask(self):
+        '''
+            build entity mask of response template, converted from the template
+        '''
         entity_maskdict = sorted(list(set(flat_list(flat_list(self.entity_need.values())))))
         entity_maskdict = dict(zip(entity_maskdict, range(len(entity_maskdict))))
         self.masks = {'need': numpy.zeros((len(self.response), len(entity_maskdict)), 'bool_'), \
@@ -68,12 +109,29 @@ class Response_Dict(object):
   
 
     def response2onehot(self, response_id):
+        '''
+            convert a response id to onehot present. used in dialog_tracker
+
+            Input:
+                - response_id: int
+
+            Output:
+                - 1d numpy array
+        '''
         response = numpy.zeros(len(self.response), 'float')
         response[response_id] = 1
         return response
 
-    #get most closed response id from templates
     def __getitem__(self, response):
+        '''
+            get most closed response id from templates
+            
+            Input:
+                - response: string
+
+            Output:
+                - response_id, int. If not found return None.
+        '''
         response_ids = self.vocab.sentence2id(response)
         if len(response_ids) < 1:
             return None

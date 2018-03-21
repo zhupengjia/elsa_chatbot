@@ -3,7 +3,18 @@ import glob, os, yaml, sys, re
 from ailab.utils import zload, zdump
 from .reader_base import Reader_Base
 
+'''
+    Author: Pengjia Zhu (zhupengjia@gmail.com)
+'''
+
 class Reader_Dialog(Reader_Base):
+    '''
+        Read from dialog history (HR chatbot history), inherit from Reader_Base 
+
+        Input:
+            - cfg: dictionary or ailab.utils.config object
+                - needed keys: Please check needed keys in Reader_Base
+    '''
     def __init__(self, cfg):
         Reader_Base.__init__(self, cfg)
 
@@ -68,6 +79,10 @@ class Reader_Dialog(Reader_Base):
 
 
     def read(self, locdir):
+        '''
+            Input:
+                - locdir: The location of saved dialog history
+        '''
         cached_pkl = os.path.join(locdir, 'dialog.pkl')
         if os.path.exists(cached_pkl):
             convs = zload(cached_pkl)

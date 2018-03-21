@@ -6,8 +6,43 @@ from ..hook.behaviors import Behaviors
 from ailab.utils import flat_list
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
+'''
+    Author: Pengjia Zhu (zhupengjia@gmail.com)
+'''
+
 class Dialog_Status:
     def __init__(self, cfg, vocab, entity_dict, response_dict):
+        '''
+        Maintain the dialog status in a dialog
+
+        The dialog status will maintain:
+            - utterance history
+            - response history
+            - entity mask history
+            - entity history
+            - current entity mask
+            - current entities
+        
+        The class also provide the method to convert those data to torch variables
+        
+        To use this class, one must do the following steps:
+            - add_utterance: add the current utterance to status, the entities will be extracted from utterance
+            - getmask: create entity mask from existed entities
+            - add_response: add the current response to status, and run the corresponded hook functions
+
+        Input:
+            - cfg: dictionary or ailab.utils.config object
+                - needed keys: 
+                    - no additional keys needed, just for backup
+            - vocab: instance of ailab.text.vocab
+            - entity_dict: instance of src/module/entity_dict
+            - response_dict:  instance of src/module/response_dict
+
+        Special usage:
+            - str(): print the current status
+
+        '''
+
         self.cfg = cfg
         self.vocab = vocab
         self.response_dict = response_dict
@@ -17,8 +52,18 @@ class Dialog_Status:
         self.utterances, self.responses, self.entities, self.masks = [], [], [], []
 
 
-    # add utterance to status
     def add_utterance(self, utterance, entity_ids=None):
+        '''
+            add utterance to status
+
+            Input:
+                - utterance: string or token_id list
+                - entity_ids: entity id dictionary, usable only if utterance is a token_id list 
+
+            Output:
+                - if success, return True, otherwise return None
+
+        '''
         if isinstance(utterance, str):
             #predeal utterance
             entities, tokens = self.vocab.seg_ins.get(utterance.lower())
@@ -38,8 +83,13 @@ class Dialog_Status:
         return True
 
 
-    #add response and apply function
     def add_response(self, response):
+        '''
+            add response and apply function
+            
+            Input:
+                - response: string
+        '''
         self.responses.append(response)
         funcneeds = self.response_dict.func_need[response]
         for funcname in funcneeds:
@@ -47,8 +97,13 @@ class Dialog_Status:
             self.applyfunc(func)
 
 
-    #apply function and put result to entities 
     def applyfunc(self, func):
+        '''
+            apply function and put result to entities 
+
+            Input:
+                - func: function name
+        '''
         entities_get = func(self.entity)
         for e in entities_get:
             e_id = self.entity_dict.name2id(e)
@@ -59,8 +114,12 @@ class Dialog_Status:
                 self.entity_mask[self.entity_dict.entity_maskdict[e_id], 0] = False #mask for response choose
 
 
-    #mask for each turn of response
     def getmask(self):
+        '''
+            mask for each turn of response
+
+            No input needed
+        '''
         mask_need = numpy.matmul(self.response_dict.masks['need'], self.entity_mask).reshape(1,-1)[0]
         mask_need = numpy.logical_not(mask_need)
         mask_notneed = numpy.matmul(self.response_dict.masks['notneed'], numpy.logical_not(self.entity_mask)).reshape(1,-1)[0]
@@ -69,6 +128,9 @@ class Dialog_Status:
 
 
     def __str__(self):
+        '''
+            print the current status
+        '''
         txt = '='*60 + '\n'
         txt += 'entity: ' + str(self.entity) + '\n'
         txt += 'entity mask: ' + str(self.entity_mask.reshape(1, -1)[0]) + '\n'
@@ -82,9 +144,31 @@ class Dialog_Status:
         return txt    
 
 
-    #convert dialogs to batch
     @staticmethod 
     def torch(cfg, vocab, entity_dict, dialogs):
+        '''
+            staticmethod, convert dialogs to batch
+
+            Input:
+                - cfg: dictionary or ailab.utils.config object
+                    - needed keys:
+                        - model:
+                            - max_seq_len: maximum sequence length
+                            - max_entity_types: number of entity types
+                            - use_gpu: if use gpu or not
+                - vocab: ailab.text.vocab instance
+                - entity_dict: src/module/entity_dict instance
+                - dialogs: list of src/module/dialog_status instance
+
+            Output:
+                - dictionary of pytorch variables with the keys of :
+                    - utterance: 2d long tensor
+                    - response: 1d long tensor
+                    - response_prev: 2d float tensor
+                    - mask: 2d float tensor
+                    - entity: 2d float tensor
+                    - batch_sizes: used in lstm pack_padded_sequence to speed up
+        '''
         dialog_lengths = numpy.array([len(d.utterances) for d in dialogs], 'int')
         perm_idx = dialog_lengths.argsort()[::-1]
         N_dialogs = len(dialogs)

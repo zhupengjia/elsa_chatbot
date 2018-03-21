@@ -5,7 +5,14 @@ import torch.nn as nn
 from .sentence_encoder import Sentence_Encoder
 from .model_base import Model_Base
 
+'''
+    Author: Pengjia Zhu (zhupengjia@gmail.com)
+'''
+
 class Duplicate_Embedding(Model_Base):
+    '''
+        sentence embedding via supervised learning , one of the training data is Quora's duplicate QA
+    '''
     def __init__(self, cfg, vocab):
         super().__init__(cfg, vocab)
         self.network()
