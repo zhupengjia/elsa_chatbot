@@ -7,9 +7,8 @@ The code reserved several readers for different sources, such like api.ai like j
 
 The entity recognition, is provided in ailab package. Please check ailab package for more details.
 
-Please read docs/end2end.mindnode for the general framework. You need to install mindnode5 to read this file.
+Detailed for each modules in framework please check: [end2end modules](docs/end2end.md)
 
-Instead, you can also read documents/end2end.png for general framework, and the notes for each node can be found in docs/end2end.md
 
 Related paper:
 
