@@ -7,7 +7,7 @@ The code reserved several readers for different sources, such like api.ai like j
 
 The entity recognition, is provided in ailab package. Please check ailab package for more details.
 
-Detailed for each modules in framework please check: [end2end modules](docs/end2end.md)
+Detailed for each modules in framework please check: [end2end modules](http://code.acnailab.com/acn.ai/iassitant/chatbot-end2end/blob/master/docs/end2end.md)
 
 
 Related paper:
