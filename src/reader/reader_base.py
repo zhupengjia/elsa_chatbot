@@ -82,10 +82,19 @@ class Reader_Base(object):
             Predeal the dialog. Please use it with your read function.
             
             Input:
-                - data: dialog data, format as [[[utterance, response], ...],... ]
+                - data: dialog data, format as::
+                    
+                    [
+	                [
+		            [utterance, response],
+		            ...
+	                ],
+	                ...
+                    ]
             
-            Output:
-                - {  
+            Output::
+
+                {  
 	            'utterance': [utterance token_ids],  
 	            'response': [response ids]  
 	            'ent_utterance':[utterance entity ids]  
@@ -93,7 +102,7 @@ class Reader_Base(object):
 		        [dialog_startid, dialog_endid],  
 		        ...  
 	            ]  
-                   }  
+                }
 
         '''
         ripe = {}
