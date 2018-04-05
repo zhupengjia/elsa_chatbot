@@ -29,3 +29,5 @@ class Behaviors:
     @staticmethod
     def bookcuisine(entities):
         return {'BOOK_CUISINE': 'DONE!'}
+
+    

@@ -9,3 +9,14 @@ korean
 spanish
 thai
 vietnamese
+indonesian
+malaysian
+mexican
+american
+asian
+french
+african
+russian
+turkish
+australian
+canadian

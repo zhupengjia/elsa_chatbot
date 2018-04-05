@@ -2,7 +2,7 @@
 import numpy, torch, copy, time, sys
 from torch.autograd import Variable
 from torch import functional as F
-from ..hook.behaviors import Behaviors
+from ..hook import *
 from ailab.utils import flat_list
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
@@ -40,6 +40,7 @@ class Dialog_Status:
 
         Special usage:
             - str(): print the current status
+            - len(): length of dialog
 
         '''
 
@@ -141,7 +142,14 @@ class Dialog_Status:
                 txt += 'response: ' + self.response_dict.response[self.responses[i]] + '\n'
             txt += 'entities: ' + ' '.join([self.entity_dict.entity_namedict.inv[e] for e in self.entities[i].keys()]) + '\n'
             txt += 'mask: ' + str(self.masks[i]) + '\n'
-        return txt    
+        return txt
+
+
+    def __len__(self):
+        '''
+            length of dialog
+        '''
+        return len(self.utterances)
 
 
     @staticmethod 

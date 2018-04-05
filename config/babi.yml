@@ -3,6 +3,18 @@
 #app setting
 APPNAME: END2END_DEMO
 
+
+# for adversary chatbot
+rule_based:
+    dialog_file: data/babi/babi_adversary.xlsx 
+    cached_vocab: data/babi/vocab_adversary.pkl
+    TOKENIZER: spacy
+    LANGUAGE: en
+    ngrams: 3 
+    min_score: 0.6 #jump the rule if less than this score
+    
+
+#
 response_template: 
     data: data/babi/template.txt
     cached_index: data/babi/template.index

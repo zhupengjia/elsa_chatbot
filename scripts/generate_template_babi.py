@@ -48,20 +48,29 @@ with open(datafile) as f:
         convs.append(conv)
 
 
-responses = []
+utterances, responses = [], []
 for conv in convs:
     print('='*60)
     for l in conv:
         entities, tokens = ner.get(l[1])
         responses.append(' '.join(tokens))
+        entities, tokens = ner.get(l[0])
+        utterances.append(' '.join(tokens))
         print('-'*30)
         print(l[0],'\n', l[1])
+
 responses = sorted(list(set(responses)))
 with open('template.txt', 'w') as f:
     for i, r in enumerate(responses):
         f.write(r+'\n')
         print(i, r)
 
+
+utterances = sorted(list(set(utterances)))
+with open('utterance.txt', 'w') as f:
+    for i, r in enumerate(utterances):
+        f.write(r+'\n')
+        print(i, r)
 
 
 
