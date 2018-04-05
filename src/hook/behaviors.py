@@ -8,26 +8,27 @@ class Behaviors:
     '''
         The build in hook functions
         
-        All hook functiosn should be the staticmethod, input should be the current entities, output should be a dictionary, and will be merged to the current entities. The key in dictionary will be the entity name, and the value will be the entity value.
+        Input should be the current entities, output should be a dictionary, and will be merged to the current entities. The key in dictionary will be the entity name, and the value will be the entity value.  
+
+        Input:
+            - cfg: dictionary or ailab.utils.config object
     '''
-    @staticmethod
-    def geteid(entities):
+    def __init__(self, cfg):
+        self.cfg = cfg
+
+    def geteid(self, entities):
         return {'CAREER_LEVEL':'7 - Manager', 'COUNTRY':'China'}
     
-    @staticmethod
-    def getwbs(entities):
+    def getwbs(self, entities):
         return {'WBS':'9FBxDMO'}
     
-    @staticmethod
-    def getbalance(entities):
+    def getbalance(self, entities):
         return {'BALANCE':10}
 
-    @staticmethod
-    def getrestinfo(entities):
+    def getrestinfo(self, entities):
         return {'REST_INFO': 'RESERVED_REST_INFO'}
 
-    @staticmethod
-    def bookcuisine(entities):
+    def bookcuisine(self, entities):
         return {'BOOK_CUISINE': 'DONE!'}
 
     

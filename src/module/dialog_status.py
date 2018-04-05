@@ -47,6 +47,7 @@ class Dialog_Status:
         self.cfg = cfg
         self.vocab = vocab
         self.response_dict = response_dict
+        self.behaviors = Behaviors(self.cfg)
         self.entity_dict = entity_dict #for response mask
         self.entity = {} #for current entity 
         self.entity_mask = numpy.ones((len(entity_dict.entity_maskdict),1), 'bool_') #for response mask
@@ -94,7 +95,7 @@ class Dialog_Status:
         self.responses.append(response)
         funcneeds = self.response_dict.func_need[response]
         for funcname in funcneeds:
-            func = getattr(Behaviors, funcname)
+            func = getattr(self.behaviors, funcname)
             self.applyfunc(func)
 
 
