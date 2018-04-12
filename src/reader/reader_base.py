@@ -73,7 +73,7 @@ class Reader_Base(object):
         '''
         response = self.responses.response[responseid]
         if entity is not None:
-            response = response.format(*entity)
+            response = response.format(**entity)
         return response
    
      

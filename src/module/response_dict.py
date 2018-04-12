@@ -59,8 +59,8 @@ class Response_Dict(object):
             print("The format should be: needentity | notneedentity | func | response")
             sys.exit()
 
-        response = re.sub('(\{[A-Z]+\})|(\d+)','', response)
-        response_ids = self.vocab.sentence2id(response) 
+        response_lite = re.sub('(\{[A-Z]+\})|(\d+)','', response)
+        response_ids = self.vocab.sentence2id(response_lite) 
         if len(response_ids) < 1:
             return
         self.response.append(response)
