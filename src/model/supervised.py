@@ -9,7 +9,7 @@ import torch.optim as optim
 '''
 
 class Supervised:
-    def __init__(self, cfg_fn):
+    def __init__(self, cfg_fn, reader_cls):
         '''
             Policy Gradiant for end2end chatbot
 

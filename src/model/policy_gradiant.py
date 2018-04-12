@@ -73,6 +73,7 @@ class Policy_Gradiant:
         dialogs = []
         N_true = 0
         for batch in range(self.cfg.model.batch_size):
+            #self.logger.info('--------- new dialog ------')
             #reset adversal chatbot
             self.ad_chatbot.reset(self.clientid)
             #greeting utterance
@@ -88,8 +89,12 @@ class Policy_Gradiant:
                 y_prob = self.tracker(data)
 
                 _, y_pred = torch.max(y_prob.data, 1)
+                if self.cfg.model.use_gpu:
+                    y_pred = y_pred.cpu()
                 y_pred = int(y_pred.numpy()[-1])
                 response = self.reader.get_response(y_pred)
+                #self.logger.info('{}\t{}'.format(utterance, response))
+
                 dialog_status.add_response(y_pred)
                
                 if y_pred == len(self.reader) - 1:
@@ -108,6 +113,9 @@ class Policy_Gradiant:
 
 
     def train(self):
+        '''
+            Train the model. No input needed
+        '''
         for epoch in range(self.cfg.model.epochs):
             dialogs, precision = self.__memory_replay()
             self.tracker.zero_grad()
