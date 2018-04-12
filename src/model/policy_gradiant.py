@@ -118,18 +118,11 @@ class Policy_Gradiant:
             m = torch.distributions.Categorical(y_prob)
             action = m.sample()
             
-            print(m.log_prob(action))
-            print(dialogs['reward'])
-
             loss = -m.log_prob(action) * dialogs['reward']
-
-            loss.backward()
+    
+            loss.sum().backward()
             self.optimizer.step()
 
-            
-
-            print(y_prob)
-            sys.exit()
 
             if epoch > 0 and epoch%1000 == 0: 
                 model_state_dict = self.tracker.state_dict()

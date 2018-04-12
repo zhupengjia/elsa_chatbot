@@ -60,7 +60,7 @@ model:
     learning_rate: 0.001
     weight_decay: 0.0001
     epochs: 10000
-    batch_size: 10
+    batch_size: 1000
     rl_learning_rate: 0.001
     rl_maxloop: 30
     rl_discount: 0.95

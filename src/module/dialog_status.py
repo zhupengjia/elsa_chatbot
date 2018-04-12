@@ -238,6 +238,7 @@ class Dialog_Status:
         response = Variable(response)
         entity = Variable(entity)
         mask = Variable(mask)
+        reward = Variable(reward)
         response_prev = Variable(response_prev)
 
 
