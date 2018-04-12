@@ -54,9 +54,16 @@ class Rule_Based:
                 - utterance: string
                 - entities: dictionary
         '''
+        #special command
+        utterance = utterance.strip()
+        if utterance in [':CLEAR', ':RESET', ':RESTART', ":EXIT", ":STOP", ":QUIT", ":Q"]:
+            self.reset(clientid)
+            return 'dialog status reset!'
+        
         #create new session for user
         if not clientid in self.session:
             self.session[clientid] = {'CHILDID': None, 'RESPONSE': None}
+
         utterance_id = self.vocab.sentence2id(utterance)
         self.session[clientid]['RESPONSE'] = None # clean response
         if len(utterance_id) < 1:
@@ -68,7 +75,15 @@ class Rule_Based:
         if isinstance(self.session[clientid]['RESPONSE'], str):
             return self.session[clientid]['RESPONSE']
         return '^_^'
-        
+    
+
+    def reset(self, clientid):
+        '''
+            reset session
+        '''
+        if clientid in self.session:
+            del self.session[clientid]
+
 
     def _find(self, utterance_id, entities):
         '''
@@ -92,7 +107,7 @@ class Rule_Based:
             idx = data_filter['score'].idxmax()
             if data_filter.loc[idx]['score'] < self.cfg['min_score']:
                 #try to get score for out of rules
-                otherids = [i for i in data.index if i not in entities['CHILDID']]
+                otherids = list(set(list(data.index)) - set(entities['CHILDID']))
                 data_others = data.loc[otherids]
                 data_others['score'] = data_others['utterance'].apply(getscore)
                 idx_others = data_others['score'].idxmax()

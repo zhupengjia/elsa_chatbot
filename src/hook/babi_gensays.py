@@ -31,7 +31,7 @@ class Babi_GenSays:
                         self.entities[entity].append(l)
 
     def __bundle(self, *replylist):
-        reply = [random.choice(x) for x in replylist]
+        reply = [random.choice(x) for x in replylist if len(x) > 0]
         reply = [r.strip() for r in reply]
         reply = [r for r in reply if len(r) > 0]
         return ' '.join(reply)
@@ -71,10 +71,11 @@ class Babi_GenSays:
         return {'RESPONSE': self.__bundle(self.requesting, [self.__getresttype()], self.polite)}
 
     def getrequest(self, entities):
-        reply = random.shuffle[random.choice[self.__getpeople(), ''], \
-                random.choice[self.__getlocation(), ''], \
-                random.choice[self.__getcuisine(), ''], \
-                random.choice[self.__getresttype(), '']]
+        reply = self.__bundle([random.choice([self.__getpeople(), '']), \
+                random.choice([self.__getlocation(), '']), \
+                random.choice([self.__getcuisine(), '']), \
+                random.choice([self.__getresttype(), ''])])
+
         return {'RESPONSE': self.__bundle(self.requesting, reply, self.polite)}
 
     def getadditional(self, entities):

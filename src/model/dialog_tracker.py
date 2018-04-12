@@ -127,8 +127,7 @@ class Dialog_Tracker(Model_Base):
         #output to softmax
         lstm_softmax = self.softmax(lstm_out.data)
         #apply mask 
-        response = lstm_softmax * dialogs['mask']
-        response = torch.log(response + 1e-15)
+        response = lstm_softmax * dialogs['mask'] + 1e-15
         return response
 
 

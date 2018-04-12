@@ -176,6 +176,7 @@ class Dialog_Status:
                     - response_prev: 2d float tensor
                     - mask: 2d float tensor
                     - entity: 2d float tensor
+                    - reward: 1d float tensor, used in policy gradiant
                     - batch_sizes: used in lstm pack_padded_sequence to speed up
         '''
         dialog_lengths = numpy.array([len(d.utterances) for d in dialogs], 'int')
@@ -188,32 +189,50 @@ class Dialog_Status:
         response = numpy.zeros((N_dialogs, max_dialog_len), 'int')
         entity = numpy.zeros((N_dialogs, max_dialog_len, cfg.model.max_entity_types), 'float')
         mask = numpy.zeros((N_dialogs, max_dialog_len, len(dialogs[0].masks[0])), 'float')
+        reward = numpy.zeros((N_dialogs, max_dialog_len), 'float')
         response_prev = numpy.zeros((N_dialogs, max_dialog_len, len(dialogs[0].response_dict)), 'float') #previous response, onehot
 
 
         for j, idx in enumerate(perm_idx):
             dialog = dialogs[idx]
+            #check if dialog finished by measuring the length of dialog
+            if len(dialog) < cfg.model.rl_maxloop:
+                reward_base = 1
+            else:
+                reward_base = 0
             response[j, :len(dialog.responses)] = torch.LongTensor(dialog.responses)
             for i in range(dialog_lengths[j]):
                 entities = entity_dict.name2onehot(dialog.entities[i].keys()) #all entity names
                 seqlen = min(cfg.model.max_seq_len, len(dialog.utterances[i]))
                 utterance[j, i, :seqlen] = numpy.array(dialog.utterances[i])[:seqlen]
                 entity[j, i, :] = entities
+                reward[j, i] = reward_base * cfg.model.rl_discount ** i
                 mask[j, i, :] = dialog.masks[i].astype('float')
                 if i > 0:
                     response_prev[j, i, response[j, i-1]] = 1
-        
+            reward[j] = reward[j]/dialog_lengths[j]
+       
+
+        #Get baseline of reward, an average return of the current policy, then do R-b
+        for r in numpy.unique(response):
+            rid = response == r
+            reward_mean = numpy.mean(reward[rid])
+            reward[rid] = reward[rid] - reward_mean
+
+
         #to variable
         utterance = torch.LongTensor(utterance)
         response = torch.LongTensor(response)
         entity = torch.FloatTensor(entity)
         mask = torch.FloatTensor(mask)
+        reward = torch.FloatTensor(reward)
         response_prev = torch.FloatTensor(response_prev)
         if cfg.model.use_gpu:
             utterance = utterance.cuda(cfg.model.use_gpu-1)
             response = response.cuda(cfg.model.use_gpu-1)
             entity = entity.cuda(cfg.model.use_gpu-1)
             mask = mask.cuda(cfg.model.use_gpu-1)
+            reward = reward.cuda(cfg.model.use_gpu-1)
             response_prev = response_prev.cuda(cfg.model.use_gpu-1)
         utterance = Variable(utterance)
         response = Variable(response)
@@ -225,13 +244,14 @@ class Dialog_Status:
         #pack them up for different dialogs
         utterance = pack_padded_sequence(utterance, dialog_lengths, batch_first=True)
         response = pack_padded_sequence(response, dialog_lengths, batch_first=True).data
+        reward = pack_padded_sequence(reward, dialog_lengths, batch_first=True).data
         entity = pack_padded_sequence(entity, dialog_lengths, batch_first=True).data
         mask = pack_padded_sequence(mask, dialog_lengths, batch_first=True).data
         response_prev = pack_padded_sequence(response_prev, dialog_lengths, batch_first=True).data
         batch_sizes = utterance.batch_sizes
         utterance = utterance.data
 
-        dialog_torch = {'utterance': utterance, 'response':response, 'response_prev':response_prev, 'mask':mask, 'entity':entity, 'batch_sizes':batch_sizes}
+        dialog_torch = {'utterance': utterance, 'response':response, 'response_prev':response_prev, 'mask':mask, 'entity':entity, 'reward':reward, 'batch_sizes':batch_sizes}
         return dialog_torch
 
 
