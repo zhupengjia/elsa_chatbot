@@ -9,6 +9,7 @@ from .reader_xlsx import Reader_xlsx
 class Reader:
     '''
         Rule based reader
+
         Input:
             - cfg: dictionary or ailab.utils.config object
                 - dialog_file: file of rule definition. Support xlsx

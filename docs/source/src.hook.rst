@@ -4,6 +4,14 @@ src\.hook package
 Submodules
 ----------
 
+src\.hook\.babi\_gensays module
+-------------------------------
+
+.. automodule:: src.hook.babi_gensays
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 src\.hook\.behaviors module
 ---------------------------
 

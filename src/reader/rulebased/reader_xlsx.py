@@ -9,6 +9,7 @@ from ailab.text import Vocab, Embedding, Segment
 class Reader_xlsx:
     '''
         dialog reader for rule based, from xlsx file
+
         Input:
             - cfg: dictionary or ailab.utils.config object
                 - dialog_file: xlsx file of rule definition

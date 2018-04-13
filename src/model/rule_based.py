@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 import numpy, pandas, re, random, math, sys
 from ailab.text import Vocab, Embedding, Segment, DocSim
-from ..module.dialog_status import Dialog_Status
 from ..reader.rulebased import Reader
 
 '''

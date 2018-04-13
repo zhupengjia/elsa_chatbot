@@ -231,7 +231,11 @@ To speed up, the lstm tracker use pack_padded_sequence to pack several dialogs t
 Convert entity names one-hot array to embedding, mlp
 
 
-# Loss function
+# Supervised Learning Loss function
+
+Please check the code:  
+  
+src/model/supervised.py
 
 
 # Sentence Encoder
@@ -277,4 +281,51 @@ not implemented
 
 Location:  
 src/hook/behaviors.py
+
+
+# Rule Based
+
+Rule based chatbot  
+  
+code:  
+src/model/rule_based.py
+
+
+## Reader_VUI
+
+Read rules from webUI  
+Not implemented
+
+## Reader_XLSX
+
+Read rules from excel table  
+Location:  
+src/reader/rulebased/reader_xlsx.py  
+  
+excel Format:  
+first row:  
+id : the intent id  
+childID : the child intent id for this intent, if empty will search from all intents  
+userSays : all possible usersays, splitted by \n. If empty will dealt as the first greeting say.  
+response : response sentence  
+webhook : callable hook function. if 'RESPONSE' key in return will reply correlated value
+
+
+# User Simulator
+
+An example of babi simulator please check the hook function:  
+src/hook/babi_gensays.py  
+  
+and the rules:  
+data/babi/babi_adversary.xlsx
+
+
+# Policy Gradiant Reinforcement Learning
+
+Please check the code:  
+  
+src/model/policy_gradiant.py
+
+
+# Real User
 

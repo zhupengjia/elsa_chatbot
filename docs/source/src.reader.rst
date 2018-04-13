@@ -1,6 +1,13 @@
 src\.reader package
 ===================
 
+Subpackages
+-----------
+
+.. toctree::
+
+    src.reader.rulebased
+
 Submodules
 ----------
 
