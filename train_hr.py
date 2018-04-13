@@ -2,7 +2,7 @@
 import sys, torch, os
 from src.reader import Reader_Dialog
 from src.model.dialog_tracker import Dialog_Tracker
-from nlptools.utils import Config, setLogger
+from ailab.utils import Config, setLogger
 import torch.optim as optim
 
 config = Config('config/hr.yml')
@@ -13,7 +13,8 @@ logger = setLogger(config.logger)
 data = Reader_Dialog(config)
 data.build_responses()
 
-locdir = '/home/pzhu/data/accenture/HR/history'
+#locdir = '/home/pzhu/data/accenture/HR/history'
+locdir = '/home/bigdata/users/gao/chatbot_hr/history'
 data.read(locdir)
 
 tracker = Dialog_Tracker(config.model, data.vocab, len(data))
@@ -34,7 +35,8 @@ if os.path.exists(config.model['saved_model']):
 
 for epoch, d in enumerate(data):
     tracker.zero_grad()
-    y_prob = tracker(d['utterance'], d['entity'], d['mask'])
+    #y_prob = tracker(d['utterance'], d['entity'], d['mask'])
+    y_prob = tracker(d)
     loss = loss_function(y_prob, d['response'])
 
     #precision
