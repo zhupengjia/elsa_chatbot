@@ -73,8 +73,13 @@ class Babi_GenSays:
 
     def getrequest(self, entities):
         reply = ''
+        a1 = ['book', 'reserve']
+        a2 = ['a', 'the', '']
+        a3 = ['table', 'restaurant', 'room', '']
+        a = self.__bundle(a1,a2,a3)
         while len(reply) < 1:
-            reply = self.__bundle([random.choice([self.__getpeople(), ''])], \
+            reply = self.__bundle( [random.choice([a, ''])],\
+                [random.choice([self.__getpeople(), ''])], \
                 [random.choice([self.__getlocation(), ''])], \
                 [random.choice([self.__getcuisine(), ''])], \
                 [random.choice([self.__getresttype(), ''])] )

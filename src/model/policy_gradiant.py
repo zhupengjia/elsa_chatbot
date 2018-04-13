@@ -73,7 +73,7 @@ class Policy_Gradiant:
         dialogs = []
         N_true = 0
         for batch in range(self.cfg.model.batch_size):
-            #self.logger.info('--------- new dialog ------')
+            self.logger.debug('--------- new dialog ------')
             #reset adversal chatbot
             self.ad_chatbot.reset(self.clientid)
             #greeting utterance
@@ -93,7 +93,7 @@ class Policy_Gradiant:
                     y_pred = y_pred.cpu()
                 y_pred = int(y_pred.numpy()[-1])
                 response = self.reader.get_response(y_pred)
-                #self.logger.info('{}\t{}'.format(utterance, response))
+                self.logger.debug('{}\t{}'.format(utterance, response))
 
                 dialog_status.add_response(y_pred)
                
@@ -132,7 +132,7 @@ class Policy_Gradiant:
             self.optimizer.step()
 
 
-            if epoch > 0 and epoch%1000 == 0: 
+            if epoch > 0 and epoch%10 == 0: 
                 model_state_dict = self.tracker.state_dict()
                 optimizer_state_dict = self.optimizer.state_dict()
                 checkpoint = {
