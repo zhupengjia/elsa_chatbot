@@ -99,7 +99,6 @@ class Rule_Based:
             return 1/(1+distance)
         data = self.reader.data
         
-        entities['CHILDID'] = [4,6,2]
         if entities['CHILDID'] is not None:
             data_filter = data.loc[entities['CHILDID']]
             data_filter['score'] = data_filter['utterance'].apply(getscore)
@@ -145,7 +144,7 @@ class Rule_Based:
         if not isinstance(entities['RESPONSE'], str) and isinstance(data.response, str):
             entities['RESPONSE'] = data.response
         if data.childID is not None:
-            entities['CHILDID'] = data.childID
+            entities['CHILDID'] = self.__decode_childID(data.childID)
         else:
             entities['CHILDID'] = None
         return entities
@@ -161,6 +160,22 @@ class Rule_Based:
         return entities
         
 
+    def __decode_childID(self, IDs):
+        if isinstance(IDs, str):
+            IDs2 = []
+            for i in re.split('[,，]', IDs):
+                if i.isdigit():
+                    IDs2.append(int(i))
+                else:
+                    itmp = [int(x) for x in re.split('[~-]', i) if len(x.strip())>0]
+                    if len(itmp) > 1:
+                        IDs2 += range(itmp[0], itmp[1]+1)
+                    else:
+                        IDs2.append(int(itmp[0]))
+
+            return numpy.asarray(IDs2, 'int')
+        else:
+            return numpy.asarray(IDs, 'int')
 
             
          
