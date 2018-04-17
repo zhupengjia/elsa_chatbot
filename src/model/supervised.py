@@ -69,10 +69,9 @@ class Supervised:
     def train(self):
         for epoch, d in enumerate(self.reader):
             self.tracker.zero_grad()
-            y_prob = self.tracker(d)
+            y_prob = torch.log(self.tracker(d))
         
             responses = d['response']
-            responses = torch.log(responses)
 
             loss = self.loss_function(y_prob, responses)
         
