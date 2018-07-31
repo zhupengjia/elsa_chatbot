@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from bidict import bidict
-from ailab.utils import zload, zdump
+from nlptools.utils import zload, zdump
 import os, numpy
 
 '''

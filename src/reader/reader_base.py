@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 import sys, os, numpy
-from ailab.utils import setLogger
-from ailab.text.ner import NER
-from ailab.text import Vocab, Embedding
+from nlptools.utils import setLogger
+from nlptools.text.ner import NER
+from nlptools.text import Vocab, Embedding
 from ..module.response_dict import Response_Dict
 from ..module.dialog_status import Dialog_Status
 from ..module.entity_dict import Entity_Dict
