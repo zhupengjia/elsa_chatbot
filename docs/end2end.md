@@ -1,7 +1,7 @@
 # Entity  extraction
 
-Provided from ailab package:  
-ailab.text.ner.py
+Provided from nlptools package:  
+nlptools.text.ner.py
 
 
 ## Keywords
@@ -14,7 +14,7 @@ ner:
 	annoy_filter: filter threshold (for vector search)  
   
 Related code:  
-ailab/text/ner.py  
+nlptools/text/ner.py  
 Class NER_Base:  
 	get_keywords  
   
@@ -29,7 +29,7 @@ ner:
 		....  
   
 Related code:  
-ailab/text/ner.py  
+nlptools/text/ner.py  
 Class NER_Base:  
 	get_regex
 
@@ -42,7 +42,7 @@ ner:
 		....  
   
 Related code:  
-ailab/text/ner.py  
+nlptools/text/ner.py  
 Class NER_Base:  
 	get_ner
 
@@ -65,9 +65,9 @@ There are also maintained a entity_mask dict, which is used to convert existed e
 
 # Tokenizer
 
-Provided from ailab package:  
-ailab.text.ner  
-ailab.text.tokenizer
+Provided from nlptools package:  
+nlptools.text.ner  
+nlptools.text.tokenizer
 
 
 # Response dictionary
@@ -88,9 +88,9 @@ response_template:
   
 First you need a response template file, the format in each line is:  
 needed_entity | notneeded_entity | func_call | response  
-needed_entity means this response is available only those entities existed  
-notneeded_entity means this response is not available if those entities existed  
-func_call is the needed function call  before return the response. The available func_call is in src/hook/behaviors. In the future will support web hooks  
+needed_entity means this response is avnlptoolsle only those entities existed  
+notneeded_entity means this response is not avnlptoolsle if those entities existed  
+func_call is the needed function call  before return the response. The avnlptoolsle func_call is in src/hook/behaviors. In the future will support web hooks  
   
 The class will build a tf-idf index for template, the __getitem__ method is to get the most closed response via the tf-idf algorithm.(only used for training, the response string in training data will convert to a response id via tfidf search)  
   
@@ -160,8 +160,8 @@ src/reader/reader_base.py
 
 # Vocab Dictionary
 
-Provided from ailab package:  
-ailab.text.vocab  
+Provided from nlptools package:  
+nlptools.text.vocab  
   
 tokens to id 
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-from ailab.utils import zload, zdump, setLogger
-from ailab.text import Segment, Embedding, Vocab
+from nlptools.utils import zload, zdump, setLogger
+from nlptools.text import Tokenizer, Embedding, Vocab
 import os, pandas, sys, numpy, math, torch
 from torch.autograd import Variable
 
@@ -14,7 +14,7 @@ class Reader_Quora(object):
     '''
     def __init__(self, cfg):
         self.cfg = cfg
-        self.seg = Segment(self.cfg)
+        self.seg = Tokenizer(self.cfg)
         self.emb = Embedding(self.cfg)
         self.logger = setLogger(self.cfg)
         self.vocab = Vocab(self.cfg, self.seg, self.emb)

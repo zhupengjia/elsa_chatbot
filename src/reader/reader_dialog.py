@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import glob, os, yaml, sys, re
-from ailab.utils import zload, zdump
+from nlptools.utils import zload, zdump
 from .reader_base import Reader_Base
 import codecs
 

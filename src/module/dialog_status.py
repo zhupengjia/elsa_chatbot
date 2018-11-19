@@ -3,7 +3,7 @@ import numpy, torch, copy, time, sys
 from torch.autograd import Variable
 from torch import functional as F
 from ..hook import *
-from ailab.utils import flat_list
+from nlptools.utils import flat_list
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 '''
