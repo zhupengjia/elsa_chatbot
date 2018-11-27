@@ -3,7 +3,7 @@ import sys, torch, os
 from src.reader.reader_dialog import Reader_Dialog
 from src.model.dialog_tracker import Dialog_Tracker
 from src.module.dialog_status import Dialog_Status
-from ailab.utils import Config
+from nlptools.utils import Config
 import torch.optim as optim
 
 

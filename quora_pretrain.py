@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import sys, torch, os
-from ailab.utils import Config, setLogger
+from nlptools.utils import Config, setLogger
 import torch.nn as nn
 import torch.optim as optim
 from src.reader.reader_quora import Reader_Quora

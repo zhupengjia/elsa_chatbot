@@ -11,13 +11,12 @@ class Reader:
         Rule based reader
 
         Input:
-            - cfg: dictionary or ailab.utils.config object
-                - dialog_file: file of rule definition. Support xlsx
+            - dialog_file: file of rule definition. Support xlsx
     '''
 
-    def __new__(cls, cfg):
-        ext = os.path.splitext(cfg.dialog_file)[-1]
+    def __new__(cls, dialog_file, **args):
+        ext = os.path.splitext(dialog_file)[-1]
         if ext in ['.xls', '.xlsx']:
-            return Reader_xlsx(cfg)
+            return Reader_xlsx(dialog_file)
         raise('{} file not supported!!'.format(ext))
 

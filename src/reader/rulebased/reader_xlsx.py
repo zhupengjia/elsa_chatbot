@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import os, pandas, re
-from ailab.text import Vocab, Embedding, Segment
 
 '''
     Author: Pengjia Zhu (zhupengjia@gmail.com)
@@ -11,19 +10,18 @@ class Reader_xlsx:
         dialog reader for rule based, from xlsx file
 
         Input:
-            - cfg: dictionary or ailab.utils.config object
-                - dialog_file: xlsx file of rule definition
+            - dialog_file: xlsx file of rule definition
 
     '''
 
-    def __init__(self, cfg):
-        self.cfg = cfg
+    def __init__(self, dialog_file):
+        self.dialog_file = dialog_file
         self._read()
 
     def _read(self):
-        if not os.path.exists(self.cfg.dialog_file):
-            raise('{} not exists!!!'.format(self.cfg.dialog_file))
-        self.data = pandas.read_excel(self.cfg.dialog_file, index_col='id')
+        if not os.path.exists(self.dialog_file):
+            raise('{} not exists!!!'.format(self.dialog_file))
+        self.data = pandas.read_excel(self.dialog_file, index_col='id')
         self.data['childID'] = self.data['childID'].apply(self.__decode_childID)
 
    

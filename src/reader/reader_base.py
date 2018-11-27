@@ -16,10 +16,10 @@ class Reader_Base(object):
        Reader base class to predeal the dialogs 
 
        Input:
-           - cfg: dictionary or ailab.utils.config object
+           - cfg: dictionary or nlptools.utils.config object
                - needed keys:
                     - ner:
-                        - any keys needed in ailab.text.vocab, ailab.text.ner, ailab.text.embedding, ailab.utils.logger, 
+                        - any keys needed in nlptools.text.vocab, nlptools.text.ner, nlptools.text.embedding, nlptools.utils.logger, 
                     - response_template: file path for the response template
                     - model:
                         - batch_size: int, batch_size for iterator

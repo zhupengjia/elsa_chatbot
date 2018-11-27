@@ -21,10 +21,10 @@ class Response_Dict(object):
         The class will build a tf-idf index for template, the __getitem__ method is to get the most closed response via the tf-idf algorithm.(only used for training, the response string in training data will convert to a response id via tfidf search)  
 
         Input:
-            - cfg: dictionary or ailab.utils.config object
+            - cfg: dictionary or nlptools.utils.config object
                 - needed keys:
-                    - any keys used in ailab.text.vocab, ailab.text.vectfidf
-            - tokenizer: instance of ailab.text.segment
+                    - any keys used in nlptools.text.vocab, nlptools.text.vectfidf
+            - tokenizer: instance of nlptools.text.segment
             - entity_dict: instance of src/module/entity_dict
 
         Special usage:

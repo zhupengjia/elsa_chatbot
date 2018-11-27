@@ -12,9 +12,9 @@ class Model_Base(nn.Module):
         Base Model class
 
         Input:
-            - cfg: dictionary or ailab.utils.config object
+            - cfg: dictionary or nlptools.utils.config object
                 - needed keys: Please check your subclass 
-            - vocab: instance of ailab.text.vocab
+            - vocab: instance of nlptools.text.vocab
     '''
     def __init__(self, cfg, vocab):
         super().__init__()

@@ -12,7 +12,7 @@ class Reader_Babi(Reader_Base):
         Read from babi training data, inherit from Reader_Base
 
         Input:
-            - cfg: dictionary or ailab.utils.config object
+            - cfg: dictionary or nlptools.utils.config object
                 - needed keys: Please check needed keys in Reader_Base
     '''
     def __init__(self, cfg):

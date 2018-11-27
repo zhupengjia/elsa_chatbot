@@ -2,7 +2,7 @@
 import sys, torch, os
 from src.reader.reader_babi import Reader_Babi
 from src.model.supervised import Supervised
-from ailab.utils import Config, setLogger
+from nlptools.utils import Config, setLogger
 
 
 model = Supervised('config/babi.yml', Reader_Babi)

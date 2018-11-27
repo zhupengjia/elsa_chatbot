@@ -11,7 +11,7 @@ class Behaviors:
         Input should be the current entities, output should be a dictionary, and will be merged to the current entities. The key in dictionary will be the entity name, and the value will be the entity value.  
 
         Input:
-            - cfg: dictionary or ailab.utils.config object
+            - cfg: dictionary or nlptools.utils.config object
     '''
     def __init__(self, cfg):
         self.cfg = cfg

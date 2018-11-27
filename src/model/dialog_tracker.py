@@ -17,7 +17,7 @@ class Dialog_Tracker(Model_Base):
         dialog tracker for end2end chatbot 
 
         Input:
-            - cfg: dictionary or ailab.utils.config object
+            - cfg: dictionary or nlptools.utils.config object
                 - needed keys:
                     - cnn_kernel_num
                     - cnn_kernel_size
@@ -25,7 +25,7 @@ class Dialog_Tracker(Model_Base):
                     - max_entity_types
                     - fc_response1
                     - fc_response2
-            - vocab: instance of ailab.text.vocab
+            - vocab: instance of nlptools.text.vocab
             - Nresponses: number of available responses
             
     '''

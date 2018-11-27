@@ -10,21 +10,17 @@ class Babi_GenSays:
         Generate user says for babi
 
         Input:
-            - cfg: dictionary or ailab.utils.config object
-                - needed keys:
-                    - ner:
-                        - keywords: dictionary of {entityname: keywords list file path}, entity recognition via keywords list
+            - keywords: dictionary of {entityname: keywords list file path}, entity recognition via keywords list
     '''
-    def __init__(self, cfg):
-        self.cfg = cfg
+    def __init__(self, keywords):
         self.greeting = ['Hello', 'Hi', 'Hey', 'Good morning', 'Good afternoon', 'Good evening', 'yay', 'sweetie', 'sir', 'miss', 'hola', 'ahhh', 'yea',  'hallo', 'awww','heh', 'hahah', 'Haha']
         self.requesting = ["I'd like to", "I love", "I am looking for", "Can I", "Should I", "Do you have", "Could you please", "", "Would you mind", "May I have", "I prefer", 'It will be']
         self.polite = ["please", "thanks", ""]
         self.polite2 = ["thanks", "thank you", "you rock", "no thanks"]
         self.entities = {}
-        for entity in self.cfg.ner.keywords:
+        for entity in keywords:
             self.entities[entity] = []
-            with open(self.cfg.ner.keywords[entity]) as f:
+            with open(keywords[entity]) as f:
                 for l in f:
                     l = l.strip()
                     if len(l) > 0:

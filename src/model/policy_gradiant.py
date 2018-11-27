@@ -5,7 +5,7 @@ from .dialog_tracker import Dialog_Tracker
 from ..module.dialog_status import Dialog_Status
 from torch.autograd import Variable
 from torch.nn.utils.rnn import PackedSequence, pack_padded_sequence, pad_packed_sequence
-from ailab.utils import Config, setLogger
+from nlptools.utils import Config, setLogger
 import torch.optim as optim
 
 '''

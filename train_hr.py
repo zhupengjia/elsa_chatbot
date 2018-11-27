@@ -2,7 +2,7 @@
 import sys, torch, os
 from src.reader import Reader_Dialog
 from src.model.dialog_tracker import Dialog_Tracker
-from ailab.utils import Config, setLogger
+from nlptools.utils import Config, setLogger
 import torch.optim as optim
 
 config = Config('config/hr.yml')

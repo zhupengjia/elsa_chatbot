@@ -31,10 +31,10 @@ class Dialog_Status:
             - add_response: add the current response to status, and run the corresponded hook functions
 
         Input:
-            - cfg: dictionary or ailab.utils.config object
+            - cfg: dictionary or nlptools.utils.config object
                 - needed keys: 
                     - no additional keys needed, just for backup
-            - vocab: instance of ailab.text.vocab
+            - vocab: instance of nlptools.text.vocab
             - entity_dict: instance of src/module/entity_dict
             - response_dict:  instance of src/module/response_dict
 
@@ -159,13 +159,13 @@ class Dialog_Status:
             staticmethod, convert dialogs to batch
 
             Input:
-                - cfg: dictionary or ailab.utils.config object
+                - cfg: dictionary or nlptools.utils.config object
                     - needed keys:
                         - model:
                             - max_seq_len: maximum sequence length
                             - max_entity_types: number of entity types
                             - use_gpu: if use gpu or not
-                - vocab: ailab.text.vocab instance
+                - vocab: nlptools.text.vocab instance
                 - entity_dict: src/module/entity_dict instance
                 - dialogs: list of src/module/dialog_status instance
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import sys, torch, os, numpy
 from .dialog_tracker import Dialog_Tracker
-from ailab.utils import Config, setLogger
+from nlptools.utils import Config, setLogger
 import torch.optim as optim
 
 '''

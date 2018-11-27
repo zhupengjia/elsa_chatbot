@@ -18,12 +18,12 @@ class Entity_Dict:
         There are also maintained a entity_mask dict, which is used to convert existed entities to a one-hot array
 
         Input:
-           - cfg: dictionary or ailab.utils.config object
+           - cfg: dictionary or nlptools.utils.config object
                - needed keys:
                     - entity_dict: string, cached dict file path
                     - max_entity_types: int, number of entity types 
 
-            - vocab: instance of ailab.text.vocab
+            - vocab: instance of nlptools.text.vocab
 
         Special usages:
             - __call__: convert entity from entity map like {entityname:[entityvalues],...} to {entityname_id:[entityvalue_ids], ...}

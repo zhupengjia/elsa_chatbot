@@ -1,7 +1,8 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 import numpy, pandas, re, random, math, sys
-from ailab.text import Vocab, Embedding, Segment, DocSim
+from nlptools.text import DocSim
+from nlptools.text import Tokenizer
 from ..reader.rulebased import Reader
 
 '''
@@ -13,20 +14,19 @@ class Rule_Based:
         Rule based chatbot
 
         Input:
-            - cfg: dictionary or ailab.utils.config object
-                - needed keys:
-                    - all needed keys in ailab.text.segment, embedding and vocab
+            - vocab: instance of nlptools.text.Vocab
+            - tokenizer: instance of nlptools.text.Tokenizer
             - hook: hook instance, please check src/hook/babi_gensays.py for example
+            - dialog_file: xlsx file of rule definition
+            - min_score: score filter for sentence similarity
     '''
-    def __init__(self, cfg, hook):
-        self.cfg = cfg
+    def __init__(self, vocab, tokenizer, hook, dialog_file, min_score=0.6):
         self.hook = hook
-        self.tokenizer = Segment(self.cfg)
-        self.embedding = Embedding(self.cfg)
-        self.vocab = Vocab(self.cfg, self.tokenizer, self.embedding)
-        self.vocab.addBE()
+        self.vocab = vocab
         self.docsim = DocSim(self.vocab)
-        self.reader = Reader(self.cfg)
+        self.reader = Reader(dialog_file)
+        self.tokenizer = tokenizer
+        self.min_score = min_score
         self.session = {}
         self._predeal()
 
@@ -38,7 +38,7 @@ class Rule_Based:
         def utterance2id(utter):
             if not isinstance(utter, str):
                 return None
-            utter = [self.vocab.sentence2id(u) for u in re.split('\n', utter)]
+            utter = [self.vocab.words2id(self.tokenizer(u)) for u in re.split('\n', utter)]
             utter = [u for u in utter if len(u) > 0]
             if len(utter) < 1: return None
             return utter
@@ -63,7 +63,7 @@ class Rule_Based:
         if not clientid in self.session:
             self.session[clientid] = {'CHILDID': None, 'RESPONSE': None}
 
-        utterance_id = self.vocab.sentence2id(utterance)
+        utterance_id = self.vocab.words2id(self.tokenizer(utterance))
         self.session[clientid]['RESPONSE'] = None # clean response
         if len(utterance_id) < 1:
             for e, v in self._get_fallback(self.session[clientid]).items():
@@ -103,7 +103,7 @@ class Rule_Based:
             data_filter = data.loc[entities['CHILDID']]
             data_filter['score'] = data_filter['utterance'].apply(getscore)
             idx = data_filter['score'].idxmax()
-            if data_filter.loc[idx]['score'] < self.cfg['min_score']:
+            if data_filter.loc[idx]['score'] < self.min_score:
                 #try to get score for out of rules
                 otherids = list(set(list(data.index)) - set(entities['CHILDID']))
                 data_others = data.loc[otherids]
