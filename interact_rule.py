@@ -10,9 +10,10 @@ class InteractiveSession():
     def __init__(self):
         self.cfg = Config('config/rule_demo.yml')
         hook = Babi_GenSays(self.cfg.hook_keywords) 
-        tokenizer = Tokenizer(**self.cfg.tokenizer)
+        tokenizer = Tokenizer(tokenizer='bert', **self.cfg.tokenizer)
         embedding = Embedding(**self.cfg.embedding)
-        vocab = Vocab(embedding=embedding, **self.cfg.vocab)
+        vocab = tokenizer.vocab
+        vocab.embedding = embedding
         self.chatbot = Rule_Based(vocab, tokenizer, hook, self.cfg.dialog_file)
         self.client_id = 'Interact'
 
@@ -41,7 +42,7 @@ class InteractiveSession():
         
             else:
 
-                response = self.chatbot.get_reply(u, client_id)
+                response = self.chatbot.get_reply(u, self.client_id)
                 print(response)
 
                 
@@ -50,7 +51,7 @@ if __name__ == '__main__':
     # create interactive session
     isess = InteractiveSession()
     # begin interaction
-    #isess.interact()
-    isess.test('hell')
+    isess.interact()
+    #isess.test('hell')
      
 
