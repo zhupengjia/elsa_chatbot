@@ -18,20 +18,19 @@ class Entity_Dict:
         There are also maintained a entity_mask dict, which is used to convert existed entities to a one-hot array
 
         Input:
-           - cfg: dictionary or nlptools.utils.config object
-               - needed keys:
-                    - entity_dict: string, cached dict file path
-                    - max_entity_types: int, number of entity types 
-
             - vocab: instance of nlptools.text.vocab
+            - max_entity_types: int, number of entity types 
+            - entity_dict_path: string, cached dict file path, will create a new empty dict if the file not exists. Default is None
+
 
         Special usages:
             - __call__: convert entity from entity map like {entityname:[entityvalues],...} to {entityname_id:[entityvalue_ids], ...}
 
     '''
-    def __init__(self, cfg, vocab):
+    def __init__(self, vocab, max_entity_types, entity_dict_path=None):
         self.vocab = vocab
-        self.cfg = cfg
+        self.entity_dict_path = entity_dict_path
+        self.max_entity_types = max_entity_types
         self.entity_maskdict = {} #dict for entity mask
         self.load()
     
@@ -103,13 +102,18 @@ class Entity_Dict:
         return vid
 
 
-    def load(self):
+    def load(self, entity_dict_path=None):
         '''
             load the entity dictionary from file, if not exists, generate a new one
+
+            Input:
+                - entity_dict_path: string, cached dict file path, will use the global variable if it is None. Default is None.
         '''
-        if os.path.exists(self.cfg.entity_dict):
+        if entity_dict_path is not None:
+            self.entity_dict_path = entity_dict_path
+        if self.entity_dict_path is not None and os.path.exists(self.entity_dict_path):
             self.entity_namedict, self.entity_dict, self.entity_value, self.entity_type \
-                    = zload(self.cfg.entity_dict)
+                    = zload(self.entity_dict_path)
         else:
             self.entity_namedict = bidict() #entity name to id 
             self.entity_dict = bidict() #entity value to id 
@@ -117,11 +121,17 @@ class Entity_Dict:
             self.entity_type = {} #check if entity is a string(0) or value(1)
 
 
-    def save(self):
+    def save(self, entity_dict_path=None):
         '''
             save the entity dictionary to file
+
+            Input:
+                - entity_dict_path: string, cached dict file path, will use the global variable it is None. Default is None.
         '''
-        zdump((self.entity_namedict, self.entity_dict, self.entity_value, self.entity_type), self.cfg.entity_dict)
+        if entity_dict_path is not None:
+            self.entity_dict_path = entity_dict_path
+        if self.entity_dict_path is not None:
+            zdump((self.entity_namedict, self.entity_dict, self.entity_value, self.entity_type), self.entity_dict_path)
 
 
     def name2onehot(self, entitynameids):
@@ -134,9 +144,9 @@ class Entity_Dict:
             Output:
                 - 1d numpy array
         '''
-        data = numpy.zeros(self.cfg.max_entity_types, 'float')
+        data = numpy.zeros(self.max_entity_types, 'float')
         for e in entitynameids:
-            if e > self.cfg.max_entity_types - 1:
+            if e > self.max_entity_types - 1:
                 continue
             data[e] += 1
         return data

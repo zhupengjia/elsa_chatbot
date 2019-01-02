@@ -6,15 +6,15 @@
 
 class Behaviors:
     '''
-        The build in hook functions
+        The demo hook functions
         
         Input should be the current entities, output should be a dictionary, and will be merged to the current entities. The key in dictionary will be the entity name, and the value will be the entity value.  
 
         Input:
-            - cfg: dictionary or nlptools.utils.config object
+            - 
     '''
-    def __init__(self, cfg):
-        self.cfg = cfg
+    def __init__(self):
+        pass
 
     def geteid(self, entities):
         return {'CAREER_LEVEL':'7 - Manager', 'COUNTRY':'China'}

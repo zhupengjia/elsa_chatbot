@@ -11,34 +11,42 @@ from torch.autograd import Variable
 class Reader_Quora(object):
     '''
         Reader for quora's duplicated QA. Used for training the sentence embedding with supervised learning, use __getitem__ method or iterator to get the data
+        
+        Input:
+            - vocab:  instance of nlptools.text.Vocab
+            - tokenizer: instance of nlptools.text.tokenizer
+            - embedding: instance of nlptools.text.Embedding
+            - logger: logger instance
+    
     '''
-    def __init__(self, cfg):
-        self.cfg = cfg
-        self.seg = Tokenizer(self.cfg)
-        self.emb = Embedding(self.cfg)
-        self.logger = setLogger(self.cfg)
-        self.vocab = Vocab(self.cfg, self.seg, self.emb)
-        self.vocab.addBE()
+    
+    def __init__(self, vocab, tokenizer, embedding, logger=None):
+        self.tokenizer = tokenizer
+        self.embedding = embedding
+        self.vocab = vocab
+        self.logger = logger
         self.predeal()
+
+    def __sentence2id(self, sentence):
+        return self.vocab.words2id(self.tokenizer(sentence)) 
 
     def predeal(self):
         '''
             Predeal the data. No input needed
         '''
         if os.path.exists(self.cfg['data_cache']):
-            self.logger.info('loaded quora data from cache')
+            if self.logger: self.logger.info('loaded quora data from cache')
             self.data = zload(self.cfg['data_cache'])
         else:
-            self.logger.info('read quora data via pandas')
+            if self.logger: self.logger.info('read quora data via pandas')
             self.data = pandas.read_csv(self.cfg['data_path'], sep='\t', usecols=['question1', 'question2', 'is_duplicate']).dropna()
-            self.logger.info('sentence2id for question1')
-            self.data['question1_id'] = self.data['question1'].apply(self.vocab.sentence2id)
-            self.logger.info('sentence2id for question2')
-            self.data['question2_id'] = self.data['question2'].apply(self.vocab.sentence2id)
-            self.logger.info('cache vectors')
-            self.vocab.get_id2vec()
+            if self.logger: self.logger.info('sentence2id for question1')
+            self.data['question1_id'] = self.data['question1'].apply(self.__sentence2id)
+            if self.logger: self.logger.info('sentence2id for question2')
+            self.data['question2_id'] = self.data['question2'].apply(self.__sentence2id)
+            if self.logger: self.logger.info('cache vectors')
             self.vocab.save()
-            self.emb.save()
+            self.embedding.save()
             zdump(self.data, self.cfg['data_cache'])
         self.N_batches = math.ceil(len(self.data['question1_id'])/self.cfg["batch_size"])
 
@@ -46,7 +54,7 @@ class Reader_Quora(object):
         '''
             Shuffle the data
         '''
-        self.logger.info('shuffle data')
+        if self.logger: self.logger.info('shuffle data')
         self.data = self.data.sample(frac=1).reset_index(drop=True)
 
     def __iter__(self):

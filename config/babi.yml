@@ -7,12 +7,31 @@ APPNAME: END2END_DEMO
 # for adversary chatbot
 rule_based:
     dialog_file: data/babi/babi_adversary.xlsx 
-    cached_vocab: data/babi/vocab_adversary.pkl
-    TOKENIZER: spacy
-    LANGUAGE: en
-    ngrams: 3 
-    min_score: 0.6 #jump the rule if less than this score
     
+    tokenizer:
+        bert_model_name: /home/pzhu/data/bert/bert-base-uncased/vocab
+      
+    embedding:
+        w2v_word2idx: /home/pzhu/data/bert/bert-base-uncased/word2idx.zpkl
+        w2v_idx2vec: /home/pzhu/data/bert/bert-base-uncased/word2vec_weight.npy
+        dim: 768
+
+    vocab:
+        cached_vocab: data/babi/vocab_adversary.pkl
+
+    hook_keywords:
+        PARTY_SIZE: data/babi/entities/party_size.txt
+        LOCATION: data/babi/entities/location.txt
+        CUISINE: data/babi/entities/cuisine.txt
+        REST_TYPE: data/babi/entities/rest_type.txt
+    
+    logger:
+        LogLevel_Console:  20
+        LogLevel_File: 0
+        LogFile: data/babi/train.log
+        LogFormat: '%(asctime)s | %(levelname)s: %(message)s'
+    
+    min_score: 0.6 #jump the rule if less than this score
 
 #
 response_template: 

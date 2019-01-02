@@ -12,11 +12,10 @@ class Reader_Babi(Reader_Base):
         Read from babi training data, inherit from Reader_Base
 
         Input:
-            - cfg: dictionary or nlptools.utils.config object
-                - needed keys: Please check needed keys in Reader_Base
+            - see Reader_Base
     '''
-    def __init__(self, cfg):
-        Reader_Base.__init__(self, cfg)
+    def __init__(self, **args):
+        Reader_Base.__init__(self, **args)
      
     def _rm_index(self, row):
         return [' '.join(row[0].split(' ')[1:])] + row[1:]

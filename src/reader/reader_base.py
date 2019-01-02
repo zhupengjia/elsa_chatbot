@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import sys, os, numpy
-from nlptools.utils import setLogger
 from nlptools.text.ner import NER
 from nlptools.text import Vocab, Embedding
 from ..module.response_dict import Response_Dict
@@ -16,48 +15,50 @@ class Reader_Base(object):
        Reader base class to predeal the dialogs 
 
        Input:
-           - cfg: dictionary or nlptools.utils.config object
-               - needed keys:
-                    - ner:
-                        - any keys needed in nlptools.text.vocab, nlptools.text.ner, nlptools.text.embedding, nlptools.utils.logger, 
-                    - response_template: file path for the response template
-                    - model:
-                        - batch_size: int, batch_size for iterator
-
+            - vocab:  instance of nlptools.text.Vocab
+            - ner: instance of nlptools.text.ner.NER
+            - embedding: instance of nlptools.text.Embedding
+            - entity_dict: instance of ..module.entity_dict.Entity_Dict
+            - hook: hook instance, see ..hook.behaviors for example
+            - response_cache: path of cached index file for response search, will create the file if it is not existed
+            - batch_size, int, batch size for iterator, default is 20
+            - logger: logger instance
+            
         Special method supported:
             - len(): return total number of responses in template
             - iterator: return data in pytorch Variable used in tracker
     '''
-    def __init__(self, cfg):
-        self.cfg = cfg
-        self.logger = setLogger(self.cfg.logger)
-        self.emb = Embedding(self.cfg.ner)
-        self.ner = NER(self.cfg.ner)
+
+    def __init__(self, vocab, ner, embedding, entity_dict, hook, response_cache, batch_size=20, logger = None):
+        self.logger = logger
+        self.emb = embedding
+        self.ner = ner
         self.ner.build_keywords_index(self.emb)
-        self.vocab = Vocab(self.cfg.ner, self.ner, self.emb)
-        self.vocab.addBE()
-        self.entity_dict = Entity_Dict(self.cfg.ner, self.vocab)
+        self.vocab = vocab
+        self.entity_dict = entity_dict
+        self.hook = hook
         self.data = {}
-    
+   
+
     def build_responses(self):
         '''
             build response index for response_template
         '''
-        self.responses = Response_Dict(self.cfg.response_template, self.ner, self.entity_dict)
+        self.response_dict = Response_Dict(self.ner, self.entity_dict, self.response_cache)
         with open(self.cfg.response_template.data) as f:
             for l in f:
                 l = l.strip()
                 if len(l) < 1:
                     continue
-                self.responses.add(l)
-        self.responses.build_index()
+                self.response_dict.add(l)
+        self.response_dict.build_index()
 
 
     def __len__(self):
         '''
             return total number of responses in template
         '''
-        return len(self.responses)
+        return len(self.response_dict)
 
 
     def get_response(self, responseid, entity=None):
@@ -71,7 +72,7 @@ class Reader_Base(object):
             Output:
                 - response, string
         '''
-        response = self.responses.response[responseid]
+        response = self.response_dict.response[responseid]
         if entity is not None:
             response = response.format(**entity)
         return response
@@ -110,7 +111,8 @@ class Reader_Base(object):
             ripe[k] = []
 
         for i_d, dialog in enumerate(data):
-            self.logger.info('predeal dialog {}/{}'.format(i_d, len(data)))
+            if self.logger is not None:
+                self.logger.info('predeal dialog {}/{}'.format(i_d, len(data)))
             ripe['idrange'].append([len(ripe['utterance']), len(ripe['utterance'])+len(dialog)])
             for i_p, pair in enumerate(dialog):
                 for i_s, sentence in enumerate(pair):
@@ -125,7 +127,7 @@ class Reader_Base(object):
                         ripe['utterance'].append(token_ids)
                         ripe['ent_utterance'].append(entity_ids)
                     else:
-                        response_id = self.responses[tokens + list(entities.keys())]
+                        response_id = self.response_dict[tokens + list(entities.keys())]
                         ripe['ent_response'].append(entity_ids)
                         if response_id is None:
                             ripe['response'].append(0)
@@ -135,7 +137,7 @@ class Reader_Base(object):
                             #print(' '.join(tokens))
                             #for i in range(min(3, len(response_id))):
                             #    print('-'*30)
-                            #    print(self.responses.response[response_id[i][0]])
+                            #    print(self.response_dict.response[response_id[i][0]])
                             ripe['response'].append(response_id[0])
         self.vocab.reduce_vocab()
         self.vocab.save()
@@ -148,7 +150,7 @@ class Reader_Base(object):
         '''
             return a new dialog status instance
         '''
-        return  Dialog_Status(self.cfg, self.vocab, self.entity_dict, self.responses)
+        return  Dialog_Status(self.vocab, self.ner, self.entity_dict, self.response_dict, self.hook)
 
 
     def __iter__(self):
@@ -169,7 +171,8 @@ class Reader_Base(object):
                     #mask
                     dialog_status.getmask()
                     dialog_status.add_response(self.data['response'][i])
-                self.logger.debug(dialog_status)
+                if self.logger is not None:
+                    self.logger.debug(dialog_status)
                 dialogs.append(dialog_status)
             yield Dialog_Status.torch(self.cfg, self.vocab, self.entity_dict, dialogs)
 

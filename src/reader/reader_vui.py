@@ -12,11 +12,10 @@ class Reader_VUI(Reader_Base):
         Read from VUI json files (compatible with old api.ai format), inherit from Reader_Base 
 
         Input:
-            - cfg: dictionary or nlptools.utils.config object
-                - needed keys: Please check needed keys in Reader_Base
+            - see Reader_Base
     '''
-    def __init__(self, cfg):
-        Reader_Base.__init__(self, cfg)
+    def __init__(self, **args):
+        Reader_Base.__init__(self, **args)
         self.data = []
 
     def _jsonparse(self, data):

@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import numpy, torch, copy, time, sys
-from torch.autograd import Variable
 from torch import functional as F
 from ..hook import *
 from nlptools.utils import flat_list
@@ -11,7 +10,7 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 '''
 
 class Dialog_Status:
-    def __init__(self, cfg, vocab, entity_dict, response_dict):
+    def __init__(self, vocab, ner, entity_dict, response_dict, hook):
         '''
         Maintain the dialog status in a dialog
 
@@ -31,12 +30,11 @@ class Dialog_Status:
             - add_response: add the current response to status, and run the corresponded hook functions
 
         Input:
-            - cfg: dictionary or nlptools.utils.config object
-                - needed keys: 
-                    - no additional keys needed, just for backup
             - vocab: instance of nlptools.text.vocab
+            - ner: instance of nlptools.text.ner
             - entity_dict: instance of src/module/entity_dict
             - response_dict:  instance of src/module/response_dict
+            - hook: hook instance, please check src/hook/babi_gensays.py for example
 
         Special usage:
             - str(): print the current status
@@ -44,10 +42,10 @@ class Dialog_Status:
 
         '''
 
-        self.cfg = cfg
         self.vocab = vocab
+        self.ner = ner
         self.response_dict = response_dict
-        self.behaviors = Behaviors(self.cfg)
+        self.hook = hook
         self.entity_dict = entity_dict #for response mask
         self.entity = {} #for current entity 
         self.entity_mask = numpy.ones((len(entity_dict.entity_maskdict),1), 'bool_') #for response mask
@@ -68,8 +66,8 @@ class Dialog_Status:
         '''
         if isinstance(utterance, str):
             #predeal utterance
-            entities, tokens = self.vocab.seg_ins.get(utterance.lower())
-            utterance_ids = self.vocab.sentence2id(tokens)
+            entities, tokens = self.ner.get(utterance.lower())
+            utterance_ids = self.vocab.words2id(self.ner(tokens))
             if len(utterance_ids) < 1:
                 return None
             entity_ids =  self.entity_dict(entities)
@@ -95,7 +93,7 @@ class Dialog_Status:
         self.responses.append(response)
         funcneeds = self.response_dict.func_need[response]
         for funcname in funcneeds:
-            func = getattr(self.behaviors, funcname)
+            func = getattr(self.hook, funcname)
             self.applyfunc(func)
 
 
@@ -138,7 +136,7 @@ class Dialog_Status:
         txt += 'entity mask: ' + str(self.entity_mask.reshape(1, -1)[0]) + '\n'
         for i in range(len(self.utterances)):
             txt += '-'*20 + str(i) + '-'*20 + '\n'
-            txt += 'utterance: ' + self.vocab.id2sentence(self.utterances[i]) + '\n'
+            txt += 'utterance: ' + ' '.join(self.vocab.id2words(self.utterances[i])) + '\n'
             if i < len(self.responses):
                 txt += 'response: ' + self.response_dict.response[self.responses[i]] + '\n'
             txt += 'entities: ' + ' '.join([self.entity_dict.entity_namedict.inv[e] for e in self.entities[i].keys()]) + '\n'
@@ -154,20 +152,19 @@ class Dialog_Status:
 
 
     @staticmethod 
-    def torch(cfg, vocab, entity_dict, dialogs):
+    def torch(vocab, entity_dict, dialogs, max_seq_len, max_entity_types, rl_maxloop=20, rl_discount=0.95, device=None):
         '''
             staticmethod, convert dialogs to batch
 
             Input:
-                - cfg: dictionary or nlptools.utils.config object
-                    - needed keys:
-                        - model:
-                            - max_seq_len: maximum sequence length
-                            - max_entity_types: number of entity types
-                            - use_gpu: if use gpu or not
                 - vocab: nlptools.text.vocab instance
                 - entity_dict: src/module/entity_dict instance
                 - dialogs: list of src/module/dialog_status instance
+                - max_seq_len: int, maximum sequence length
+                - max_entity_types: int, number of entity types
+                - rl_maxloop: int, maximum dialog loop, default is 20
+                - rl_discount: float, discount rate for reinforcement learning, default is 0.95
+                - device: instance of torch.device, default is cpu device
 
             Output:
                 - dictionary of pytorch variables with the keys of :
@@ -185,28 +182,30 @@ class Dialog_Status:
         dialog_lengths = dialog_lengths[perm_idx]
         max_dialog_len = int(dialog_lengths[0])
         
-        utterance = numpy.zeros((N_dialogs, max_dialog_len, cfg.model.max_seq_len), 'int')
+        utterance = numpy.zeros((N_dialogs, max_dialog_len, max_seq_len), 'int')
         response = numpy.zeros((N_dialogs, max_dialog_len), 'int')
-        entity = numpy.zeros((N_dialogs, max_dialog_len, cfg.model.max_entity_types), 'float')
+        entity = numpy.zeros((N_dialogs, max_dialog_len, max_entity_types), 'float')
         mask = numpy.zeros((N_dialogs, max_dialog_len, len(dialogs[0].masks[0])), 'float')
         reward = numpy.zeros((N_dialogs, max_dialog_len), 'float')
         response_prev = numpy.zeros((N_dialogs, max_dialog_len, len(dialogs[0].response_dict)), 'float') #previous response, onehot
 
+        if device is None:
+            device = torch.device('cpu')
 
         for j, idx in enumerate(perm_idx):
             dialog = dialogs[idx]
             #check if dialog finished by measuring the length of dialog
-            if len(dialog) < cfg.model.rl_maxloop:
+            if len(dialog) < rl_maxloop:
                 reward_base = 1
             else:
                 reward_base = 0
             response[j, :len(dialog.responses)] = torch.LongTensor(dialog.responses)
             for i in range(dialog_lengths[j]):
                 entities = entity_dict.name2onehot(dialog.entities[i].keys()) #all entity names
-                seqlen = min(cfg.model.max_seq_len, len(dialog.utterances[i]))
+                seqlen = min(max_seq_len, len(dialog.utterances[i]))
                 utterance[j, i, :seqlen] = numpy.array(dialog.utterances[i])[:seqlen]
                 entity[j, i, :] = entities
-                reward[j, i] = reward_base * cfg.model.rl_discount ** i
+                reward[j, i] = reward_base * rl_discount ** i
                 mask[j, i, :] = dialog.masks[i].astype('float')
                 if i > 0:
                     response_prev[j, i, response[j, i-1]] = 1
@@ -220,26 +219,13 @@ class Dialog_Status:
             reward[rid] = reward[rid] - reward_mean
 
 
-        #to variable
-        utterance = torch.LongTensor(utterance)
-        response = torch.LongTensor(response)
-        entity = torch.FloatTensor(entity)
-        mask = torch.FloatTensor(mask)
-        reward = torch.FloatTensor(reward)
-        response_prev = torch.FloatTensor(response_prev)
-        if cfg.model.use_gpu:
-            utterance = utterance.cuda(cfg.model.use_gpu-1)
-            response = response.cuda(cfg.model.use_gpu-1)
-            entity = entity.cuda(cfg.model.use_gpu-1)
-            mask = mask.cuda(cfg.model.use_gpu-1)
-            reward = reward.cuda(cfg.model.use_gpu-1)
-            response_prev = response_prev.cuda(cfg.model.use_gpu-1)
-        utterance = Variable(utterance)
-        response = Variable(response)
-        entity = Variable(entity)
-        mask = Variable(mask)
-        reward = Variable(reward)
-        response_prev = Variable(response_prev)
+        #to torch tensor
+        utterance = torch.LongTensor(utterance).to(device)
+        response = torch.LongTensor(response).to(device)
+        entity = torch.FloatTensor(entity).to(device)
+        mask = torch.FloatTensor(mask).to(device)
+        reward = torch.FloatTensor(reward).to(device)
+        response_prev = torch.FloatTensor(response_prev).to(device)
 
 
         #pack them up for different dialogs

@@ -8,7 +8,7 @@ from nlptools.utils import flat_list
     Author: Pengjia Zhu (zhupengjia@gmail.com)
 '''
 
-class Response_Dict(object):
+class Response_Dict:
     '''
         Response dictionary. Used to index the response template and get the most closed response_template from a response string. 
         
@@ -21,23 +21,22 @@ class Response_Dict(object):
         The class will build a tf-idf index for template, the __getitem__ method is to get the most closed response via the tf-idf algorithm.(only used for training, the response string in training data will convert to a response id via tfidf search)  
 
         Input:
-            - cfg: dictionary or nlptools.utils.config object
-                - needed keys:
-                    - any keys used in nlptools.text.vocab, nlptools.text.vectfidf
-            - tokenizer: instance of nlptools.text.segment
+            - tokenizer: instance of nlptools.text.tokenizer
             - entity_dict: instance of src/module/entity_dict
+            - cached_index: path of cached index file for response search, will create the file if it is not existed
 
         Special usage:
             - len(): return number of responses in template
             - __getitem__ : get most closed response id for response, input is response string
     '''
-    def __init__(self, cfg, tokenizer, entity_dict):
+    def __init__(self, tokenizer, entity_dict, cached_index):
         self.response, self.response_ids, self.func_need = [], [], []
         self.entity_need = {'need':[], 'notneed':[]}
-        self.vocab = Vocab(cfg, tokenizer) #response vocab, only used for searching best matched response template, independent with outside vocab.  
-        self.cfg = cfg
+        self.tokenizer = tokenizer
+        self.cached_vocab = cached_index + '.vocab'
+        self.vocab = Vocab(self.cached_vocab) #response vocab, only used for searching best matched response template, independent with outside vocab.  
         self.entity_dict = entity_dict
-        self.__search = VecTFIDF(self.cfg, self.vocab)
+        self.__search = VecTFIDF(self.vocab, cached_index)
 
 
     def add(self, response):
@@ -60,7 +59,7 @@ class Response_Dict(object):
             sys.exit()
 
         response_lite = re.sub('(\{[A-Z]+\})|(\d+)','', response)
-        response_ids = self.vocab.sentence2id(response_lite) 
+        response_ids = self.vocab.words2id(self.tokenizer(response_lite)) 
         if len(response_ids) < 1:
             return
         self.response.append(response)
@@ -132,7 +131,7 @@ class Response_Dict(object):
             Output:
                 - response_id, int. If not found return None.
         '''
-        response_ids = self.vocab.sentence2id(response)
+        response_ids = self.vocab.words2id(self.tokenizer(response))
         if len(response_ids) < 1:
             return None
         result = self.__search.search_index(response_ids, topN=1)
