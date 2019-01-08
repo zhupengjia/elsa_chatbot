@@ -13,14 +13,14 @@ class Duplicate_Embedding(Model_Base):
     '''
         sentence embedding via supervised learning , one of the training data is Quora's duplicate QA
     '''
-    def __init__(self, cfg, vocab):
-        super().__init__(cfg, vocab)
+    def __init__(self, vocab, kernel_num, kernel_size, dropout):
+        super().__init__(vocab)
         self.network()
 
     def network(self):
-        self.encoder = Sentence_Encoder(self.cfg, self.vocab)
+        self.encoder = Sentence_Encoder(self.vocab, self.kernel_num, self.kernel_size, dropout)
         self.encoder.network()
-        self.fc1 = nn.Linear(self.cfg['cnn_kernel_num']*2, 1)
+        self.fc1 = nn.Linear(self.kernel_num*2, 1)
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, question1, question2):

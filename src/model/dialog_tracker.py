@@ -17,42 +17,43 @@ class Dialog_Tracker(Model_Base):
         dialog tracker for end2end chatbot 
 
         Input:
-            - cfg: dictionary or nlptools.utils.config object
-                - needed keys:
-                    - cnn_kernel_num
-                    - cnn_kernel_size
-                    - dropout
-                    - max_entity_types
-                    - fc_response1
-                    - fc_response2
             - vocab: instance of nlptools.text.vocab
             - Nresponses: number of available responses
+            - kernel_num: int
+            - kernel_size: int
+            - max_entity_types: int
+            - fc_response1: int
+            - fc_response2: int
+            - dropout: float
             
     '''
-    def __init__(self, cfg, vocab, Nresponses):
-        super().__init__(cfg, vocab)
+    def __init__(self, vocab, Nresponses, kernel_num, kernel_size, max_entity_types, dropout=0.2):
+        super().__init__(vocab)
         self.Nresponses = Nresponses
+        self.kernel_num = kernel_num
+        self.kernel_size = kernel_size
+        self.dropout = dropout
         self.network()
 
     def network(self):
         '''
             Define the network modules
         '''
-        self.encoder = Sentence_Encoder(self.cfg, self.vocab) # sentence encoder for utterance embedding
+        self.encoder = Sentence_Encoder(self.vocab, self.kernel_num, self.kernel_size, self.dropout) # sentence encoder for utterance embedding
         self.encoder.network()
         self.conv = nn.Conv2d(in_channels = 1, \
-                out_channels = self.cfg['cnn_kernel_num'], \
-                kernel_size = (self.cfg['cnn_kernel_size'], self.vocab.emb_ins.vec_len),\
+                out_channels = self.kernel_num, \
+                kernel_size = (self.kernel_size, self.vocab.emb_ins.vec_len),\
                 padding = 0)
-        self.dropout = nn.Dropout(self.cfg['dropout'])
+        self.dropout = nn.Dropout(self.dropout)
         self.pool = nn.AvgPool1d(2)
-        self.fc_entity1 = nn.Linear(self.cfg['max_entity_types'],self.cfg['max_entity_types'])
-        self.fc_entity2 = nn.Linear(self.cfg['max_entity_types'],self.cfg['max_entity_types'])
-        self.fc_response1 = nn.Linear(self.Nresponses, self.cfg['fc_response1'])
-        self.fc_response2 = nn.Linear(self.cfg['fc_response1'], self.cfg['fc_response2'])
-        fc1_input_size = self.cfg['cnn_kernel_num']*2 + self.cfg['max_entity_types'] + self.cfg['fc_response2']
+        self.fc_entity1 = nn.Linear(self.max_entity_types,self.max_entity_types)
+        self.fc_entity2 = nn.Linear(self.max_entity_types,self.max_entity_types)
+        self.fc_response1 = nn.Linear(self.Nresponses, self.fc_response1)
+        self.fc_response2 = nn.Linear(self.fc_response1, self.fc_response2)
+        fc1_input_size = self.kernel_num*2 + self.max_entity_types + self.fc_response2
         self.fc_dialog = nn.Linear(fc1_input_size, self.Nresponses)
-        self.lstm = nn.LSTM(self.Nresponses, self.Nresponses, num_layers=1, dropout = self.cfg['dropout'], batch_first=True)
+        self.lstm = nn.LSTM(self.Nresponses, self.Nresponses, num_layers=1, dropout = self.dropout, batch_first=True)
         self.softmax = nn.Softmax(dim=1)
 
     def entityencoder(self, x):

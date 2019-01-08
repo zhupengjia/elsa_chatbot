@@ -10,11 +10,7 @@ class InteractiveSession():
     def __init__(self):
         self.cfg = Config('config/rule_demo.yml')
         hook = Babi_GenSays(self.cfg.hook_keywords) 
-        tokenizer = Tokenizer(tokenizer='bert', **self.cfg.tokenizer)
-        embedding = Embedding(**self.cfg.embedding)
-        vocab = tokenizer.vocab
-        vocab.embedding = embedding
-        self.chatbot = Rule_Based(vocab, tokenizer, hook, self.cfg.dialog_file)
+        self.chatbot = Rule_Based.build(self.cfg, hook)
         self.client_id = 'Interact'
 
     def test(self, say):

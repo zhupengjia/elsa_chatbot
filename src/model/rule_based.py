@@ -1,8 +1,8 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 import numpy, pandas, re, random, math, sys
-from nlptools.text import DocSim
-from nlptools.text import Tokenizer
+from nlptools.utils import Config
+from nlptools.text import DocSim, Tokenizer, Embedding
 from ..reader.rulebased import Reader
 
 '''
@@ -29,6 +29,22 @@ class Rule_Based:
         self.min_score = min_score
         self.session = {}
         self._predeal()
+
+
+    @classmethod
+    def build(cls, config, hook):
+        '''
+            construct model from config
+
+            Input:
+                - config: configure dictionary
+                - hook: hook instance, please check src/hook/babi_gensays.py for example
+        '''
+        tokenizer = Tokenizer(tokenizer='bert', **config.tokenizer)
+        embedding = Embedding(**config.embedding)
+        vocab = tokenizer.vocab
+        vocab.embedding = embedding
+        return cls(vocab, tokenizer, hook=hook, dialog_file=config.dialog_file, min_score = config.min_score)
 
 
     def _predeal(self):

@@ -12,8 +12,11 @@ class Sentence_Encoder(Model_Base):
     '''
         sentence encoder to get the sentence embedding, use CNN. 
     '''
-    def __init__(self, cfg, vocab):
-        super().__init__(cfg, vocab)
+    def __init__(self, vocab, kernel_num, kernel_size, dropout=0.2):
+        super().__init__(vocab)
+        self.kernel_num = kernel_num
+        self.kernel_size = kernel_size
+        self.dropout = dropout
         self.network()
     
     def network(self):
@@ -24,10 +27,10 @@ class Sentence_Encoder(Model_Base):
         #self.embedding.weight.data = torch.FloatTensor(self.vocab.dense_vectors())
         #self.embedding.weight.requires_grad = False
         self.conv = nn.Conv2d(in_channels = 1, \
-                out_channels = self.cfg['cnn_kernel_num'], \
-                kernel_size = (self.cfg['cnn_kernel_size'], self.vocab.emb_ins.vec_len),\
+                out_channels = self.kernel_num, \
+                kernel_size = (self.kernel_size, self.vocab.emb_ins.vec_len),\
                 padding = 0)
-        self.dropout = nn.Dropout(self.cfg['dropout'])
+        self.dropout = nn.Dropout(self.dropout)
         self.pool = nn.AvgPool1d(2)
 
     def conv_and_pool(self, x):

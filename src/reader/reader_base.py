@@ -29,7 +29,7 @@ class Reader_Base(object):
             - iterator: return data in pytorch Variable used in tracker
     '''
 
-    def __init__(self, vocab, ner, embedding, entity_dict, hook, response_cache, batch_size=20, logger = None):
+    def __init__(self, vocab, ner, embedding, entity_dict, hook, response_cache="response.cache", batch_size=20, logger = None):
         self.logger = logger
         self.emb = embedding
         self.ner = ner

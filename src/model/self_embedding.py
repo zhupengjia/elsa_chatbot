@@ -13,14 +13,17 @@ class Self_Embedding(Model_Base):
     '''
         sentence embedding via autoencoder, not implemented
     '''
-    def __init__(self, cfg, vocab):
-        super().__init__(cfg, vocab)
+    def __init__(self, vocab, kernel_num, kernel_size, dropout=0.2):
+        super().__init__(vocab)
+        self.kernel_num = kernel_num
+        self.kernel_size = kernel_size
+        self.dropout = dropout
         self.network()
 
     def network(self):
-        self.encoder = Sentence_Encoder(self.cfg, self.vocab)
+        self.encoder = Sentence_Encoder(self.vocab, self.kernel_num, self.kernel_size, dropout)
         self.encoder.network()
-        self.fc1 = nn.Linear(self.cfg['cnn_kernel_num']*2, 1)
+        self.fc1 = nn.Linear(self.kernel_num*2, 1)
         
 
     def forward(self, question):

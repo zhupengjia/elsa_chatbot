@@ -4,10 +4,10 @@
 
 # for adversary chatbot
 dialog_file: data/babi/babi_adversary.xlsx 
-
+min_score: 0.6 #jump the rule if less than this score
 
 tokenizer:
-    bert_model_name: /home/pzhu/data/bert/bert-base-uncased/vocab
+    bert_model_name: /home/pzhu/data/bert/bert-base-uncased
   
 embedding:
     w2v_word2idx: /home/pzhu/data/bert/bert-base-uncased/word2idx.zpkl
