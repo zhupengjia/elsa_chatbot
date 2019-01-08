@@ -20,7 +20,6 @@ class Reader_Base(object):
             - embedding: instance of nlptools.text.Embedding
             - entity_dict: instance of ..module.entity_dict.Entity_Dict
             - hook: hook instance, see ..hook.behaviors for example
-            - response_cache: path of cached index file for response search, will create the file if it is not existed
             - batch_size, int, batch size for iterator, default is 20
             - logger: logger instance
             
@@ -29,7 +28,7 @@ class Reader_Base(object):
             - iterator: return data in pytorch Variable used in tracker
     '''
 
-    def __init__(self, vocab, ner, embedding, entity_dict, hook, response_cache="response.cache", batch_size=20, logger = None):
+    def __init__(self, vocab, ner, embedding, entity_dict, hook, batch_size=20, logger = None):
         self.logger = logger
         self.emb = embedding
         self.ner = ner
@@ -40,12 +39,15 @@ class Reader_Base(object):
         self.data = {}
    
 
-    def build_responses(self):
+    def build_responses(self, template_file):
         '''
             build response index for response_template
+
+            Input:
+                - template_file: template file path
         '''
-        self.response_dict = Response_Dict(self.ner, self.entity_dict, self.response_cache)
-        with open(self.cfg.response_template.data) as f:
+        self.response_dict = Response_Dict(self.ner, self.entity_dict, template_file+".cache")
+        with open(template_file) as f:
             for l in f:
                 l = l.strip()
                 if len(l) < 1:

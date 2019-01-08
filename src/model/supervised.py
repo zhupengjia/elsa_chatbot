@@ -47,43 +47,28 @@ class Supervised:
 
 
     @classmethod
-    def build(cls, cfgfile): 
+    def build(cls, config, reader_cls, hook): 
         '''
             construct model from config
 
             Input:
-                - cfgfile: str, config file path
+                - config: configure dictionary
+                - reader_cls: class for reader
+                - hook: hook instance, please check src/hook/babi_gensays.py for example
         '''
-        config = Config(cfg)
         logger = setLogger(config.logger)
         vocab = Vocab(**config.vocab)
         ner = NER(**config.ner)
         embedding = Embedding(**config.embedding)
 
         entity_dict = Entity_Dict(vocab, **config.entity_dict) 
-        
-        reader =  
+       
+        #reader
+        reader = reader_cls(vocab, ner, embedding, entity_dict, hook, config.model.batch_size, logger)
+        reader.build_responses(cfg.response_template) #build response template index, will read response template and create entity need for each response template every time, but not search index.
+        reader.responses.build_mask()
 
-
-        model = cls(reader=reader, **config.model)
-
-        #build reader
-
-
-        pass 
-
-
-    def __init_reader(self, reader_cls):
-        '''
-            construct reader
-            
-            Input:
-                - reader_cls:
-                    class for reader
-        '''
-        self.reader = reader_cls(self.vocab, self.ner, self.embedding, self.entity_dict, self.hook, self.response_cache, self.batch_size, self.logger)
-        self.reader.build_responses() #build response template index, will read response template and create entity need for each response template every time, but not search index.
-        self.reader.responses.build_mask()
+        return cls(reader=reader, max_entity_types=config.entity_dict.max_entity_types, logger=logger, **config.model)
 
 
     def __init_tracker(self):
