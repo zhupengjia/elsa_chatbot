@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import sys, re, numpy
-from nlptools.text import VecTFIDF, Vocab
+from nlptools.text import VecTFIDF
+from nlptools.text.ngrams import Ngrams
 from nlptools.utils import flat_list
 
 
@@ -34,7 +35,7 @@ class Response_Dict:
         self.entity_need = {'need':[], 'notneed':[]}
         self.tokenizer = tokenizer
         self.cached_vocab = cached_index + '.vocab'
-        self.vocab = Vocab(self.cached_vocab) #response vocab, only used for searching best matched response template, independent with outside vocab.  
+        self.vocab = Ngrams(ngrams=3, cached_vocab = self.cached_vocab) #response vocab, only used for searching best matched response template, independent with outside vocab.  
         self.entity_dict = entity_dict
         self.__search = VecTFIDF(self.vocab, cached_index)
 
