@@ -3,7 +3,7 @@ import sys, torch, os, numpy
 from .dialog_tracker import Dialog_Tracker
 from nlptools.utils import Config, setLogger
 from ..module.entity_dict import Entity_Dict
-from nlptools.text import Vocab
+from nlptools.text import Vocab, Embedding
 from nlptools.text.ner import NER
 import torch.optim as optim
 
@@ -64,8 +64,8 @@ class Supervised:
         entity_dict = Entity_Dict(vocab, **config.entity_dict) 
        
         #reader
-        reader = reader_cls(vocab, ner, embedding, entity_dict, hook, config.model.batch_size, logger)
-        reader.build_responses(cfg.response_template) #build response template index, will read response template and create entity need for each response template every time, but not search index.
+        reader = reader_cls(vocab=vocab, ner=ner, embedding=embedding, entity_dict=entity_dict, hook=hook, batch_size=config.model.batch_size, logger=logger)
+        reader.build_responses(config.response_template) #build response template index, will read response template and create entity need for each response template every time, but not search index.
         reader.responses.build_mask()
 
         return cls(reader=reader, max_entity_types=config.entity_dict.max_entity_types, logger=logger, **config.model)

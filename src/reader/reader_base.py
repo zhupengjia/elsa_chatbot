@@ -32,7 +32,7 @@ class Reader_Base(object):
         self.logger = logger
         self.emb = embedding
         self.ner = ner
-        self.ner.build_keywords_index(self.emb)
+        self.ner.build_keywords_index(embedding=self.emb)
         self.vocab = vocab
         self.entity_dict = entity_dict
         self.hook = hook
