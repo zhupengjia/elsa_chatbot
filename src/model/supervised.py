@@ -56,7 +56,7 @@ class Supervised:
                 - reader_cls: class for reader
                 - hook: hook instance, please check src/hook/babi_gensays.py for example
         '''
-        logger = setLogger(config.logger)
+        logger = setLogger(**config.logger)
         vocab = Vocab(**config.vocab)
         ner = NER(**config.ner)
         embedding = Embedding(**config.embedding)

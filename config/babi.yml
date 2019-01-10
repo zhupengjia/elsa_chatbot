@@ -84,8 +84,8 @@ model:
     saved_model: 'data/babi/model.pt'
 
 logger:
-    LogLevel_Console:  20
-    LogLevel_File: 0
-    LogFile: data/babi/train.log
-    LogFormat: '%(asctime)s | %(levelname)s: %(message)s'
+    appname: babi
+    loglevel_console:  20
+    loglevel_file: 0
+    logfile: data/babi/train.log
 
