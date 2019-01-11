@@ -102,6 +102,9 @@ class Supervised:
 
     def train(self):
         for epoch, d in enumerate(self.reader):
+            for k in d:
+                d[k] = d[k].to(self.device)
+                print(k, d[k])
             self.tracker.zero_grad()
             y_prob = torch.log(self.tracker(d))
         
