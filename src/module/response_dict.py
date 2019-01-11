@@ -61,6 +61,7 @@ class Response_Dict:
 
         response_lite = re.sub('(\{[A-Z]+\})|(\d+)','', response)
         response_ids = self.vocab.words2id(self.tokenizer(response_lite)) 
+        response_ids = numpy.concatenate(list(response_ids.values()))
         if len(response_ids) < 1:
             return
         self.response.append(response)

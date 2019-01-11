@@ -27,33 +27,22 @@ class Dialog_Tracker(Model_Base):
             - dropout: float
             
     '''
-    def __init__(self, vocab, Nresponses, kernel_num, kernel_size, max_entity_types, dropout=0.2):
+    def __init__(self, vocab, Nresponses, kernel_num, kernel_size, max_entity_types, fc_response1, fc_response2, dropout=0.2):
         super().__init__(vocab)
-        self.Nresponses = Nresponses
-        self.kernel_num = kernel_num
-        self.kernel_size = kernel_size
-        self.dropout = dropout
-        self.network()
-
-    def network(self):
-        '''
-            Define the network modules
-        '''
-        self.encoder = Sentence_Encoder(self.vocab, self.kernel_num, self.kernel_size, self.dropout) # sentence encoder for utterance embedding
-        self.encoder.network()
+        self.encoder = Sentence_Encoder(self.vocab, kernel_num, kernel_size, dropout) # sentence encoder for utterance embedding
         self.conv = nn.Conv2d(in_channels = 1, \
-                out_channels = self.kernel_num, \
-                kernel_size = (self.kernel_size, self.vocab.emb_ins.vec_len),\
+                out_channels = kernel_num, \
+                kernel_size = (kernel_size, self.vocab.embedding.dim),\
                 padding = 0)
-        self.dropout = nn.Dropout(self.dropout)
+        self.dropout = nn.Dropout(dropout)
         self.pool = nn.AvgPool1d(2)
-        self.fc_entity1 = nn.Linear(self.max_entity_types,self.max_entity_types)
-        self.fc_entity2 = nn.Linear(self.max_entity_types,self.max_entity_types)
-        self.fc_response1 = nn.Linear(self.Nresponses, self.fc_response1)
-        self.fc_response2 = nn.Linear(self.fc_response1, self.fc_response2)
-        fc1_input_size = self.kernel_num*2 + self.max_entity_types + self.fc_response2
-        self.fc_dialog = nn.Linear(fc1_input_size, self.Nresponses)
-        self.lstm = nn.LSTM(self.Nresponses, self.Nresponses, num_layers=1, dropout = self.dropout, batch_first=True)
+        self.fc_entity1 = nn.Linear(max_entity_types,max_entity_types)
+        self.fc_entity2 = nn.Linear(max_entity_types,max_entity_types)
+        self.fc_response1 = nn.Linear(Nresponses, fc_response1)
+        self.fc_response2 = nn.Linear(fc_response1, fc_response2)
+        fc1_input_size = kernel_num*2 + max_entity_types + fc_response2
+        self.fc_dialog = nn.Linear(fc1_input_size, Nresponses)
+        self.lstm = nn.LSTM(Nresponses, Nresponses, num_layers=1, batch_first=True)
         self.softmax = nn.Softmax(dim=1)
 
     def entityencoder(self, x):

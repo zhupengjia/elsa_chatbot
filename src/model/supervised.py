@@ -12,7 +12,7 @@ import torch.optim as optim
 '''
 
 class Supervised:
-    def __init__(self, reader, max_entity_types, kernel_num=5, kernel_size=16,  epochs=1000, weight_decay=0, learning_rate=0.001, saved_model="model.pt", dropout=0.2, logger=None):
+    def __init__(self, reader, max_entity_types, kernel_num=5, kernel_size=16,  fc_response1=5, fc_response2=4, epochs=1000, weight_decay=0, learning_rate=0.001, saved_model="model.pt", dropout=0.2, logger=None):
         '''
             Policy Gradiant for end2end chatbot
 
@@ -34,15 +34,16 @@ class Supervised:
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
         self.epochs = epochs
-        self.device = torch.device("cuda:0" if use_cuda else "cpu")
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.logger = logger 
 
         self.kernel_num = kernel_num
         self.kernel_size = kernel_size
         self.max_entity_types = max_entity_types
+        self.fc_response1 = fc_response1
+        self.fc_response2 = fc_response2
         self.dropout = dropout
 
-        self.__init_reader(reader_cls)
         self.__init_tracker()
 
 
@@ -57,24 +58,23 @@ class Supervised:
                 - hook: hook instance, please check src/hook/babi_gensays.py for example
         '''
         logger = setLogger(**config.logger)
-        vocab = Vocab(**config.vocab)
         ner = NER(**config.ner)
         embedding = Embedding(**config.embedding)
+        vocab = Vocab(embedding=embedding, **config.vocab)
 
         entity_dict = Entity_Dict(vocab, **config.entity_dict) 
        
         #reader
-        reader = reader_cls(vocab=vocab, ner=ner, embedding=embedding, entity_dict=entity_dict, hook=hook, batch_size=config.model.batch_size, logger=logger)
+        reader = reader_cls(vocab=vocab, ner=ner, embedding=embedding, entity_dict=entity_dict, hook=hook, epochs=config.model.epochs, batch_size=config.model.batch_size, logger=logger)
         reader.build_responses(config.response_template) #build response template index, will read response template and create entity need for each response template every time, but not search index.
-        reader.responses.build_mask()
+        reader.response_dict.build_mask()
 
-        return cls(reader=reader, max_entity_types=config.entity_dict.max_entity_types, logger=logger, **config.model)
+        return cls(reader=reader, max_entity_types=config.entity_dict.max_entity_types, logger=logger, kernel_num=config.model.kernel_num, kernel_size=config.model.kernel_size, epochs=config.model.epochs, weight_decay=config.model.weight_decay, learning_rate=config.model.learning_rate, saved_model=config.model.saved_model, dropout=config.model.dropout)
 
 
     def __init_tracker(self):
         '''tracker'''
-        self.tracker =  Dialog_Tracker(self.reader.vocab, len(self.reader), self.kernel_num, self.kernel_size, self.max_entity_types, self.dropout)
-        self.tracker.network()
+        self.tracker =  Dialog_Tracker(self.reader.vocab, len(self.reader), self.kernel_num, self.kernel_size, self.max_entity_types, self.fc_response1, self.fc_response2, self.dropout)
         
         #use pretrained word2vec
         self.tracker.encoder.embedding.weight.data = torch.FloatTensor(self.tracker.vocab.dense_vectors())

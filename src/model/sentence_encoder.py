@@ -14,23 +14,17 @@ class Sentence_Encoder(Model_Base):
     '''
     def __init__(self, vocab, kernel_num, kernel_size, dropout=0.2):
         super().__init__(vocab)
-        self.kernel_num = kernel_num
-        self.kernel_size = kernel_size
-        self.dropout = dropout
-        self.network()
-    
-    def network(self):
         self.embedding = nn.Embedding(num_embeddings = self.vocab.vocab_size, \
-                embedding_dim = self.vocab.emb_ins.vec_len, \
-                padding_idx = self.vocab._id_PAD)
+                embedding_dim = self.vocab.embedding.dim, \
+                padding_idx = self.vocab.PAD_ID)
 
         #self.embedding.weight.data = torch.FloatTensor(self.vocab.dense_vectors())
         #self.embedding.weight.requires_grad = False
         self.conv = nn.Conv2d(in_channels = 1, \
-                out_channels = self.kernel_num, \
-                kernel_size = (self.kernel_size, self.vocab.emb_ins.vec_len),\
+                out_channels = kernel_num, \
+                kernel_size = (kernel_size, self.vocab.embedding.dim),\
                 padding = 0)
-        self.dropout = nn.Dropout(self.dropout)
+        self.dropout = nn.Dropout(dropout)
         self.pool = nn.AvgPool1d(2)
 
     def conv_and_pool(self, x):
