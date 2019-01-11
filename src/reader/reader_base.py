@@ -20,8 +20,8 @@ class Reader_Base(object):
             - embedding: instance of nlptools.text.Embedding
             - entity_dict: instance of ..module.entity_dict.Entity_Dict
             - hook: hook instance, see ..hook.behaviors for example
-            - max_seq_len: int, maximum sequence length
             - max_entity_types: int, number of entity types
+            - max_seq_len: int, maximum sequence length
             - epochs, int, epoch for iterator, default is 100
             - batch_size, int, batch size for iterator, default is 20
             - logger: logger instance
@@ -31,13 +31,15 @@ class Reader_Base(object):
             - iterator: return data in pytorch Variable used in tracker
     '''
 
-    def __init__(self, vocab, ner, embedding, entity_dict, hook, max_seq_len, max_entity_types, epochs=100, batch_size=20, logger = None):
+    def __init__(self, vocab, ner, embedding, entity_dict, hook, max_entity_types, max_seq_len=100, epochs=100, batch_size=20, logger = None):
         self.logger = logger
         self.emb = embedding
         self.ner = ner
         self.ner.build_keywords_index(embedding=self.emb)
         self.vocab = vocab
         self.entity_dict = entity_dict
+        self.max_entity_types = max_entity_types
+        self.max_seq_len = max_seq_len
         self.hook = hook
         self.epochs = epochs
         self.batch_size = batch_size

@@ -65,7 +65,7 @@ class Supervised:
         entity_dict = Entity_Dict(vocab, **config.entity_dict) 
        
         #reader
-        reader = reader_cls(vocab=vocab, ner=ner, embedding=embedding, entity_dict=entity_dict, hook=hook, epochs=config.model.epochs, batch_size=config.model.batch_size, logger=logger)
+        reader = reader_cls(vocab=vocab, ner=ner, embedding=embedding, entity_dict=entity_dict, hook=hook, max_entity_types=config.entity_dict.max_entity_types, max_seq_len=config.model.max_seq_len, epochs=config.model.epochs, batch_size=config.model.batch_size, logger=logger)
         reader.build_responses(config.response_template) #build response template index, will read response template and create entity need for each response template every time, but not search index.
         reader.response_dict.build_mask()
 
