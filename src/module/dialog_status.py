@@ -67,7 +67,7 @@ class Dialog_Status:
         if isinstance(utterance, str):
             #predeal utterance
             entities, tokens = self.ner.get(utterance.lower())
-            utterance_ids = self.vocab.words2id(self.ner(tokens))
+            utterance_ids = self.vocab.words2id(tokens)
             if len(utterance_ids) < 1:
                 return None
             entity_ids =  self.entity_dict(entities)

@@ -62,7 +62,7 @@ class Supervised:
         ner = NER(**config.ner)
         embedding = Embedding(**config.embedding)
         vocab = Vocab(embedding=embedding, **config.vocab)
-        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        device = torch.device("cuda:0" if config.model.use_gpu and torch.cuda.is_available() else "cpu")
 
         entity_dict = Entity_Dict(vocab, **config.entity_dict) 
        
@@ -88,6 +88,7 @@ class Supervised:
             checkpoint = torch.load(self.saved_model, map_location={'cuda:0': self.device.type})
             self.tracker.load_state_dict(checkpoint['model'])
         
+
         self.loss_function = torch.nn.NLLLoss()
         self.optimizer = optim.Adam(self.tracker.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
 
@@ -103,6 +104,8 @@ class Supervised:
 
 
     def train(self):
+        self.tracker.train()
+        
         for epoch, d in enumerate(self.reader):
             self.tracker.zero_grad()
             y_prob = torch.log(self.tracker(d))

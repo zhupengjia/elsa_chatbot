@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 import sys, torch, os
 from src.reader.reader_babi import Reader_Babi
-from src.model.dialog_tracker import Dialog_Tracker
 from src.module.dialog_status import Dialog_Status
+from src.hook.behaviors import Behaviors
+from src.model.supervised import Supervised
 from nlptools.utils import Config
 import torch.optim as optim
 
@@ -10,23 +11,15 @@ import torch.optim as optim
 class InteractiveSession():
     def __init__(self):
         self.cfg = Config('config/babi.yml')
-        self.cfg.model.use_gpu = 0 #use cpu
         self.cfg.model.dropout = 0 #no dropout while predict
+        self.cfg.model.use_gpu = 0 #use gpu
 
-        self.reader = Reader_Babi(self.cfg)
-        self.reader.build_responses()
-        self.reader.responses.build_mask()
+        hook = Behaviors()
+        
+        self.model = Supervised.build(self.cfg, Reader_Babi, hook)
+        self.model.tracker.eval()
 
-        self.tracker = Dialog_Tracker(self.cfg.model, self.reader.vocab, len(self.reader))
-        self.tracker.network()
-
-        if self.cfg.model.use_gpu:
-            self.tracker.cuda(self.cfg.model.use_gpu-1)
-
-        #load checkpoint
-        checkpoint = torch.load(self.cfg.model['saved_model'], map_location={'cuda:0': 'cpu'})
-        if os.path.exists(self.cfg.model['saved_model']):
-            self.tracker.load_state_dict(checkpoint['model'])
+        self.reader = self.model.reader
 
     def interact(self):
         dialog_status = self.reader.new_dialog()
@@ -47,15 +40,17 @@ class InteractiveSession():
                 break
         
             else:
+                print(u)
                 if dialog_status.add_utterance(u) is None:
                     continue
                 dialog_status.getmask()
-                data = Dialog_Status.torch(self.cfg, self.reader.vocab, self.reader.entity_dict, [dialog_status])
+                data = Dialog_Status.torch(self.reader.vocab, self.reader.entity_dict, [dialog_status], self.reader.max_seq_len, self.reader.max_entity_types, device=self.reader.device)
                 if data is None:
                     continue
                 #print(dialog_status)
-                y_prob = self.tracker(data)
+                y_prob = self.model.tracker(data)
                 _, y_pred = torch.max(y_prob.data, 1)
+
                 y_pred = int(y_pred.numpy()[-1])
                 
 
