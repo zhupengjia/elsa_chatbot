@@ -220,12 +220,12 @@ class Dialog_Status:
 
 
         #to torch tensor
-        utterance = torch.LongTensor(utterance)
-        response = torch.LongTensor(response)
-        entity = torch.FloatTensor(entity)
-        mask = torch.FloatTensor(mask)
-        reward = torch.FloatTensor(reward)
-        response_prev = torch.FloatTensor(response_prev)
+        utterance = torch.LongTensor(utterance).to(device)
+        response = torch.LongTensor(response).to(device)
+        entity = torch.FloatTensor(entity).to(device)
+        mask = torch.FloatTensor(mask).to(device)
+        reward = torch.FloatTensor(reward).to(device)
+        response_prev = torch.FloatTensor(response_prev).to(device)
 
 
         #pack them up for different dialogs

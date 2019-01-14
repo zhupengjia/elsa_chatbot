@@ -24,6 +24,7 @@ class Reader_Base(object):
             - max_seq_len: int, maximum sequence length
             - epochs, int, epoch for iterator, default is 100
             - batch_size, int, batch size for iterator, default is 20
+            - device: instance of torch.device, default is cpu device
             - logger: logger instance
             
         Special method supported:
@@ -31,12 +32,13 @@ class Reader_Base(object):
             - iterator: return data in pytorch Variable used in tracker
     '''
 
-    def __init__(self, vocab, ner, embedding, entity_dict, hook, max_entity_types, max_seq_len=100, epochs=100, batch_size=20, logger = None):
+    def __init__(self, vocab, ner, embedding, entity_dict, hook, max_entity_types, max_seq_len=100, epochs=100, batch_size=20, device=None, logger = None):
         self.logger = logger
         self.emb = embedding
         self.ner = ner
         self.ner.build_keywords_index(embedding=self.emb)
         self.vocab = vocab
+        self.device = device
         self.entity_dict = entity_dict
         self.max_entity_types = max_entity_types
         self.max_seq_len = max_seq_len
@@ -183,6 +185,6 @@ class Reader_Base(object):
                 if self.logger is not None:
                     self.logger.debug(dialog_status)
                 dialogs.append(dialog_status)
-            yield Dialog_Status.torch(self.vocab, self.entity_dict, dialogs, self.max_seq_len, self.max_entity_types)
+            yield Dialog_Status.torch(self.vocab, self.entity_dict, dialogs, self.max_seq_len, self.max_entity_types, device=self.device)
 
 

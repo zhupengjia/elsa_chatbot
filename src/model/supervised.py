@@ -12,7 +12,7 @@ import torch.optim as optim
 '''
 
 class Supervised:
-    def __init__(self, reader, max_entity_types, kernel_num=5, kernel_size=16,  fc_response1=5, fc_response2=4, epochs=1000, weight_decay=0, learning_rate=0.001, saved_model="model.pt", dropout=0.2, logger=None):
+    def __init__(self, reader, max_entity_types, kernel_num=5, kernel_size=16,  fc_response1=5, fc_response2=4, epochs=1000, weight_decay=0, learning_rate=0.001, saved_model="model.pt", dropout=0.2, device=None, logger=None):
         '''
             Policy Gradiant for end2end chatbot
 
@@ -26,6 +26,7 @@ class Supervised:
                 - learning_rate: float, default is 0.001
                 - saved_model: str, default is "model.pt"
                 - dropout: float, default is 0.2
+                - device: instance of torch.device, default is cpu device
                 - logger: logger instance ,default is None
         '''
         self.reader = reader
@@ -34,7 +35,7 @@ class Supervised:
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
         self.epochs = epochs
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.device = device
         self.logger = logger 
 
         self.kernel_num = kernel_num
@@ -61,15 +62,16 @@ class Supervised:
         ner = NER(**config.ner)
         embedding = Embedding(**config.embedding)
         vocab = Vocab(embedding=embedding, **config.vocab)
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         entity_dict = Entity_Dict(vocab, **config.entity_dict) 
        
         #reader
-        reader = reader_cls(vocab=vocab, ner=ner, embedding=embedding, entity_dict=entity_dict, hook=hook, max_entity_types=config.entity_dict.max_entity_types, max_seq_len=config.model.max_seq_len, epochs=config.model.epochs, batch_size=config.model.batch_size, logger=logger)
+        reader = reader_cls(vocab=vocab, ner=ner, embedding=embedding, entity_dict=entity_dict, hook=hook, max_entity_types=config.entity_dict.max_entity_types, max_seq_len=config.model.max_seq_len, epochs=config.model.epochs, batch_size=config.model.batch_size, device=device, logger=logger)
         reader.build_responses(config.response_template) #build response template index, will read response template and create entity need for each response template every time, but not search index.
         reader.response_dict.build_mask()
 
-        return cls(reader=reader, max_entity_types=config.entity_dict.max_entity_types, logger=logger, kernel_num=config.model.kernel_num, kernel_size=config.model.kernel_size, epochs=config.model.epochs, weight_decay=config.model.weight_decay, learning_rate=config.model.learning_rate, saved_model=config.model.saved_model, dropout=config.model.dropout)
+        return cls(reader=reader, max_entity_types=config.entity_dict.max_entity_types, logger=logger, kernel_num=config.model.kernel_num, kernel_size=config.model.kernel_size, epochs=config.model.epochs, weight_decay=config.model.weight_decay, learning_rate=config.model.learning_rate, saved_model=config.model.saved_model, dropout=config.model.dropout, device=device)
 
 
     def __init_tracker(self):
@@ -77,7 +79,7 @@ class Supervised:
         self.tracker =  Dialog_Tracker(self.reader.vocab, len(self.reader), self.kernel_num, self.kernel_size, self.max_entity_types, self.fc_response1, self.fc_response2, self.dropout)
         
         #use pretrained word2vec
-        self.tracker.encoder.embedding.weight.data = torch.FloatTensor(self.tracker.vocab.dense_vectors())
+        self.tracker.encoder.embedding.weight.data = torch.FloatTensor(self.tracker.vocab.dense_vectors()).to(self.device)
 
         self.tracker.to(self.device)
 
@@ -102,9 +104,6 @@ class Supervised:
 
     def train(self):
         for epoch, d in enumerate(self.reader):
-            for k in d:
-                d[k] = d[k].to(self.device)
-                print(k, d[k])
             self.tracker.zero_grad()
             y_prob = torch.log(self.tracker(d))
         
@@ -114,9 +113,10 @@ class Supervised:
         
             #precision
             _, y_pred = torch.max(y_prob.data, 1)
-            precision = y_pred.eq(responses.data).sum()/responses.numel()
             
-            if self.ogger: self.logger.info('{} {} {} {}'.format(epoch, self.epochs, loss.data[0], precision))
+            precision = y_pred.eq(responses).sum().item()/responses.numel()
+            
+            if self.logger: self.logger.info('{} {} {} {}'.format(epoch, self.epochs, loss.item(), precision))
         
             loss.backward()
             self.optimizer.step()
