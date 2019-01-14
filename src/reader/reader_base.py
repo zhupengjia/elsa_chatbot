@@ -127,7 +127,8 @@ class Reader_Base(object):
             ripe['idrange'].append([len(ripe['utterance']), len(ripe['utterance'])+len(dialog)])
             for i_p, pair in enumerate(dialog):
                 for i_s, sentence in enumerate(pair):
-                    entities, tokens = self.ner.get(sentence.lower())
+                    sentence = sentence.lower().strip()
+                    entities, tokens = self.ner.get(sentence)
                     token_ids = self.vocab.sentence2id(tokens)
                     if len(token_ids) < 1:
                         entities = {}

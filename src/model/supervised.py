@@ -4,7 +4,7 @@ from .dialog_tracker import Dialog_Tracker
 from nlptools.utils import Config, setLogger
 from ..module.entity_dict import Entity_Dict
 from nlptools.text import Vocab, Embedding
-from nlptools.text.ner import NER
+from nlptools.text.ner import NER_BERT
 import torch.optim as optim
 
 '''
@@ -59,7 +59,7 @@ class Supervised:
                 - hook: hook instance, please check src/hook/babi_gensays.py for example
         '''
         logger = setLogger(**config.logger)
-        ner = NER(**config.ner)
+        ner = NER_BERT(**config.ner)
         embedding = Embedding(**config.embedding)
         vocab = Vocab(embedding=embedding, **config.vocab)
         device = torch.device("cuda:0" if config.model.use_gpu and torch.cuda.is_available() else "cpu")
