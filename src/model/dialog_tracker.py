@@ -81,7 +81,9 @@ class Dialog_Tracker(Model_Base):
                 - dialog embedding
         '''
         #utterance embedding
+        print(utterance.size())
         utterance = self.encoder(utterance) 
+        print(utterance.size())
         utter_att = self.attention(utterance, utterance) 
         #entity name embedding
         entity = self.entityencoder(entity) 

@@ -231,6 +231,8 @@ class Dialog_Status:
 
 
         #pack them up for different dialogs
+        print(utterance.size())
+        sys.exit()
         utterance = pack_padded_sequence(utterance, dialog_lengths, batch_first=True)
         response = pack_padded_sequence(response, dialog_lengths, batch_first=True).data
         reward = pack_padded_sequence(reward, dialog_lengths, batch_first=True).data
