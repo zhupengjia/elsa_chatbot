@@ -5,8 +5,8 @@ import torch.nn.functional as F
 import torch.nn as nn
 import torch.autograd as autograd
 from torch.nn.utils.rnn import PackedSequence
-from .sentence_encoder import Sentence_Encoder
 from .model_base import Model_Base
+from pytorch_pretrained_bert.modeling import BertModel
 
 '''
     Author: Pengjia Zhu (zhupengjia@gmail.com)
@@ -17,7 +17,7 @@ class Dialog_Tracker(Model_Base):
         dialog tracker for end2end chatbot 
 
         Input:
-            - vocab: instance of nlptools.text.vocab
+            - bert_model_name: bert model file location or one of the supported model name
             - Nresponses: number of available responses
             - kernel_num: int
             - kernel_size: int
@@ -27,21 +27,16 @@ class Dialog_Tracker(Model_Base):
             - dropout: float
             
     '''
-    def __init__(self, vocab, Nresponses, kernel_num, kernel_size, max_entity_types, fc_response1, fc_response2, dropout=0.2):
-        super().__init__(vocab)
-        self.encoder = Sentence_Encoder(self.vocab, kernel_num, kernel_size, dropout) # sentence encoder for utterance embedding
-        self.conv = nn.Conv2d(in_channels = 1, \
-                out_channels = kernel_num, \
-                kernel_size = (kernel_size, self.vocab.embedding.dim),\
-                padding = 0)
+    def __init__(self, bert_model_name, Nresponses, max_entity_types, fc_response1, fc_response2, dropout=0.2):
+        super().__init__()
+        self.encoder = BertModel.from_pretrained(bert_model_name) 
         self.dropout = nn.Dropout(dropout)
         self.pool = nn.AvgPool1d(2)
         self.fc_entity1 = nn.Linear(max_entity_types,max_entity_types)
         self.fc_entity2 = nn.Linear(max_entity_types,max_entity_types)
         self.fc_response1 = nn.Linear(Nresponses, fc_response1)
         self.fc_response2 = nn.Linear(fc_response1, fc_response2)
-        fc1_input_size = kernel_num*2 + max_entity_types + fc_response2
-        self.fc_dialog = nn.Linear(fc1_input_size, Nresponses)
+        self.fc_dialog = nn.Linear(fc_response1, Nresponses)
         self.lstm = nn.LSTM(Nresponses, Nresponses, num_layers=1, batch_first=True)
         self.softmax = nn.Softmax(dim=1)
 

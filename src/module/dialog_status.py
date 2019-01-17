@@ -10,7 +10,7 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 '''
 
 class Dialog_Status:
-    def __init__(self, vocab, ner, entity_dict, response_dict, hook):
+    def __init__(self, vocab, tokenizer, ner, entity_dict, response_dict, hook):
         '''
         Maintain the dialog status in a dialog
 
@@ -30,7 +30,8 @@ class Dialog_Status:
             - add_response: add the current response to status, and run the corresponded hook functions
 
         Input:
-            - vocab: instance of nlptools.text.vocab
+            - vocab:  instance of nlptools.text.vocab
+            - tokenizer:  instance of nlptools.text.Tokenizer
             - ner: instance of nlptools.text.ner
             - entity_dict: instance of src/module/entity_dict
             - response_dict:  instance of src/module/response_dict
@@ -42,8 +43,9 @@ class Dialog_Status:
 
         '''
 
-        self.vocab = vocab
+        self.tokenizer = tokenizer
         self.ner = ner
+        self.vocab = vocab
         self.response_dict = response_dict
         self.hook = hook
         self.entity_dict = entity_dict #for response mask
@@ -66,10 +68,11 @@ class Dialog_Status:
         '''
         if isinstance(utterance, str):
             #predeal utterance
-            entities, tokens = self.ner.get(utterance.lower())
-            utterance_ids = self.vocab.words2id(tokens)
-            if len(utterance_ids) < 1:
-                return None
+            utterance = utterance.strip()
+            entities, utterance_replaced = self.ner.get(utternace, return_dict=True)
+            tokens = self.tokenizer(utterance_replaced)
+            utterance_ids = numpy.concatenate(([self.vocab.CLS_ID],self.vocab.words2id(tokens),[self.vocab.SEP_ID]))
+
             entity_ids =  self.entity_dict(entities)
         else:
             utterance_ids = utterance
@@ -152,12 +155,11 @@ class Dialog_Status:
 
 
     @staticmethod 
-    def torch(vocab, entity_dict, dialogs, max_seq_len, max_entity_types, rl_maxloop=20, rl_discount=0.95, device=None):
+    def torch(entity_dict, dialogs, max_seq_len, max_entity_types, rl_maxloop=20, rl_discount=0.95, device=None):
         '''
             staticmethod, convert dialogs to batch
 
             Input:
-                - vocab: nlptools.text.vocab instance
                 - entity_dict: src/module/entity_dict instance
                 - dialogs: list of src/module/dialog_status instance
                 - max_seq_len: int, maximum sequence length

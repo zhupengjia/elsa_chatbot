@@ -11,12 +11,9 @@ class Model_Base(nn.Module):
     '''
         Base Model class
 
-        Input:
-            - vocab: instance of nlptools.text.vocab
     '''
-    def __init__(self, vocab):
+    def __init__(self):
         super().__init__()
-        self.vocab = vocab
     
     def attention(self, x, y):
         M = torch.bmm(x, y.transpose(1,2))

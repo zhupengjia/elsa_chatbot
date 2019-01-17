@@ -123,17 +123,18 @@ class Response_Dict:
         response[response_id] = 1
         return response
 
-    def __getitem__(self, response):
+    def __getitem__(self, response_tokens):
         '''
             get most closed response id from templates
             
             Input:
-                - response: string
+                - response_tokens: list of string
 
             Output:
                 - response_id, int. If not found return None.
         '''
-        response_ids = self.vocab.words2id(self.tokenizer(response))
+        response_ids = self.vocab.words2id(response_tokens)
+        response_ids = numpy.concatenate(list(response_ids.values()))
         if len(response_ids) < 1:
             return None
         result = self.__search.search_index(response_ids, topN=1)

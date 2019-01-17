@@ -3,8 +3,9 @@ import sys, torch, os, numpy
 from .dialog_tracker import Dialog_Tracker
 from nlptools.utils import Config, setLogger
 from ..module.entity_dict import Entity_Dict
-from nlptools.text import Vocab, Embedding
-from nlptools.text.ner import NER_BERT
+from nlptools.text import Embedding
+from nlptools.text.tokenizer import Tokenizer_BERT
+from nlptools.text.ner import NER
 import torch.optim as optim
 
 '''
@@ -12,15 +13,14 @@ import torch.optim as optim
 '''
 
 class Supervised:
-    def __init__(self, reader, max_entity_types, kernel_num=5, kernel_size=16,  fc_response1=5, fc_response2=4, epochs=1000, weight_decay=0, learning_rate=0.001, saved_model="model.pt", dropout=0.2, device=None, logger=None):
+    def __init__(self, reader, bert_model_name, max_entity_types, fc_response1=5, fc_response2=4, epochs=1000, weight_decay=0, learning_rate=0.001, saved_model="model.pt", dropout=0.2, device=None, logger=None):
         '''
             Policy Gradiant for end2end chatbot
 
             Input:
+                - bert_model_name: bert model file location or one of the supported model name
                 - reader: reader instance, see ..module.reader.*.py
                 - max_entity_types: int, number of entity types 
-                - kernel_num: int
-                - kernel_size: int
                 - epochs: int
                 - weight_decay: int, default is 0
                 - learning_rate: float, default is 0.001
@@ -30,7 +30,7 @@ class Supervised:
                 - logger: logger instance ,default is None
         '''
         self.reader = reader
-
+        self.bert_model_name = bert_model_name
         self.saved_model = saved_model
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
@@ -38,8 +38,6 @@ class Supervised:
         self.device = device
         self.logger = logger 
 
-        self.kernel_num = kernel_num
-        self.kernel_size = kernel_size
         self.max_entity_types = max_entity_types
         self.fc_response1 = fc_response1
         self.fc_response2 = fc_response2
@@ -59,28 +57,25 @@ class Supervised:
                 - hook: hook instance, please check src/hook/babi_gensays.py for example
         '''
         logger = setLogger(**config.logger)
-        ner = NER_BERT(**config.ner)
-        embedding = Embedding(**config.embedding)
-        vocab = Vocab(embedding=embedding, **config.vocab)
+        ner = NER(**config.ner)
+        tokenizer = Tokenizer_BERT(**config.tokenizer) 
+        
         device = torch.device("cuda:0" if config.model.use_gpu and torch.cuda.is_available() else "cpu")
 
-        entity_dict = Entity_Dict(vocab, **config.entity_dict) 
+        entity_dict = Entity_Dict(**config.entity_dict) 
        
         #reader
-        reader = reader_cls(vocab=vocab, ner=ner, embedding=embedding, entity_dict=entity_dict, hook=hook, max_entity_types=config.entity_dict.max_entity_types, max_seq_len=config.model.max_seq_len, epochs=config.model.epochs, batch_size=config.model.batch_size, device=device, logger=logger)
+        reader = reader_cls(tokenizer=tokenizer, ner=ner, entity_dict=entity_dict, hook=hook, max_entity_types=config.entity_dict.max_entity_types, max_seq_len=config.model.max_seq_len, epochs=config.model.epochs, batch_size=config.model.batch_size, device=device, logger=logger)
         reader.build_responses(config.response_template) #build response template index, will read response template and create entity need for each response template every time, but not search index.
         reader.response_dict.build_mask()
 
-        return cls(reader=reader, max_entity_types=config.entity_dict.max_entity_types, logger=logger, kernel_num=config.model.kernel_num, kernel_size=config.model.kernel_size, epochs=config.model.epochs, weight_decay=config.model.weight_decay, learning_rate=config.model.learning_rate, saved_model=config.model.saved_model, dropout=config.model.dropout, device=device)
+        return cls(reader=reader, bert_model_name=config.tokenizer.bert_model_name, max_entity_types=config.entity_dict.max_entity_types, logger=logger, epochs=config.model.epochs, weight_decay=config.model.weight_decay, learning_rate=config.model.learning_rate, saved_model=config.model.saved_model, dropout=config.model.dropout, device=device)
 
 
     def __init_tracker(self):
         '''tracker'''
-        self.tracker =  Dialog_Tracker(self.reader.vocab, len(self.reader), self.kernel_num, self.kernel_size, self.max_entity_types, self.fc_response1, self.fc_response2, self.dropout)
+        self.tracker =  Dialog_Tracker(self.bert_model_name, len(self.reader), self.max_entity_types, self.fc_response1, self.fc_response2, self.dropout)
         
-        #use pretrained word2vec
-        self.tracker.encoder.embedding.weight.data = torch.FloatTensor(self.tracker.vocab.dense_vectors()).to(self.device)
-
         self.tracker.to(self.device)
 
         #checkpoint

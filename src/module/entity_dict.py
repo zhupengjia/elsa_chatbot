@@ -18,7 +18,6 @@ class Entity_Dict:
         There are also maintained a entity_mask dict, which is used to convert existed entities to a one-hot array
 
         Input:
-            - vocab: instance of nlptools.text.vocab
             - max_entity_types: int, number of entity types 
             - entity_dict_path: string, cached dict file path, will create a new empty dict if the file not exists. Default is None
 
@@ -27,8 +26,7 @@ class Entity_Dict:
             - __call__: convert entity from entity map like {entityname:[entityvalues],...} to {entityname_id:[entityvalue_ids], ...}
 
     '''
-    def __init__(self, vocab, max_entity_types, entity_dict_path=None):
-        self.vocab = vocab
+    def __init__(self, max_entity_types, entity_dict_path=None):
         self.entity_dict_path = entity_dict_path
         self.max_entity_types = max_entity_types
         self.entity_maskdict = {} #dict for entity mask

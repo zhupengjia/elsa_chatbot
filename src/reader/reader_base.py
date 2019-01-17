@@ -15,7 +15,7 @@ class Reader_Base(object):
        Reader base class to predeal the dialogs 
 
        Input:
-            - vocab:  instance of nlptools.text.Vocab
+            - tokenizer:  instance of nlptools.text.tokenizer.Tokenizer_BERT
             - ner: instance of nlptools.text.ner.NER
             - embedding: instance of nlptools.text.Embedding
             - entity_dict: instance of ..module.entity_dict.Entity_Dict
@@ -32,13 +32,12 @@ class Reader_Base(object):
             - iterator: return data in pytorch Variable used in tracker
     '''
 
-    def __init__(self, vocab, ner, embedding, entity_dict, hook, max_entity_types, max_seq_len=100, epochs=100, batch_size=20, device=None, logger = None):
+    def __init__(self, tokenizer, ner, entity_dict, hook, max_entity_types, max_seq_len=100, epochs=100, batch_size=20, device=None, logger = None):
         self.logger = logger
-        self.emb = embedding
+        self.tokenizer = tokenizer
         self.ner = ner
-        self.ner.build_keywords_index(embedding=self.emb)
-        self.vocab = vocab
         self.device = device
+        self.vocab = self.tokenizer.vocab
         self.entity_dict = entity_dict
         self.max_entity_types = max_entity_types
         self.max_seq_len = max_seq_len
@@ -55,7 +54,7 @@ class Reader_Base(object):
             Input:
                 - template_file: template file path
         '''
-        self.response_dict = Response_Dict(self.ner, self.entity_dict, template_file+".cache")
+        self.response_dict = Response_Dict(self.tokenizer, self.entity_dict, template_file+".cache")
         with open(template_file) as f:
             for l in f:
                 l = l.strip()
@@ -127,13 +126,12 @@ class Reader_Base(object):
             ripe['idrange'].append([len(ripe['utterance']), len(ripe['utterance'])+len(dialog)])
             for i_p, pair in enumerate(dialog):
                 for i_s, sentence in enumerate(pair):
-                    sentence = sentence.lower().strip()
-                    entities, tokens = self.ner.get(sentence)
-                    token_ids = self.vocab.sentence2id(tokens)
-                    if len(token_ids) < 1:
-                        entities = {}
-                        tokens = [self.vocab.PAD]
-                        token_ids = [self.vocab._id_PAD]
+                    sentence = sentence.strip()
+                    entities, sentence_replaced = self.ner.get(sentence, return_dict=True)
+                    tokens = self.tokenizer(sentence_replaced)
+
+                    token_ids = numpy.concatenate(([self.vocab.CLS_ID],self.vocab.words2id(tokens),[self.vocab.SEP_ID]))
+                    
                     entity_ids = self.entity_dict(entities)
                     if i_s == 0:
                         ripe['utterance'].append(token_ids)
@@ -147,13 +145,8 @@ class Reader_Base(object):
                             #print('='*60)
                             #print(response_id)
                             #print(' '.join(tokens))
-                            #for i in range(min(3, len(response_id))):
-                            #    print('-'*30)
-                            #    print(self.response_dict.response[response_id[i][0]])
+                            #print(self.response_dict.response[response_id[0]])
                             ripe['response'].append(response_id[0])
-        self.vocab.reduce_vocab()
-        self.vocab.save()
-        self.emb.save()
         self.entity_dict.save()
         return ripe
 
@@ -162,7 +155,7 @@ class Reader_Base(object):
         '''
             return a new dialog status instance
         '''
-        return  Dialog_Status(self.vocab, self.ner, self.entity_dict, self.response_dict, self.hook)
+        return  Dialog_Status(self.vocab, self.tokenizer, self.ner, self.entity_dict, self.response_dict, self.hook)
 
 
     def __iter__(self):
@@ -186,6 +179,6 @@ class Reader_Base(object):
                 if self.logger is not None:
                     self.logger.debug(dialog_status)
                 dialogs.append(dialog_status)
-            yield Dialog_Status.torch(self.vocab, self.entity_dict, dialogs, self.max_seq_len, self.max_entity_types, device=self.device)
+            yield Dialog_Status.torch(self.entity_dict, dialogs, self.max_seq_len, self.max_entity_types, device=self.device)
 
 

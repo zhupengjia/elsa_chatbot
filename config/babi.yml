@@ -36,14 +36,8 @@ rule_based:
 #
 response_template: data/babi/template.txt
 
-vocab:
-    vocab_size: 100000
-    cached_vocab: data/babi/vocab.pkl
-
 ner:
     tokenizer: spacy
-    #annoy_filter: 0.8
-    stopwords_path: config/en_stopwords.txt
     ner_name_replace:
     ner:
     keywords:
@@ -54,11 +48,11 @@ ner:
     regex:  
         REST_INFO: 'resto_\w*'
 
-embedding:
-    w2v_word2idx: /home/pzhu/data/bert/bert-base-uncased/word2idx.zpkl
-    w2v_idx2vec: /home/pzhu/data/bert/bert-base-uncased/word2vec_weight.npy
-    dim: 768
-    cached_data: data/babi/w2v.pkl
+tokenizer:
+    bert_model_name: /home/pzhu/data/bert/bert-base-uncased
+    do_lower_case: 1
+    stopwords_path: config/en_stopwords.txt
+
 
 entity_dict:
     max_entity_types: 6
@@ -70,8 +64,6 @@ model:
     max_seq_len: 10
     max_dialog_len: 20
     dropout: 0.8
-    kernel_size: 5
-    kernel_num: 16
     fc_response1: 8
     fc_response2: 4
     learning_rate: 0.001
