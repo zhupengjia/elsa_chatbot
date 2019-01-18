@@ -31,13 +31,33 @@ class Policy_Gradiant:
         self.__init_reader(reader_cls)
         self.__init_tracker()
 
+    @classmethod
+    def build(cls, config, reader_cls, hook):
+        '''
+            construct model from config
 
-    def __init_reader(self, reader_cls):
+            Input:
+                - config: configure dictionary
+                - reader_cls: class for reader
+                - hook: hook instance, please check src/hook/babi_gensays.py for example
+        '''
+        logger = setLogger(**config.logger)        
+
+        ner = NER(**config.ner)
+        tokenizer = Tokenizer_BERT(**config.tokenizer) 
+        
+        device = torch.device("cuda:0" if config.model.use_gpu and torch.cuda.is_available() else "cpu")
+
+        entity_dict = Entity_Dict(**config.entity_dict) 
+       
         #reader
-        self.reader = reader_cls(self.cfg)
-        self.reader.build_responses() #build response template index, will read response template and create entity need for each response template every time, but not search index.
-        self.reader.responses.build_mask()
+        reader = reader_cls(tokenizer=tokenizer, ner=ner, entity_dict=entity_dict, hook=hook, max_entity_types=config.entity_dict.max_entity_types, max_seq_len=config.model.max_seq_len, epochs=config.model.epochs, batch_size=config.model.batch_size, device=device, logger=logger)
+        reader.build_responses(config.response_template) #build response template index, will read response template and create entity need for each response template every time, but not search index.
+        reader.response_dict.build_mask()
 
+        return cls(reader=reader, logger=logger, bert_model_name=config.tokenizer.bert_model_name, max_entity_types=config.entity_dict.max_entity_types, fc_responses=config.model.fc_responses, entity_layers=config.model.entity_layers, lstm_layers=config.model.lstm_layers, hidden_dim=config.model.hidden_dim, epochs=config.model.epochs, weight_decay=config.model.weight_decay, learning_rate=config.model.learning_rate, saved_model=config.model.saved_model, dropout=config.model.dropout, device=device)
+
+    
 
     def __init_adversary(self, hook_cls):
         '''adversary chatbot'''

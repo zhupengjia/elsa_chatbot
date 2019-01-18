@@ -69,7 +69,7 @@ class Dialog_Status:
         if isinstance(utterance, str):
             #predeal utterance
             utterance = utterance.strip()
-            entities, utterance_replaced = self.ner.get(utternace, return_dict=True)
+            entities, utterance_replaced = self.ner.get(utterance, return_dict=True)
             tokens = self.tokenizer(utterance_replaced)
             utterance_ids = numpy.concatenate(([self.vocab.CLS_ID],self.vocab.words2id(tokens),[self.vocab.SEP_ID]))
 

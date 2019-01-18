@@ -44,7 +44,7 @@ class InteractiveSession():
                 if dialog_status.add_utterance(u) is None:
                     continue
                 dialog_status.getmask()
-                data = Dialog_Status.torch(self.reader.vocab, self.reader.entity_dict, [dialog_status], self.reader.max_seq_len, self.reader.max_entity_types, device=self.reader.device)
+                data = Dialog_Status.torch(self.reader.entity_dict, [dialog_status], self.reader.max_seq_len, self.reader.max_entity_types, device=self.reader.device)
                 if data is None:
                     continue
                 #print(dialog_status)

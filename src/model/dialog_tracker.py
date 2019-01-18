@@ -5,7 +5,6 @@ import torch.nn.functional as F
 import torch.nn as nn
 import torch.autograd as autograd
 from torch.nn.utils.rnn import PackedSequence
-from .model_base import Model_Base
 from pytorch_pretrained_bert.modeling import BertModel
 
 '''
