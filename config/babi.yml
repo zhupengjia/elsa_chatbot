@@ -68,6 +68,7 @@ model:
     fc_responses: 
         - 8
         - 8
+    entity_layers: 2
     lstm_layers: 1
     learning_rate: 0.001
     weight_decay: 0.00001

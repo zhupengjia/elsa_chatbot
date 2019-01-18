@@ -23,11 +23,12 @@ class Dialog_Tracker(Model_Base):
             - kernel_size: int
             - max_entity_types: int
             - fc_responses: int for int list, default is 5
+            - entity_layers: int, default is 2
             - lstm_layers: int, default is 1
             - dropout: float, default is 0.2
             
     '''
-    def __init__(self, bert_model_name, Nresponses, max_entity_types, fc_responses=5, lstm_layers=1, hidden_dim=300, dropout=0.2):
+    def __init__(self, bert_model_name, Nresponses, max_entity_types, fc_responses=5, entity_layers=2, lstm_layers=1, hidden_dim=300, dropout=0.2):
         super().__init__()
         self.encoder = BertModel.from_pretrained(bert_model_name)
         for param in self.encoder.parameters():
@@ -36,8 +37,9 @@ class Dialog_Tracker(Model_Base):
 
         self.dropout = nn.Dropout(dropout)
         self.pool = nn.AvgPool1d(2)
-        self.fc_entity1 = nn.Linear(max_entity_types,max_entity_types)
-        self.fc_entity2 = nn.Linear(max_entity_types,max_entity_types)
+
+        fc_entity_layers = [nn.Linear(max_entity_types, max_entity_types) for i in range(entity_layers)]
+        self.fc_entity = nn.Sequential(*fc_entity_layers)
 
         if isinstance(fc_responses, int): fc_responses=[fc_responses]
         fc_responses = [Nresponses] + fc_responses
@@ -58,8 +60,7 @@ class Dialog_Tracker(Model_Base):
             Input:
                 - onehot present of entity names
         '''
-        x = self.fc_entity1(x)
-        x = self.fc_entity2(x)
+        x = self.fc_entity(x)
         x = self.dropout(x)
         return x
 
