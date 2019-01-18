@@ -13,7 +13,7 @@ import torch.optim as optim
 '''
 
 class Supervised:
-    def __init__(self, reader, bert_model_name, max_entity_types, fc_response1=5, fc_response2=4, epochs=1000, weight_decay=0, learning_rate=0.001, saved_model="model.pt", dropout=0.2, device=None, logger=None):
+    def __init__(self, reader, bert_model_name, max_entity_types, fc_responses=5, lstm_layers=1, hidden_dim=300, epochs=1000, weight_decay=0, learning_rate=0.001, saved_model="model.pt", dropout=0.2, device=None, logger=None):
         '''
             Policy Gradiant for end2end chatbot
 
@@ -21,7 +21,10 @@ class Supervised:
                 - bert_model_name: bert model file location or one of the supported model name
                 - reader: reader instance, see ..module.reader.*.py
                 - max_entity_types: int, number of entity types 
-                - epochs: int
+                - fc_responses: int
+                - lstm_layers: int, default is 1
+                - hidden_dim: int, default is 300
+                - epochs: int, default is 1000
                 - weight_decay: int, default is 0
                 - learning_rate: float, default is 0.001
                 - saved_model: str, default is "model.pt"
@@ -39,8 +42,9 @@ class Supervised:
         self.logger = logger 
 
         self.max_entity_types = max_entity_types
-        self.fc_response1 = fc_response1
-        self.fc_response2 = fc_response2
+        self.fc_responses = fc_responses
+        self.lstm_layers = lstm_layers
+        self.hidden_dim = hidden_dim
         self.dropout = dropout
 
         self.__init_tracker()
@@ -69,12 +73,13 @@ class Supervised:
         reader.build_responses(config.response_template) #build response template index, will read response template and create entity need for each response template every time, but not search index.
         reader.response_dict.build_mask()
 
-        return cls(reader=reader, bert_model_name=config.tokenizer.bert_model_name, max_entity_types=config.entity_dict.max_entity_types, logger=logger, epochs=config.model.epochs, weight_decay=config.model.weight_decay, learning_rate=config.model.learning_rate, saved_model=config.model.saved_model, dropout=config.model.dropout, device=device)
+        return cls(reader=reader, logger=logger, bert_model_name=config.tokenizer.bert_model_name, max_entity_types=config.entity_dict.max_entity_types, fc_responses=config.model.fc_responses, lstm_layers=config.model.lstm_layers, hidden_dim=config.model.hidden_dim, epochs=config.model.epochs, weight_decay=config.model.weight_decay, learning_rate=config.model.learning_rate, saved_model=config.model.saved_model, dropout=config.model.dropout, device=device)
+        
 
 
     def __init_tracker(self):
         '''tracker'''
-        self.tracker =  Dialog_Tracker(self.bert_model_name, len(self.reader), self.max_entity_types, self.fc_response1, self.fc_response2, self.dropout)
+        self.tracker =  Dialog_Tracker(bert_model_name=self.bert_model_name, Nresponses=len(self.reader), max_entity_types=self.max_entity_types, fc_responses=self.fc_responses, lstm_layers=self.lstm_layers, hidden_dim=self.hidden_dim, dropout=self.dropout)
         
         self.tracker.to(self.device)
 

@@ -171,9 +171,10 @@ class Dialog_Status:
             Output:
                 - dictionary of pytorch variables with the keys of :
                     - utterance: 2d long tensor
+                    - attention_mask: 2d long tensor for input mask
                     - response: 1d long tensor
                     - response_prev: 2d float tensor
-                    - mask: 2d float tensor
+                    - mask: 2d float tensor for response mask
                     - entity: 2d float tensor
                     - reward: 1d float tensor, used in policy gradiant
                     - batch_sizes: used in lstm pack_padded_sequence to speed up
@@ -185,6 +186,7 @@ class Dialog_Status:
         max_dialog_len = int(dialog_lengths[0])
         
         utterance = numpy.zeros((N_dialogs, max_dialog_len, max_seq_len), 'int')
+        attention_mask = numpy.zeros((N_dialogs, max_dialog_len, max_seq_len), 'int')
         response = numpy.zeros((N_dialogs, max_dialog_len), 'int')
         entity = numpy.zeros((N_dialogs, max_dialog_len, max_entity_types), 'float')
         mask = numpy.zeros((N_dialogs, max_dialog_len, len(dialogs[0].masks[0])), 'float')
@@ -206,6 +208,7 @@ class Dialog_Status:
                 entities = entity_dict.name2onehot(dialog.entities[i].keys()) #all entity names
                 seqlen = min(max_seq_len, len(dialog.utterances[i]))
                 utterance[j, i, :seqlen] = numpy.array(dialog.utterances[i])[:seqlen]
+                attention_mask[j, i, :seqlen] = 1
                 entity[j, i, :] = entities
                 reward[j, i] = reward_base * rl_discount ** i
                 mask[j, i, :] = dialog.masks[i].astype('float')
@@ -223,6 +226,7 @@ class Dialog_Status:
 
         #to torch tensor
         utterance = torch.LongTensor(utterance).to(device)
+        attention_mask = torch.LongTensor(attention_mask).to(device)
         response = torch.LongTensor(response).to(device)
         entity = torch.FloatTensor(entity).to(device)
         mask = torch.FloatTensor(mask).to(device)
@@ -231,9 +235,8 @@ class Dialog_Status:
 
 
         #pack them up for different dialogs
-        print(utterance.size())
-        sys.exit()
         utterance = pack_padded_sequence(utterance, dialog_lengths, batch_first=True)
+        attention_mask = pack_padded_sequence(attention_mask, dialog_lengths, batch_first=True).data
         response = pack_padded_sequence(response, dialog_lengths, batch_first=True).data
         reward = pack_padded_sequence(reward, dialog_lengths, batch_first=True).data
         entity = pack_padded_sequence(entity, dialog_lengths, batch_first=True).data
@@ -242,7 +245,7 @@ class Dialog_Status:
         batch_sizes = utterance.batch_sizes
         utterance = utterance.data
 
-        dialog_torch = {'utterance': utterance, 'response':response, 'response_prev':response_prev, 'mask':mask, 'entity':entity, 'reward':reward, 'batch_sizes':batch_sizes}
+        dialog_torch = {'utterance': utterance, 'attention_mask':attention_mask, 'response':response, 'response_prev':response_prev, 'mask':mask, 'entity':entity, 'reward':reward, 'batch_sizes':batch_sizes}
         return dialog_torch
 
 
