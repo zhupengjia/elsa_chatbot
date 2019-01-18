@@ -12,7 +12,7 @@ from pytorch_pretrained_bert.modeling import BertModel
     Author: Pengjia Zhu (zhupengjia@gmail.com)
 '''
 
-class Dialog_Tracker(Model_Base):
+class Dialog_Tracker(nn.Module):
     '''
         dialog tracker for end2end chatbot 
 
