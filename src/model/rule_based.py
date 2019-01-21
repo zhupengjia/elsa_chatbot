@@ -14,15 +14,14 @@ class Rule_Based:
         Rule based chatbot
 
         Input:
-            - vocab: instance of nlptools.text.Vocab
-            - tokenizer: instance of nlptools.text.Tokenizer
+            - bert_model_name: bert model file location or one of the supported model name
             - hook: hook instance, please check src/hook/babi_gensays.py for example
             - dialog_file: xlsx file of rule definition
             - min_score: score filter for sentence similarity
     '''
-    def __init__(self, vocab, tokenizer, hook, dialog_file, min_score=0.6):
+    def __init__(self, bert_model_name, hook, dialog_file, min_score=0.6):
+        self.bert_model_name = bert_model_name
         self.hook = hook
-        self.vocab = vocab
         self.docsim = DocSim(self.vocab)
         self.reader = Reader(dialog_file)
         self.tokenizer = tokenizer

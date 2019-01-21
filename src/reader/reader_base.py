@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 import sys, os, numpy
-from nlptools.text.ner import NER
-from nlptools.text import Vocab, Embedding
 from ..module.response_dict import Response_Dict
 from ..module.dialog_status import Dialog_Status
 from ..module.entity_dict import Entity_Dict
@@ -17,7 +15,6 @@ class Reader_Base(object):
        Input:
             - tokenizer:  instance of nlptools.text.tokenizer.Tokenizer_BERT
             - ner: instance of nlptools.text.ner.NER
-            - embedding: instance of nlptools.text.Embedding
             - entity_dict: instance of ..module.entity_dict.Entity_Dict
             - hook: hook instance, see ..hook.behaviors for example
             - max_entity_types: int, number of entity types
