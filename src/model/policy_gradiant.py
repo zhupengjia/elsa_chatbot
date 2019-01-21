@@ -3,9 +3,11 @@ import sys, torch, os, numpy
 from .rule_based import Rule_Based
 from .dialog_tracker import Dialog_Tracker
 from ..module.dialog_status import Dialog_Status
-from torch.autograd import Variable
+from ..module.entity_dict import Entity_Dict
 from torch.nn.utils.rnn import PackedSequence, pack_padded_sequence, pad_packed_sequence
 from nlptools.utils import Config, setLogger
+from nlptools.text.tokenizer import Tokenizer_BERT
+from nlptools.text.ner import NER
 import torch.optim as optim
 
 '''
@@ -13,7 +15,7 @@ import torch.optim as optim
 '''
 
 class Policy_Gradiant:
-    def __init__(self, adversal_chatbot, reader, bert_model_name, max_entity_types, fc_responses=5, entity_layers=2, lstm_layers=1, hidden_dim=300, epochs=1000, weight_decay=0, learning_rate=0.001, saved_model="model.pt", dropout=0.2, device=None, logger=None):
+    def __init__(self, adversal_chatbot, reader, bert_model_name, max_entity_types, fc_responses=5, entity_layers=2, lstm_layers=1, hidden_dim=300, epochs=1000, weight_decay=0, learning_rate=0.0001, maxloop=20, discount=0.95, saved_model="model.pt", dropout=0.2, device=None, logger=None):
         '''
             Policy Gradiant for end2end chatbot
 
@@ -29,19 +31,20 @@ class Policy_Gradiant:
                 - epochs: int, default is 1000
                 - weight_decay: int, default is 0
                 - learning_rate: float, default is 0.001
+                - maxloop： int, maximum dialog loops for simulation, default is 20
+                - discount: float between 0-1, reward discount, default is 0.95
                 - saved_model: str, default is "model.pt"
                 - dropout: float, default is 0.2
                 - device: instance of torch.device, default is cpu device
                 - logger: logger instance ,default is None
         '''
-        self.cfg = Config(cfg_fn)
-        if not torch.cuda.is_available(): 
-            self.cfg.model.use_gpu = 0
        
         self.reader = reader
         self.bert_model_name = bert_model_name
         self.saved_model = saved_model
         self.learning_rate = learning_rate
+        self.maxloop = maxloop
+        self.discount=discount
         self.weight_decay = weight_decay
         self.epochs = epochs
         self.device = device
@@ -88,7 +91,7 @@ class Policy_Gradiant:
         #adversal chatbot
         ad_chatbot = Rule_Based.build(config.rule_based, adversal_hook)
 
-        return cls(adversal_chatbot = ad_chatbot, reader=reader, logger=logger, bert_model_name=config.tokenizer.bert_model_name, max_entity_types=config.entity_dict.max_entity_types, fc_responses=config.model.fc_responses, entity_layers=config.model.entity_layers, lstm_layers=config.model.lstm_layers, hidden_dim=config.model.hidden_dim, epochs=config.model.epochs, weight_decay=config.model.weight_decay, learning_rate=config.model.learning_rate, saved_model=config.model.saved_model, dropout=config.model.dropout, device=device)
+        return cls(adversal_chatbot = ad_chatbot, reader=reader, logger=logger, bert_model_name=config.tokenizer.bert_model_name, max_entity_types=config.entity_dict.max_entity_types, fc_responses=config.model.fc_responses, entity_layers=config.model.entity_layers, lstm_layers=config.model.lstm_layers, hidden_dim=config.model.hidden_dim, epochs=config.model.epochs, weight_decay=config.model.weight_decay, learning_rate=config.reinforcement.learning_rate, maxloop=config.reinforcement.maxloop, discount=config.reinforcement.discount, saved_model=config.model.saved_model, dropout=config.model.dropout, device=device)
 
 
     def __init_tracker(self):
@@ -111,7 +114,7 @@ class Policy_Gradiant:
         '''memory replay'''
         dialogs = []
         N_true = 0
-        for batch in range(self.cfg.model.batch_size):
+        for batch in range(self.reader.batch_size):
             self.logger.debug('--------- new dialog ------')
             #reset adversal chatbot
             self.ad_chatbot.reset(self.clientid)
@@ -120,17 +123,15 @@ class Policy_Gradiant:
             #new dialog status
             dialog_status = self.reader.new_dialog()
             #dialog loop
-            for loop in range(self.cfg.model.rl_maxloop):
+            for loop in range(self.maxloop):
                 dialog_status.add_utterance(utterance)
                 dialog_status.getmask()
-                data = Dialog_Status.torch(self.cfg, self.reader.vocab, self.reader.entity_dict, [dialog_status])
+                data = Dialog_Status.torch(self.reader.entity_dict, [dialog_status], self.reader.max_seq_len, self.reader.max_entity_types, device=self.reader.device)
                 
                 y_prob = self.tracker(data)
-
                 _, y_pred = torch.max(y_prob.data, 1)
-                if self.cfg.model.use_gpu:
-                    y_pred = y_pred.cpu()
-                y_pred = int(y_pred.numpy()[-1])
+                y_pred = int(y_pred.cpu().numpy()[-1])
+
                 response = self.reader.get_response(y_pred)
                 self.logger.debug('{}\t{}'.format(utterance, response))
 
@@ -146,21 +147,21 @@ class Policy_Gradiant:
             
         
         #convert to torch variable
-        dialogs = Dialog_Status.torch(self.cfg, self.reader.vocab, self.reader.entity_dict, dialogs)
+        dialogs = Dialog_Status.torch(self.reader.entity_dict, dialogs, self.reader.max_seq_len, self.reader.max_entity_types, device=self.reader.device)
 
-        return dialogs, float(N_true)/self.cfg.model.batch_size
+        return dialogs, float(N_true)/self.reader.batch_size
 
 
     def train(self):
         '''
             Train the model. No input needed
         '''
-        for epoch in range(self.cfg.model.epochs):
+        for epoch in range(self.epochs):
             dialogs, precision = self.__memory_replay()
             self.tracker.zero_grad()
             y_prob = self.tracker(dialogs)
             
-            self.logger.info('{} {} {}'.format(epoch, self.cfg.model.epochs, precision))
+            self.logger.info('{} {} {}'.format(epoch, self.epochs, precision))
             
             m = torch.distributions.Categorical(y_prob)
             action = m.sample()
@@ -178,6 +179,6 @@ class Policy_Gradiant:
                     'model': model_state_dict,
                     'optimizer': optimizer_state_dict,
                 }
-                torch.save(checkpoint, self.cfg.model['saved_model'])
+                torch.save(checkpoint, self.saved_model)
             
              

@@ -3,7 +3,6 @@ import sys, torch, os, numpy
 from .dialog_tracker import Dialog_Tracker
 from nlptools.utils import Config, setLogger
 from ..module.entity_dict import Entity_Dict
-from nlptools.text import Embedding
 from nlptools.text.tokenizer import Tokenizer_BERT
 from nlptools.text.ner import NER
 import torch.optim as optim
