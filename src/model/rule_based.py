@@ -1,8 +1,9 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
-import numpy, pandas, re, random, math, sys
-from nlptools.utils import Config
-from nlptools.text import DocSim, Tokenizer, Embedding
+import numpy, pandas, re, random, math, torch, sys
+from nlptools.utils import Config, setLogger
+from nlptools.text.sentence_embedding import Sentence_Embedding
+from scipy.spatial.distance import cosine
 from ..reader.rulebased import Reader
 
 '''
@@ -18,14 +19,16 @@ class Rule_Based:
             - hook: hook instance, please check src/hook/babi_gensays.py for example
             - dialog_file: xlsx file of rule definition
             - min_score: score filter for sentence similarity
+            - batch_size: batch_size while getting sentence embedding, default is 100
+            - device: string or instance of torch.device, default is "cpu"
+            - logger: logger instance ,default is None
     '''
-    def __init__(self, bert_model_name, hook, dialog_file, min_score=0.6):
-        self.bert_model_name = bert_model_name
+    def __init__(self, bert_model_name, hook, dialog_file, min_score=0.6, batch_size=100, device='cpu', logger=None):
+        self.embedding = Sentence_Embedding(bert_model_name=bert_model_name, device=str(device))
         self.hook = hook
-        self.docsim = DocSim(self.vocab)
         self.reader = Reader(dialog_file)
-        self.tokenizer = tokenizer
         self.min_score = min_score
+        self.logger = logger
         self.session = {}
         self._predeal()
 
@@ -39,11 +42,10 @@ class Rule_Based:
                 - config: configure dictionary
                 - hook: hook instance, please check src/hook/babi_gensays.py for example
         '''
-        tokenizer = Tokenizer(tokenizer='bert', **config.tokenizer)
-        embedding = Embedding(**config.embedding)
-        vocab = tokenizer.vocab
-        vocab.embedding = embedding
-        return cls(vocab, tokenizer, hook=hook, dialog_file=config.dialog_file, min_score = config.min_score)
+        logger = setLogger(**config.logger)
+        device = torch.device("cuda:0" if config.use_gpu and torch.cuda.is_available() else "cpu")
+
+        return cls(bert_model_name=config.bert_model_name, hook=hook, dialog_file=config.dialog_file, min_score = config.min_score, batch_size=config.batch_size, device=device, logger=logger)
 
 
     def _predeal(self):
@@ -57,7 +59,8 @@ class Rule_Based:
             utter = [u for u in utter if len(u) > 0]
             if len(utter) < 1: return None
             return utter
-        self.reader.data['utterance'] = self.reader.data['userSays'].apply(utterance2id)
+        utterance_embeddings = numpy.concatenate(list(self.embedding(self.reader.data['userSays'].tolist())))
+        self.reader.data['utterance'] = list(utterance_embeddings)
 
 
     def get_reply(self, utterance, clientid):
@@ -78,13 +81,14 @@ class Rule_Based:
         if not clientid in self.session:
             self.session[clientid] = {'CHILDID': None, 'RESPONSE': None}
 
-        utterance_id = self.vocab.words2id(self.tokenizer(utterance))
         self.session[clientid]['RESPONSE'] = None # clean response
-        if len(utterance_id) < 1:
+        self.logger.debug('utterance: ' + utterance)
+        if len(utterance) < 1:
             for e, v in self._get_fallback(self.session[clientid]).items():
                 self.session[clientid][e] = v
         else:
-            for e, v in self._find(utterance_id, self.session[clientid]).items():
+            utterance_embedding = list(self.embedding(utterance))[0][0]
+            for e, v in self._find(utterance_embedding, self.session[clientid]).items():
                 self.session[clientid][e] = v
         if isinstance(self.session[clientid]['RESPONSE'], str):
             return self.session[clientid]['RESPONSE']
@@ -99,24 +103,25 @@ class Rule_Based:
             del self.session[clientid]
 
 
-    def _find(self, utterance_id, entities):
+    def _find(self, utterance_embedding, entities):
         '''
             find the most closed one
             
             Input:
-                - utterance_id : utterance token id list
+                - utterance_embedding : 1d array, embedding of utterance
                 - entities: dictionary, current entities
         '''
         def getscore(utter_cand):
             if utter_cand is None: 
                 return 0
-            distance = min([self.docsim.rwmd_distance(utterance_id, u) for u in utter_cand])
+            distance = cosine(utterance_embedding, utter_cand)
             return 1/(1+distance)
         data = self.reader.data
         
         if entities['CHILDID'] is not None:
             data_filter = data.loc[entities['CHILDID']]
             data_filter['score'] = data_filter['utterance'].apply(getscore)
+            self.logger.debug("score: \n" + str(data_filter[['userSays', 'score', 'utterance']]))
             idx = data_filter['score'].idxmax()
             if data_filter.loc[idx]['score'] < self.min_score:
                 #try to get score for out of rules
