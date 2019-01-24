@@ -119,7 +119,7 @@ class Supervised:
             
             precision = y_pred.eq(responses).sum().item()/responses.numel()
             
-            if self.logger: self.logger.info('{} {} {} {}'.format(epoch, self.epochs, loss.item(), precision))
+            self.logger.info('{} {} {} {}'.format(epoch, self.epochs, loss.item(), precision))
         
             loss.backward()
             self.optimizer.step()

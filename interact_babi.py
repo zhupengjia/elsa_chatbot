@@ -12,7 +12,8 @@ class InteractiveSession():
     def __init__(self):
         self.cfg = Config('config/babi.yml')
         self.cfg.model.dropout = 0 #no dropout while predict
-        self.cfg.model.use_gpu = 0 #use gpu
+        self.cfg.logger.loglevel_console=10
+        #self.cfg.model.use_gpu = 0 #use gpu
 
         hook = Behaviors()
         
@@ -20,6 +21,7 @@ class InteractiveSession():
         self.model.tracker.eval()
 
         self.reader = self.model.reader
+        self.logger = self.model.logger
 
     def interact(self):
         dialog_status = self.reader.new_dialog()
@@ -40,7 +42,7 @@ class InteractiveSession():
                 break
         
             else:
-                print(u)
+                self.logger.debug("utterance: " + u)
                 if dialog_status.add_utterance(u) is None:
                     continue
                 dialog_status.getmask()
@@ -51,8 +53,7 @@ class InteractiveSession():
                 y_prob = self.model.tracker(data)
                 _, y_pred = torch.max(y_prob.data, 1)
 
-                y_pred = int(y_pred.numpy()[-1])
-                
+                y_pred = int(y_pred.cpu().numpy()[-1])
 
                 dialog_status.add_response(y_pred)
 
@@ -61,6 +62,11 @@ class InteractiveSession():
                     entity = dialog_status.entity_dict.entity_namedict.inv[eid]
                     value = dialog_status.entity_dict.entity_dict.inv[dialog_status.entity[eid]]
                     entities[entity] = value
+
+                self.logger.debug("y_prob: " + str(y_prob))
+                self.logger.debug("mask: " + str(data['mask']))
+                self.logger.debug(dialog_status)
+
                 response = self.reader.get_response(y_pred, entities)
                 
                 print(response)

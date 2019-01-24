@@ -72,7 +72,7 @@ class Dialog_Status:
             entities, utterance_replaced = self.ner.get(utterance, return_dict=True)
             tokens = self.tokenizer(utterance_replaced)
             utterance_ids = numpy.concatenate(([self.vocab.CLS_ID],self.vocab.words2id(tokens),[self.vocab.SEP_ID]))
-
+            
             entity_ids =  self.entity_dict(entities)
         else:
             utterance_ids = utterance

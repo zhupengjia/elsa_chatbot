@@ -74,7 +74,7 @@ reinforcement:
 
 logger:
     appname: babi
-    loglevel_console:  20
+    loglevel_console:  10
     loglevel_file: 0
     logfile: data/babi/train.log
 
