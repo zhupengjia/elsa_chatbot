@@ -9,7 +9,8 @@ from nlptools.utils import Config
 from src.backend.xmpp import XMPP as Backend
 
 class InteractSession(Backend):
-    def __init__(self):
+    def __init__(self, **args):
+        super().__init__(**args)
         self.cfg = Config('config/babi.yml')
         self.cfg.model.dropout = 0 #no dropout while predict
         self.cfg.logger.loglevel_console=10
@@ -58,7 +59,8 @@ class InteractSession(Backend):
 
         response = self.reader.get_response(y_pred, entities)
        
-        response += "\n========= debug =======\n" + str(self.dialog_status[session_id])
+        #response += "\n========= debug =======\n" + str(self.dialog_status[session_id])
+        response += "\n========= debug =======\n" + str(entities)
 
         if y_pred == len(self.reader):
             response += '\n======= ' + 'information got:'
@@ -68,7 +70,13 @@ class InteractSession(Backend):
 
         return response
     
+if __name__ == '__main__':
+    import logging
+    logging.basicConfig(level=logging.DEBUG, format='%(levelname)-8s %(message)s')
+    
+    xmpp = InteractSession(jid='elsa@chat.higgslab.com', password='siriusvoce')
+    if xmpp.connect(use_tls=False, use_ssl=False, reattempt=True):
+        xmpp.process(block=True)
 
-session = InteractSession()
-session.run()
+
 
