@@ -1,5 +1,9 @@
 bangkok
 beijing
+hangzhou
+taizhou
+wenzhou
+jinhua
 bombay
 hanoi
 paris
@@ -10,6 +14,10 @@ seoul
 tokyo
 shanghai
 guangzhou
+xian
+dalian
+christchurch
+auckland
 hongkong
 thailand
 pattaya
