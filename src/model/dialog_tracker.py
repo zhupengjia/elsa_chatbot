@@ -5,6 +5,7 @@ import torch.nn.functional as F
 import torch.nn as nn
 import torch.autograd as autograd
 from torch.nn.utils.rnn import PackedSequence
+from .sentene_encoder import Sentence_Encoder
 from pytorch_pretrained_bert.modeling import BertModel
 
 '''
@@ -29,10 +30,9 @@ class Dialog_Tracker(nn.Module):
     '''
     def __init__(self, bert_model_name, Nresponses, max_entity_types, fc_responses=5, entity_layers=2, lstm_layers=1, hidden_dim=300, dropout=0.2):
         super().__init__()
-        self.encoder = BertModel.from_pretrained(bert_model_name)
+        self.encoder = Sentence_Encoder(bert_model_name)
         for param in self.encoder.parameters():
             param.requires_grad = False # freeze bert parameter
-        self.encoder_hidden = self.encoder.config.hidden_size
 
         self.dropout = nn.Dropout(dropout)
         self.pool = nn.AvgPool1d(2)
@@ -45,7 +45,7 @@ class Dialog_Tracker(nn.Module):
         
         fc_response_layers = [nn.Linear(fc_responses[i], fc_responses[i+1]) for i in range(len(fc_responses)-1)]
         self.fc_response = nn.Sequential(*fc_response_layers)
-        self.fc_dialog = nn.Linear(fc_responses[-1] + max_entity_types + self.encoder_hidden, hidden_dim)
+        self.fc_dialog = nn.Linear(fc_responses[-1] + max_entity_types + self.encoder.hidden_size, hidden_dim)
         
         self.lstm = nn.LSTM(hidden_dim, hidden_dim, num_layers=lstm_layers, batch_first=True)
         self.fc_out = nn.Linear(hidden_dim, Nresponses)
