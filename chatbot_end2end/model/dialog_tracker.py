@@ -31,8 +31,6 @@ class Dialog_Tracker(nn.Module):
     def __init__(self, bert_model_name, Nresponses, max_entity_types, fc_responses=5, entity_layers=2, lstm_layers=1, hidden_dim=300, dropout=0.2):
         super().__init__()
         self.encoder = Sentence_Encoder(bert_model_name)
-        for param in self.encoder.parameters():
-            param.requires_grad = False # freeze bert parameter
 
         self.dropout = nn.Dropout(dropout)
         self.pool = nn.AvgPool1d(2)

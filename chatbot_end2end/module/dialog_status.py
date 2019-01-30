@@ -10,7 +10,7 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 '''
 
 class Dialog_Status:
-    def __init__(self, vocab, tokenizer, ner, entity_dict, response_dict, hook):
+    def __init__(self, vocab, tokenizer, ner, entity_dict, response_dict, hook, max_seq_len=100):
         '''
         Maintain the dialog status in a dialog
 
@@ -36,6 +36,7 @@ class Dialog_Status:
             - entity_dict: instance of src/module/entity_dict
             - response_dict:  instance of src/module/response_dict
             - hook: hook instance, please check src/hook/babi_gensays.py for example
+            - max_seq_len: int, maximum sequence length
 
         Special usage:
             - str(): print the current status
@@ -48,10 +49,11 @@ class Dialog_Status:
         self.vocab = vocab
         self.response_dict = response_dict
         self.hook = hook
+        self.max_seq_len = max_seq_len
         self.entity_dict = entity_dict #for response mask
         self.entity = {} #for current entity 
         self.entity_mask = numpy.ones((len(entity_dict.entity_maskdict),1), 'bool_') #for response mask
-        self.utterances, self.responses, self.entities, self.masks = [], [], [], []
+        self.utterances, self.utterance_masks, self.responses, self.entities, self.masks = [], [], [], [], []
 
 
     def add_utterance(self, utterance, entity_ids=None):
@@ -71,12 +73,25 @@ class Dialog_Status:
             utterance = utterance.strip()
             entities, utterance_replaced = self.ner.get(utterance, return_dict=True)
             tokens = self.tokenizer(utterance_replaced)
-            utterance_ids = numpy.concatenate(([self.vocab.CLS_ID],self.vocab.words2id(tokens),[self.vocab.SEP_ID]))
             
+            utterance_ids = self.vocab.words2id(tokens) 
             entity_ids =  self.entity_dict(entities)
         else:
             utterance_ids = utterance
-        self.utterances.append(utterance_ids)
+        
+        utterance_ids = utterance_ids[:self.max_seq_len-2]
+        seq_len = len(utterance_ids) + 2
+       
+        utterance_ids_expand = numpy.zeros(self.max_seq_len)
+        utterance_masks = numpy.zeros(self.max_seq_len)
+        utterance_ids_expand[0] = self.vocab.CLS_ID
+        utterance_ids_expand[1:seq_len-1] = utterance_ids
+        utterance_ids_expand[seq_len-1] = self.vocab.SEP_ID
+
+        utterance_masks[:seq_len] = 1
+
+        self.utterances.append(utterance_ids_expand)
+        self.utterance_masks.append(utterance_masks)
         for e in entity_ids:
             self.entity[e] = entity_ids[e][0]
             #entity status and response mask
@@ -139,7 +154,7 @@ class Dialog_Status:
         txt += 'entity mask: ' + str(self.entity_mask.reshape(1, -1)[0]) + '\n'
         for i in range(len(self.utterances)):
             txt += '-'*20 + str(i) + '-'*20 + '\n'
-            txt += 'utterance: ' + ' '.join(self.vocab.id2words(self.utterances[i])) + '\n'
+            txt += 'utterance: ' + ' '.join(self.vocab.id2words(self.utterances[i][self.utterance_masks[i]])) + '\n'
             if i < len(self.responses):
                 txt += 'response: ' + self.response_dict.response[self.responses[i]] + '\n'
             txt += 'entities: ' + ' '.join([self.entity_dict.entity_namedict.inv[e] for e in self.entities[i].keys()]) + '\n'
@@ -155,14 +170,13 @@ class Dialog_Status:
 
 
     @staticmethod 
-    def torch(entity_dict, dialogs, max_seq_len, max_entity_types, rl_maxloop=20, rl_discount=0.95, device=None):
+    def torch(entity_dict, dialogs, max_entity_types, rl_maxloop=20, rl_discount=0.95, device=None):
         '''
             staticmethod, convert dialogs to batch
 
             Input:
                 - entity_dict: src/module/entity_dict instance
                 - dialogs: list of src/module/dialog_status instance
-                - max_seq_len: int, maximum sequence length
                 - max_entity_types: int, number of entity types
                 - rl_maxloop: int, maximum dialog loop, default is 20
                 - rl_discount: float, discount rate for reinforcement learning, default is 0.95
@@ -184,6 +198,8 @@ class Dialog_Status:
         N_dialogs = len(dialogs)
         dialog_lengths = dialog_lengths[perm_idx]
         max_dialog_len = int(dialog_lengths[0])
+
+        max_seq_len = len(dialogs[0].utterances[0])
         
         utterance = numpy.zeros((N_dialogs, max_dialog_len, max_seq_len), 'int')
         attention_mask = numpy.zeros((N_dialogs, max_dialog_len, max_seq_len), 'int')
@@ -206,9 +222,8 @@ class Dialog_Status:
             response[j, :len(dialog.responses)] = torch.LongTensor(dialog.responses)
             for i in range(dialog_lengths[j]):
                 entities = entity_dict.name2onehot(dialog.entities[i].keys()) #all entity names
-                seqlen = min(max_seq_len, len(dialog.utterances[i]))
-                utterance[j, i, :seqlen] = numpy.array(dialog.utterances[i])[:seqlen]
-                attention_mask[j, i, :seqlen] = 1
+                utterance[j, i] = dialog.utterances[i]
+                attention_mask[j, i] = dialog.utterance_masks[i]
                 entity[j, i, :] = entities
                 reward[j, i] = reward_base * rl_discount ** i
                 mask[j, i, :] = dialog.masks[i].astype('float')

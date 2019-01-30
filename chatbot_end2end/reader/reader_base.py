@@ -92,6 +92,7 @@ class Reader_Base(object):
             Input:
                 - data: dialog data, format as::
                     
+
                     [
 	                [
 		            [utterance, response],
@@ -104,8 +105,8 @@ class Reader_Base(object):
 
                 {  
 	            'utterance': [utterance token_ids],  
-	            'response': [response ids]  
-	            'ent_utterance':[utterance entity ids]  
+                    'response': [response ids]  
+	            'ent_utterance':[utterance entity ids]
 	            'idrange':[  
 		        [dialog_startid, dialog_endid],  
 		        ...  
@@ -126,9 +127,8 @@ class Reader_Base(object):
                     sentence = sentence.strip()
                     entities, sentence_replaced = self.ner.get(sentence, return_dict=True)
                     tokens = self.tokenizer(sentence_replaced)
-
-                    token_ids = numpy.concatenate(([self.vocab.CLS_ID],self.vocab.words2id(tokens),[self.vocab.SEP_ID]))
                     
+                    token_ids = self.vocab.words2id(tokens)
                     entity_ids = self.entity_dict(entities)
                     if i_s == 0:
                         ripe['utterance'].append(token_ids)
@@ -152,7 +152,7 @@ class Reader_Base(object):
         '''
             return a new dialog status instance
         '''
-        return  Dialog_Status(self.vocab, self.tokenizer, self.ner, self.entity_dict, self.response_dict, self.hook)
+        return  Dialog_Status(self.vocab, self.tokenizer, self.ner, self.entity_dict, self.response_dict, self.hook, self.max_seq_len)
 
 
     def __iter__(self):
@@ -176,6 +176,6 @@ class Reader_Base(object):
                 if self.logger is not None:
                     self.logger.debug(dialog_status)
                 dialogs.append(dialog_status)
-            yield Dialog_Status.torch(self.entity_dict, dialogs, self.max_seq_len, self.max_entity_types, device=self.device)
+            yield Dialog_Status.torch(self.entity_dict, dialogs, self.max_entity_types, device=self.device)
 
 
