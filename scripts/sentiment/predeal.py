@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import glob, os, gzip, shutil, json
+import glob, os, gzip, shutil, json, time
 import h5py, numpy
 from nlptools.text  import Tokenizer
 
@@ -17,8 +17,8 @@ data_paths = glob.glob(os.path.join(data_folder, "*.json.gz"))
 #print(num_lines)
 num_lines = 18186733
 
-#if os.path.exists(db_path):
-#    os.remove(db_path)
+if os.path.exists(db_path):
+    os.remove(db_path)
 
 tokenizer = Tokenizer(tokenizer='bert', bert_model_name=bert_model_name)
 vocab = tokenizer.vocab
@@ -40,20 +40,29 @@ def jsonconvert(jsonstr):
     return text_ids, text_mask, rate
 
 
+def add_trace(dset, arr):
+    dset.resize((dset.shape[0]+1, max_seq_len) )
+    dset[-1,:] = arr
+                
+
 with h5py.File(db_path, "w") as h5file:
-    id_set = h5file.create_dataset("ids", (num_lines, max_seq_len), dtype='i', chunks=True) 
-    mask_set = h5file.create_dataset("masks", (num_lines, max_seq_len), dtype='i', chunks=True) 
-    label_set = h5file.create_dataset("label", (num_lines,), dtype='i', chunks=True) 
+    id_set = h5file.create_dataset("ids", (0, max_seq_len), dtype='i', chunks=(1, max_seq_len), maxshape=(None, max_seq_len)) 
+    mask_set = h5file.create_dataset("masks", (0, max_seq_len), dtype='i', chunks=(1, max_seq_len), maxshape=(None, max_seq_len)) 
+    label_set = h5file.create_dataset("label", (num_lines,), dtype='i') 
     h5file.attrs["Nlines"] = num_lines
     ikey = 0
     for data_path in data_paths:
         with gzip.open(data_path, "rb") as f:
             for l in f:
+                t1 = time.time()
                 text_ids, text_mask, rate = jsonconvert(l)
-                id_set[ikey] = text_ids
-                mask_set[ikey] = text_mask
+                t2 = time.time()
+                add_trace(id_set, text_ids)
+                add_trace(mask_set, text_mask)
+                
                 label_set[ikey] = rate
+                t3 = time.time()
                 ikey += 1
-                if ikey % 10 == 0:
-                    print(data_path, ikey)
+                if ikey % 200 == 0:
+                    print(data_path, ikey, t2-t1, t3-t2)
 
