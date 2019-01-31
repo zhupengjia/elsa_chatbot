@@ -38,7 +38,7 @@ def train():
     num_workers = 1
     bert_model_name = "/home/pzhu/data/bert/bert-base-uncased"
     saved_model = '/home/pzhu/data/amazon-reviews-pds/sentiment.pt'
-    data_path = "/home/pzhu/data/amazon-reviews-pds/reviews_part.h5"
+    data_path = "/home/pzhu/data/amazon-reviews-pds/reviews.h5"
     
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda:0" if use_cuda else "cpu")
