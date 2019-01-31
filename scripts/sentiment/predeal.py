@@ -17,8 +17,8 @@ data_paths = glob.glob(os.path.join(data_folder, "*.json.gz"))
 #print(num_lines)
 num_lines = 18186733
 
-if os.path.exists(db_path):
-    os.remove(db_path)
+#if os.path.exists(db_path):
+#    os.remove(db_path)
 
 tokenizer = Tokenizer(tokenizer='bert', bert_model_name=bert_model_name)
 vocab = tokenizer.vocab
