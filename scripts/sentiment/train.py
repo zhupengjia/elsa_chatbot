@@ -47,8 +47,8 @@ def train():
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
 
     model = Sentiment_Full(bert_model_name).to(device)
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    
+    optimizer = optim.Adam(model.sentiment.parameters(), lr=learning_rate)
+     
     
     if os.path.exists(saved_model):
         checkpoints = torch.load(saved_model, map_location={'cuda:0':str(device)})
