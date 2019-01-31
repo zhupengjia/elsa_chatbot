@@ -174,11 +174,6 @@ class Policy_Gradiant:
 
             if epoch > 0 and epoch%10 == 0: 
                 model_state_dict = self.tracker.state_dict()
-                optimizer_state_dict = self.optimizer.state_dict()
-                checkpoint = {
-                    'model': model_state_dict,
-                    'optimizer': optimizer_state_dict,
-                }
-                torch.save(checkpoint, self.saved_model)
+                torch.save(model_state_dict, self.saved_model)
             
              

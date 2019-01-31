@@ -4,13 +4,14 @@ from torch import functional as F
 from ..hook import *
 from nlptools.utils import flat_list
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
 '''
     Author: Pengjia Zhu (zhupengjia@gmail.com)
 '''
 
 class Dialog_Status:
-    def __init__(self, vocab, tokenizer, ner, entity_dict, response_dict, hook, max_seq_len=100):
+    def __init__(self, vocab, tokenizer, ner, response_dicts, hook, max_entity_types=1024, max_seq_len=100):
         '''
         Maintain the dialog status in a dialog
 
@@ -33,9 +34,9 @@ class Dialog_Status:
             - vocab:  instance of nlptools.text.vocab
             - tokenizer:  instance of nlptools.text.Tokenizer
             - ner: instance of nlptools.text.ner
-            - entity_dict: instance of src/module/entity_dict
-            - response_dict:  instance of src/module/response_dict
+            - response_dicts:  dictionary of instance of src/module/response_dict, key is topic name
             - hook: hook instance, please check src/hook/babi_gensays.py for example
+            - max_entity_types: int, number of entity types, default is 1024
             - max_seq_len: int, maximum sequence length
 
         Special usage:
@@ -47,57 +48,71 @@ class Dialog_Status:
         self.tokenizer = tokenizer
         self.ner = ner
         self.vocab = vocab
-        self.response_dict = response_dict
+        self.response_dicts = response_dicts
         self.hook = hook
         self.max_seq_len = max_seq_len
-        self.entity_dict = entity_dict #for response mask
-        self.entity = {} #for current entity 
-        self.entity_mask = numpy.ones((len(entity_dict.entity_maskdict),1), 'bool_') #for response mask
-        self.utterances, self.utterance_masks, self.responses, self.entities, self.masks = [], [], [], [], []
+        self.max_entity_types = max_entity_types
+
+        self.current_status = self.__init_status()
+
+        self.history_status = []
+        self.sentiment_analyzer =  SentimentIntensityAnalyzer()
+        
+
+    def __init_status(self):
+        initstatus =  {"entity":{}, \
+                "entity_mask": {}, \
+                "utterance": None, \
+                "utterance_mask": None, \
+                "response": None, \
+                "sentiment": 0, \
+                "topic": self.response_dicts.keys()[0] \
+                }
+        #for k in self.response_dicts:
+        #    initstatus["entity_mask"] = numpy.ones((len(self.response_dict[k].entity_maskdict),1), 'bool_')
+        return initstatus
 
 
-    def add_utterance(self, utterance, entity_ids=None):
+    def entity2id(self, entity):
+        return hash(entity)%self.max_entity_types
+        
+
+    def add_utterance(self, utterance):
         '''
             add utterance to status
 
             Input:
                 - utterance: string or token_id list
-                - entity_ids: entity id dictionary, usable only if utterance is a token_id list 
 
             Output:
                 - if success, return True, otherwise return None
 
         '''
-        if isinstance(utterance, str):
-            #predeal utterance
-            utterance = utterance.strip()
-            entities, utterance_replaced = self.ner.get(utterance, return_dict=True)
-            tokens = self.tokenizer(utterance_replaced)
-            
-            utterance_ids = self.vocab.words2id(tokens) 
-            entity_ids =  self.entity_dict(entities)
-        else:
-            utterance_ids = utterance
-        
+        #get entities
+        utterance = utterance.strip()
+        entities, utterance_replaced = self.ner.get(utterance, return_dict=True)
+        for e in entities:
+            self.current_status["entity"][e] = entities[e][0] #only keep first value
+            if e in self.response_dict.entity_maskdict:
+                self.current_status["entity_mask"][self.entity2id(e), 0] = False #mask for response choose
+              
+       
+        #utterance to id 
+        tokens = self.tokenizer(utterance_replaced)
+        utterance_ids = self.vocab.words2id(tokens)
+
         utterance_ids = utterance_ids[:self.max_seq_len-2]
         seq_len = len(utterance_ids) + 2
        
-        utterance_ids_expand = numpy.zeros(self.max_seq_len)
-        utterance_masks = numpy.zeros(self.max_seq_len)
-        utterance_ids_expand[0] = self.vocab.CLS_ID
-        utterance_ids_expand[1:seq_len-1] = utterance_ids
-        utterance_ids_expand[seq_len-1] = self.vocab.SEP_ID
-
-        utterance_masks[:seq_len] = 1
-
-        self.utterances.append(utterance_ids_expand)
-        self.utterance_masks.append(utterance_masks)
-        for e in entity_ids:
-            self.entity[e] = entity_ids[e][0]
-            #entity status and response mask
-            if e in self.entity_dict.entity_maskdict:
-                self.entity_mask[self.entity_dict.entity_maskdict[e], 0] = False #mask for response choose
-        self.entities.append(copy.deepcopy(self.entity))
+        self.current_status["utterance"] = numpy.zeros(self.max_seq_len)
+        self.current_status["utterance_mask"] = numpy.zeros(self.max_seq_len)
+        
+        self.current_status["utterance"][0] = self.vocab.CLS_ID
+        self.current_status["utterance"][1:seq_len-1] = utterance_ids
+        self.current_status["utterance"][seq_len-1] = self.vocab.SEP_ID
+        
+        self.current_status["utterance_mask"][:seq_len] = 1
+       
         return True
 
 
@@ -113,6 +128,7 @@ class Dialog_Status:
         for funcname in funcneeds:
             func = getattr(self.hook, funcname)
             self.applyfunc(func)
+        self.history_status.append(copy.deepcopy(self.current_status))
 
 
     def applyfunc(self, func):
@@ -122,14 +138,12 @@ class Dialog_Status:
             Input:
                 - func: function name
         '''
-        entities_get = func(self.entity)
+        entities_get = func(self.current_status["entity"])
         for e in entities_get:
-            e_id = self.entity_dict.name2id(e)
-            self.entity[e_id] = self.entity_dict.value2id(e_id, entities_get[e])
-            self.entities[-1][e_id] = copy.deepcopy(self.entity[e_id])
+            self.current_status["entity"][e] = entities_get[e]
             #entity status and response mask
-            if e_id in self.entity_dict.entity_maskdict:
-                self.entity_mask[self.entity_dict.entity_maskdict[e_id], 0] = False #mask for response choose
+            if e in self.response_dict.entity_maskdict:
+                self.current_status["entity_mask"][self.entity2id(e), 0] = False #mask for response choose
 
 
     def getmask(self):
@@ -138,9 +152,9 @@ class Dialog_Status:
 
             No input needed
         '''
-        mask_need = numpy.matmul(self.response_dict.masks['need'], self.entity_mask).reshape(1,-1)[0]
+        mask_need = numpy.matmul(self.response_dict.masks['need'], self.current_status["entity_mask"]).reshape(1,-1)[0]
         mask_need = numpy.logical_not(mask_need)
-        mask_notneed = numpy.matmul(self.response_dict.masks['notneed'], numpy.logical_not(self.entity_mask)).reshape(1,-1)[0]
+        mask_notneed = numpy.matmul(self.response_dict.masks['notneed'], numpy.logical_not(self.current_status["entity_mask"])).reshape(1,-1)[0]
         mask_notneed = numpy.logical_not(mask_notneed)
         self.masks.append(mask_need * mask_notneed)
 
@@ -150,15 +164,8 @@ class Dialog_Status:
             print the current status
         '''
         txt = '='*60 + '\n'
-        txt += 'entity: ' + str(self.entity) + '\n'
-        txt += 'entity mask: ' + str(self.entity_mask.reshape(1, -1)[0]) + '\n'
-        for i in range(len(self.utterances)):
-            txt += '-'*20 + str(i) + '-'*20 + '\n'
-            txt += 'utterance: ' + ' '.join(self.vocab.id2words(self.utterances[i][self.utterance_masks[i]])) + '\n'
-            if i < len(self.responses):
-                txt += 'response: ' + self.response_dict.response[self.responses[i]] + '\n'
-            txt += 'entities: ' + ' '.join([self.entity_dict.entity_namedict.inv[e] for e in self.entities[i].keys()]) + '\n'
-            txt += 'mask: ' + str(self.masks[i]) + '\n'
+        for k in self.current_status:
+            txt += "{}: {}\n".format(k, str(self.current_status[k]))
         return txt
 
 
@@ -166,7 +173,7 @@ class Dialog_Status:
         '''
             length of dialog
         '''
-        return len(self.utterances)
+        return len(self.history_status)
 
 
     @staticmethod 

@@ -11,7 +11,7 @@ from nlptools.utils import flat_list
 
 class Response_Dict:
     '''
-        Response dictionary. Used to index the response template and get the most closed response_template from a response string. 
+        Response dictionary for goal oriented chatbot. Used to index the response template and get the most closed response_template from a response string. 
         
         First you need a response template file, the format in each line is:  
             - needed_entity | notneeded_entity | func_call | response  
@@ -23,20 +23,19 @@ class Response_Dict:
 
         Input:
             - tokenizer: instance of nlptools.text.tokenizer
-            - entity_dict: instance of src/module/entity_dict
             - cached_index: path of cached index file for response search, will create the file if it is not existed
 
         Special usage:
             - len(): return number of responses in template
             - __getitem__ : get most closed response id for response, input is response string
     '''
-    def __init__(self, tokenizer, entity_dict, cached_index):
+    def __init__(self, tokenizer, cached_index):
         self.response, self.response_ids, self.func_need = [], [], []
         self.entity_need = {'need':[], 'notneed':[]}
         self.tokenizer = tokenizer
         self.cached_vocab = cached_index + '.vocab'
         self.vocab = Ngrams(ngrams=3, cached_vocab = self.cached_vocab) #response vocab, only used for searching best matched response template, independent with outside vocab.  
-        self.entity_dict = entity_dict
+        self.entity_maskdict = {}
         self.__search = VecTFIDF(self.vocab, cached_index)
 
 
@@ -66,10 +65,10 @@ class Response_Dict:
             return
         self.response.append(response)
         self.response_ids.append(response_ids)
-        
+       
+        #deal with entity_need and not need in template
         entity_need = {k:[x.strip() for x in re.split(',', entity_need[k])] for k in entity_need}
         entity_need = {k:[x.upper() for x in entity_need[k] if len(x) > 0] for k in entity_need}
-        entity_need = {k:[self.entity_dict.name2id(x) for x in entity_need[k]] for k in entity_need}
         for k in self.entity_need: self.entity_need[k].append(entity_need[k])
         
         func_need = [x.strip() for x in re.split(',', func_need)]
@@ -100,7 +99,7 @@ class Response_Dict:
         entity_maskdict = dict(zip(entity_maskdict, range(len(entity_maskdict))))
         self.masks = {'need': numpy.zeros((len(self.response), len(entity_maskdict)), 'bool_'), \
                 'notneed': numpy.zeros((len(self.response), len(entity_maskdict)), 'bool_')}
-        self.entity_dict.entity_maskdict = entity_maskdict #copy maskdict to entity_dict 
+        self.entity_maskdict = entity_maskdict #copy maskdict to entity_dict 
         for i in range(len(self.entity_need['need'])):
             for e in self.entity_need['need'][i]:
                 self.masks['need'][i, entity_maskdict[e]] = True
