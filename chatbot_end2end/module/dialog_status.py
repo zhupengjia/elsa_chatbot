@@ -2,6 +2,7 @@
 import numpy, torch, copy, time, sys
 from torch import functional as F
 from ..hook import *
+from .entity_dict import Entity_Dict
 from nlptools.utils import flat_list
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
@@ -11,7 +12,7 @@ from nltk.sentiment.vader import SentimentIntensityAnalyzer
 '''
 
 class Dialog_Status:
-    def __init__(self, vocab, tokenizer, ner, response_dicts, hook, max_entity_types=1024, max_seq_len=100):
+    def __init__(self, vocab, tokenizer, ner, topic_manager, hook, max_entity_types=1024, max_seq_len=100):
         '''
         Maintain the dialog status in a dialog
 
@@ -34,8 +35,7 @@ class Dialog_Status:
             - vocab:  instance of nlptools.text.vocab
             - tokenizer:  instance of nlptools.text.Tokenizer
             - ner: instance of nlptools.text.ner
-            - response_dicts:  dictionary of instance of src/module/response_dict, key is topic name
-            - hook: hook instance, please check src/hook/babi_gensays.py for example
+            - topic_manager: topic manager instance, see src/module/topic_manager
             - max_entity_types: int, number of entity types, default is 1024
             - max_seq_len: int, maximum sequence length
 
@@ -48,8 +48,7 @@ class Dialog_Status:
         self.tokenizer = tokenizer
         self.ner = ner
         self.vocab = vocab
-        self.response_dicts = response_dicts
-        self.hook = hook
+        self.topic_manager = topic_manager
         self.max_seq_len = max_seq_len
         self.max_entity_types = max_entity_types
 
@@ -61,21 +60,16 @@ class Dialog_Status:
 
     def __init_status(self):
         initstatus =  {"entity":{}, \
-                "entity_mask": {}, \
                 "utterance": None, \
                 "utterance_mask": None, \
-                "response": None, \
+                "response_string": None, \
+                "response": {}, \
+                "response_masks": {}, \
                 "sentiment": 0, \
-                "topic": self.response_dicts.keys()[0] \
+                "topic": None \
                 }
-        #for k in self.response_dicts:
-        #    initstatus["entity_mask"] = numpy.ones((len(self.response_dict[k].entity_maskdict),1), 'bool_')
         return initstatus
 
-
-    def entity2id(self, entity):
-        return hash(entity)%self.max_entity_types
-        
 
     def add_utterance(self, utterance):
         '''
@@ -93,10 +87,7 @@ class Dialog_Status:
         entities, utterance_replaced = self.ner.get(utterance, return_dict=True)
         for e in entities:
             self.current_status["entity"][e] = entities[e][0] #only keep first value
-            if e in self.response_dict.entity_maskdict:
-                self.current_status["entity_mask"][self.entity2id(e), 0] = False #mask for response choose
-              
-       
+
         #utterance to id 
         tokens = self.tokenizer(utterance_replaced)
         utterance_ids = self.vocab.words2id(tokens)
@@ -112,7 +103,13 @@ class Dialog_Status:
         self.current_status["utterance"][seq_len-1] = self.vocab.SEP_ID
         
         self.current_status["utterance_mask"][:seq_len] = 1
-       
+     
+        #get topic
+        self.current_status["topic"] = self.topic_manager.get_topic(self.current_status)
+
+        #response mask
+        self.current_status["response_mask"] = self.topic_manager.update_response_masks(self.current_status)
+
         return True
 
 
@@ -121,8 +118,11 @@ class Dialog_Status:
             add response and apply function
             
             Input:
-                - response: string
+                - response: response target value
         '''
+        self.current_status = self.topic_manager.update_response(response)
+
+
         self.responses.append(response)
         funcneeds = self.response_dict.func_need[response]
         for funcname in funcneeds:
@@ -141,22 +141,6 @@ class Dialog_Status:
         entities_get = func(self.current_status["entity"])
         for e in entities_get:
             self.current_status["entity"][e] = entities_get[e]
-            #entity status and response mask
-            if e in self.response_dict.entity_maskdict:
-                self.current_status["entity_mask"][self.entity2id(e), 0] = False #mask for response choose
-
-
-    def getmask(self):
-        '''
-            mask for each turn of response
-
-            No input needed
-        '''
-        mask_need = numpy.matmul(self.response_dict.masks['need'], self.current_status["entity_mask"]).reshape(1,-1)[0]
-        mask_need = numpy.logical_not(mask_need)
-        mask_notneed = numpy.matmul(self.response_dict.masks['notneed'], numpy.logical_not(self.current_status["entity_mask"])).reshape(1,-1)[0]
-        mask_notneed = numpy.logical_not(mask_notneed)
-        self.masks.append(mask_need * mask_notneed)
 
 
     def __str__(self):
@@ -267,7 +251,7 @@ class Dialog_Status:
         batch_sizes = utterance.batch_sizes
         utterance = utterance.data
 
-        dialog_torch = {'utterance': utterance, 'attention_mask':attention_mask, 'response':response, 'response_prev':response_prev, 'mask':mask, 'entity':entity, 'reward':reward, 'batch_sizes':batch_sizes}
+        dialog_torch = {'utterance': utterance, 'attention_mask':attention_mask, 'response':response, 'mask':mask, 'entity':entity, 'reward':reward, 'batch_sizes':batch_sizes}
         return dialog_torch
 
 

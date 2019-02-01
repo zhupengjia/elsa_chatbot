@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, re, numpy
+import sys, re, numpy, os, torch
 from nlptools.text import VecTFIDF
 from nlptools.text.ngrams import Ngrams
 from nlptools.utils import flat_list
@@ -9,30 +9,33 @@ from nlptools.utils import flat_list
     Author: Pengjia Zhu (zhupengjia@gmail.com)
 '''
 
-class Response_Dict:
+class Goal_Response:
     '''
-        Response dictionary for goal oriented chatbot. Used to index the response template and get the most closed response_template from a response string. 
+        Response topic for goal oriented chatbot. Used to index the response template, get the most closed response_template from a response string, call model to get the response from utterance
         
         First you need a response template file, the format in each line is:  
             - needed_entity | notneeded_entity | func_call | response  
                 - needed_entity means this response is available only those entities existed  
                 - notneeded_entity means this response is not available if those entities existed  
-                - func_call is the needed function call  before return the response. The available func_call is in src/hook/behaviors. In the future will support web hooks  
+                - func_call is the needed function defined in hook function before return the response. 
   
         The class will build a tf-idf index for template, the __getitem__ method is to get the most closed response via the tf-idf algorithm.(only used for training, the response string in training data will convert to a response id via tfidf search)  
 
         Input:
             - tokenizer: instance of nlptools.text.tokenizer
+            - hook: hook instance, please check src/hook/babi_gensays.py for example
             - cached_index: path of cached index file for response search, will create the file if it is not existed
 
         Special usage:
             - len(): return number of responses in template
             - __getitem__ : get most closed response id for response, input is response string
     '''
-    def __init__(self, tokenizer, cached_index):
+    def __init__(self, tokenizer, hook, cached_index):
         self.response, self.response_ids, self.func_need = [], [], []
+                    #mask
         self.entity_need = {'need':[], 'notneed':[]}
         self.tokenizer = tokenizer
+        self.hook = hook
         self.cached_vocab = cached_index + '.vocab'
         self.vocab = Ngrams(ngrams=3, cached_vocab = self.cached_vocab) #response vocab, only used for searching best matched response template, independent with outside vocab.  
         self.entity_maskdict = {}
@@ -91,6 +94,25 @@ class Response_Dict:
         return len(self.response)
 
 
+    def update_mask(self, current_status):
+        '''
+            Update response masks after retrieving utterance and before getting response
+            
+            Input:
+                - current_status: dictionary of status, generated from Dialog_Status module
+        '''
+        entity_mask = numpy.ones((len(self.entity_maskdict),1), 'bool_')
+        for e in current_status["entity"]:
+            if e in self.entity_maskdict:
+                entity_mask[self.entity_maskdict[e], 0] = False #mask for response choose
+        #calculate response mask
+        mask_need = numpy.matmul(self.masks['need'], entity_mask).reshape(1,-1)[0]
+        mask_need = numpy.logical_not(mask_need)
+        mask_notneed = numpy.matmul(self.masks['notneed'], numpy.logical_not(entity_mask)).reshape(1,-1)[0]
+        mask_notneed = numpy.logical_not(mask_notneed)
+        return mask_need * mask_notneed
+
+    
     def build_mask(self):
         '''
             build entity mask of response template, converted from the template
@@ -142,5 +164,88 @@ class Response_Dict:
         else:
             return None
 
+    
+    def init_model(self, saved_model="dialog_tracker.pt", device='cpu', **args):
+        '''
+            init dialog tracker
+
+            Input:
+                - saved_model: str, default is "dialog_tracker.pt"
+                - device: string, model location, default is 'cpu'
+                - see ..model.dialog_tracker.Dialog_Tracker
+        '''
+        self.model =  Dialog_Tracker(**args)
+        
+        self.model.to(torch.device(device))
+
+        if os.path.exists(saved_model):
+            checkpoint = torch.load(saved_model, map_location=lambda storage, location: device)
+            self.model.load_state_dict(checkpoint)
+    
+    
+    def get_response_by_id(self, responseid, entity=None):
+        '''
+            return response string by response id
+
+            Input:
+                - responseid: int
+                - entity: entity dictionary to format the output response
+
+            Output:
+                - response, string
+        '''
+        response = self.response[responseid]
+        if entity is not None:
+            response = response.format(**entity)
+        return response
+    
+    
+    def get_response(self, current_status, fill_entity=False):
+        '''
+            get response from current status
+
+            Input:
+                - current_status: dictionary of status, generated from Dialog_Status module
+                - fill_entity: check if fill entity for response output
+        '''
+        y_prob = self.tracker(data)
+        _, y_pred = torch.max(y_prob.data, 1)
+        y_pred = int(y_pred.cpu().numpy()[-1])
+        if fill_entity:
+            return y_pred, self.get_response_by_id(y_pred)
+        else:
+            return y_pred, self.get_response_by_id()
+
+
+    def applyfunc(self, func, entities):
+        '''
+            apply function and put result to entities 
+
+            Input:
+                - func: function name
+        '''
+        entities_get = func(self.current_status["entity"])
+        for e in entities_get:
+            self.current_status["entity"][e] = entities_get[e]
+
+    def update_response(self, response_id, current_status):
+        '''
+            update current response to the response status
+            
+            Input:
+                - response id: int
+                - current_status: dictionary of status, generated from Dialog_Status module
+        '''
+        response_string = self.get_response_by_id(response_id)
+       
+        #function call
+        entities = {}
+        for funcname in self.func_need[response_id]:
+            func = getattr(self.hook, funcname)
+            entities_get = func(current_status["entity"])
+            for e in entities_get:
+                entities[e] = entities_get[e]
+        return entities
+        
 
 

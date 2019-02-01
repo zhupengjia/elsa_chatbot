@@ -125,7 +125,7 @@ class Policy_Gradiant:
             #dialog loop
             for loop in range(self.maxloop):
                 dialog_status.add_utterance(utterance)
-                dialog_status.getmask()
+
                 data = Dialog_Status.torch(self.reader.entity_dict, [dialog_status], self.reader.max_seq_len, self.reader.max_entity_types, device=self.reader.device)
                 
                 y_prob = self.tracker(data)
@@ -133,6 +133,7 @@ class Policy_Gradiant:
                 y_pred = int(y_pred.cpu().numpy()[-1])
 
                 response = self.reader.get_response(y_pred)
+
                 self.logger.debug('{}\t{}'.format(utterance, response))
 
                 dialog_status.add_response(y_pred)

@@ -8,9 +8,9 @@ from ..module.entity_dict import Entity_Dict
     Author: Pengjia Zhu (zhupengjia@gmail.com)
 '''
 
-class Reader_Base(object):
+class Reader_Goal(object):
     '''
-       Reader base class to predeal the dialogs 
+       Reader base class for goal oriented chatbot to predeal the dialogs 
 
        Input:
             - tokenizer:  instance of nlptools.text.tokenizer.Tokenizer_BERT
@@ -168,10 +168,7 @@ class Reader_Base(object):
                 dialog_status = self.new_dialog()
                 for i in range(idrange[0], idrange[1]):
                     #add to dialog status
-                    if dialog_status.add_utterance(self.data['utterance'][i], self.data['ent_utterance'][i]) is None:
-                        continue
-                    #mask
-                    dialog_status.getmask()
+                    dialog_status.add_utterance(self.data['utterance'][i], self.data['ent_utterance'][i])
                     dialog_status.add_response(self.data['response'][i])
                 if self.logger is not None:
                     self.logger.debug(dialog_status)
