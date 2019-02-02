@@ -40,7 +40,7 @@ class Topic_Manager:
             get current topic
             
             Input:
-                - current_status: dictionary of status, generated from Dialog_Status module
+                - current_status: dictionary of status, generated from dialog_status module
         '''
         return self.topics.keys()[0]
 
@@ -48,8 +48,14 @@ class Topic_Manager:
     def update_response(self, response, current_status):
         '''
             update response in the status
+
+            Input:
+                - response: response target value
+                - current_status: dictionary of status, generated from dialog_status module
         '''
-        return self.topics[self.current_topic].update_response(response, current_status)
+        current_status = self.topics[self.current_topic].update_response(response, current_status)
+        current_status["response"][self.current_topic] = response 
+        return current_status
 
 
     def get_response(self, current_status):
@@ -59,10 +65,8 @@ class Topic_Manager:
             Input:
                 - current_status: dictionary of status, generated from Dialog_Status module
 
-            Output:
-                - pass
-                
         '''
-        pass
-
+        response_id = self.topics[self.current_topic].get_response(current_status)
+        return self.update_response(response_id, current_status)
+        
 

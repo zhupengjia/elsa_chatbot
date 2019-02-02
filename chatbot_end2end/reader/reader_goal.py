@@ -67,23 +67,6 @@ class Reader_Goal(object):
         '''
         return len(self.response_dict)
 
-
-    def get_response(self, responseid, entity=None):
-        '''
-            return response string by id
-
-            Input:
-                - responseid: int
-                - entity: entity dictionary to format the output response
-
-            Output:
-                - response, string
-        '''
-        response = self.response_dict.response[responseid]
-        if entity is not None:
-            response = response.format(**entity)
-        return response
-   
      
     def predeal(self, data):
         '''

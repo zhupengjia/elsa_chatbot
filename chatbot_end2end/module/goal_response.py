@@ -200,21 +200,17 @@ class Goal_Response:
         return response
     
     
-    def get_response(self, current_status, fill_entity=False):
+    def get_response(self, current_status):
         '''
-            get response from current status
+            get response value from current status
 
             Input:
                 - current_status: dictionary of status, generated from Dialog_Status module
-                - fill_entity: check if fill entity for response output
         '''
         y_prob = self.tracker(data)
         _, y_pred = torch.max(y_prob.data, 1)
         y_pred = int(y_pred.cpu().numpy()[-1])
-        if fill_entity:
-            return y_pred, self.get_response_by_id(y_pred)
-        else:
-            return y_pred, self.get_response_by_id()
+        return y_pred
 
 
     def applyfunc(self, func, entities):
@@ -236,16 +232,16 @@ class Goal_Response:
                 - response id: int
                 - current_status: dictionary of status, generated from Dialog_Status module
         '''
-        response_string = self.get_response_by_id(response_id)
-       
         #function call
         entities = {}
         for funcname in self.func_need[response_id]:
             func = getattr(self.hook, funcname)
             entities_get = func(current_status["entity"])
             for e in entities_get:
-                entities[e] = entities_get[e]
-        return entities
+                current_status["entity"][e] = entities_get[e]
+
+        current_status["response_sting"] = self.get_response_by_id(response_id, entity=current_status["entity"])
+        return current_status
         
 
 

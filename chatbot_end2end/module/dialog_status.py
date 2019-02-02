@@ -113,36 +113,26 @@ class Dialog_Status:
         return True
 
 
-    def add_response(self, response):
+    def update_response(self, response):
         '''
-            add response and apply function
+            add existed response
             
             Input:
                 - response: response target value
         '''
         self.current_status = self.topic_manager.update_response(response)
-
-
-        self.responses.append(response)
-        funcneeds = self.response_dict.func_need[response]
-        for funcname in funcneeds:
-            func = getattr(self.hook, funcname)
-            self.applyfunc(func)
-        self.history_status.append(copy.deepcopy(self.current_status))
-
-
-    def applyfunc(self, func):
+    
+    
+    def get_response(self, response):
         '''
-            apply function and put result to entities 
-
+            get response from current status
+            
             Input:
-                - func: function name
+                - response: response target value
         '''
-        entities_get = func(self.current_status["entity"])
-        for e in entities_get:
-            self.current_status["entity"][e] = entities_get[e]
+        self.current_status = self.topic_manager.get_response(response)
 
-
+    
     def __str__(self):
         '''
             print the current status
