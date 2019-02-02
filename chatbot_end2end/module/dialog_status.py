@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import numpy, torch, copy, time, sys
 from torch import functional as F
-from ..hook import *
 from .entity_dict import Entity_Dict
 from nlptools.utils import flat_list
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
@@ -12,7 +11,7 @@ from nltk.sentiment.vader import SentimentIntensityAnalyzer
 '''
 
 class Dialog_Status:
-    def __init__(self, vocab, tokenizer, ner, topic_manager, hook, max_entity_types=1024, max_seq_len=100):
+    def __init__(self, vocab, tokenizer, ner, topic_manager, max_seq_len=100):
         '''
         Maintain the dialog status in a dialog
 
@@ -28,15 +27,13 @@ class Dialog_Status:
         
         To use this class, one must do the following steps:
             - add_utterance: add the current utterance to status, the entities will be extracted from utterance
-            - getmask: create entity mask from existed entities
-            - add_response: add the current response to status, and run the corresponded hook functions
+            - update_response/get_response: updated the current response to status or get response from current_status
 
         Input:
             - vocab:  instance of nlptools.text.vocab
             - tokenizer:  instance of nlptools.text.Tokenizer
             - ner: instance of nlptools.text.ner
             - topic_manager: topic manager instance, see src/module/topic_manager
-            - max_entity_types: int, number of entity types, default is 1024
             - max_seq_len: int, maximum sequence length
 
         Special usage:
@@ -50,7 +47,6 @@ class Dialog_Status:
         self.vocab = vocab
         self.topic_manager = topic_manager
         self.max_seq_len = max_seq_len
-        self.max_entity_types = max_entity_types
 
         self.current_status = self.__init_status()
 
@@ -202,7 +198,7 @@ class Dialog_Status:
                 reward_base = 0
             response[j, :len(dialog.responses)] = torch.LongTensor(dialog.responses)
             for i in range(dialog_lengths[j]):
-                entities = entity_dict.name2onehot(dialog.entities[i].keys()) #all entity names
+                entities = entity_dict.name2onehot(dialog.entities[i].keys(), max_entity_types) #all entity names
                 utterance[j, i] = dialog.utterances[i]
                 attention_mask[j, i] = dialog.utterance_masks[i]
                 entity[j, i, :] = entities

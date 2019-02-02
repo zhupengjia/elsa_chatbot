@@ -3,15 +3,15 @@ import sys, re, numpy, os, torch
 from nlptools.text import VecTFIDF
 from nlptools.text.ngrams import Ngrams
 from nlptools.utils import flat_list
-
+from .skill_base import Skill_Base
 
 '''
     Author: Pengjia Zhu (zhupengjia@gmail.com)
 '''
 
-class Goal_Response:
+class Goal_Response(Skill_Base):
     '''
-        Response topic for goal oriented chatbot. Used to index the response template, get the most closed response_template from a response string, call model to get the response from utterance
+        Response skill for goal oriented chatbot. Used to index the response template, get the most closed response_template from a response string, call model to get the response from utterance
         
         First you need a response template file, the format in each line is:  
             - needed_entity | notneeded_entity | func_call | response  
@@ -31,6 +31,7 @@ class Goal_Response:
             - __getitem__ : get most closed response id for response, input is response string
     '''
     def __init__(self, tokenizer, hook, cached_index):
+        super().__init__()
         self.response, self.response_ids, self.func_need = [], [], []
                     #mask
         self.entity_need = {'need':[], 'notneed':[]}
@@ -226,7 +227,7 @@ class Goal_Response:
 
     def update_response(self, response_id, current_status):
         '''
-            update current response to the response status
+            update current response to the response status. Used for preparing training data
             
             Input:
                 - response id: int
