@@ -20,18 +20,19 @@ class Skill_Base:
 
     def get_response(self, current_status):
         '''
-            get response value from current status
+            predict response value from current status
 
             Input:
                 - current_status: dictionary of status, generated from Dialog_Status module
         '''
         return None
 
-    def update_response(self, )
+    def update_response(self, response, current_status)
         '''
-            update current response to the response status. Used for preparing training data
+            update current response to the response status.
             
             Input:
                 - response id: int
                 - current_status: dictionary of status, generated from Dialog_Status module
         '''
+        return current_status

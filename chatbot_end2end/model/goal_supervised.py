@@ -6,15 +6,17 @@ from ..module.entity_dict import Entity_Dict
 from nlptools.text.tokenizer import Tokenizer_BERT
 from nlptools.text.ner import NER
 import torch.optim as optim
+from ..module.topic_manager import Topic_Manager
+from ..skills.goal_response import Goal_Response
 
 '''
     Author: Pengjia Zhu (zhupengjia@gmail.com)
 '''
 
-class Supervised:
+class Goal_Supervised:
     def __init__(self, reader, bert_model_name, max_entity_types, fc_responses=5, entity_layers=2, lstm_layers=1, hidden_dim=300, epochs=1000, weight_decay=0, learning_rate=0.001, saved_model="model.pt", dropout=0.2, device=None, logger=None):
         '''
-            Policy Gradiant for end2end chatbot
+            Supervised learning for end2end goal oriented chatbot
 
             Input:
                 - bert_model_name: bert model file location or one of the supported model name
@@ -67,18 +69,30 @@ class Supervised:
         
         device = torch.device("cuda:0" if config.model.use_gpu and torch.cuda.is_available() else "cpu")
 
+
+        #skill
+        goal_response = Goal_Response(tokenizer=tokenizer, hook=hook, template_file=config.response_template)
+        topic_manager = Topic_Manager()
+        topic_manager.register(config.skill_name, goal_response)
+
+
+
+
+
         entity_dict = Entity_Dict(**config.entity_dict) 
        
         #reader
         reader = reader_cls(tokenizer=tokenizer, ner=ner, entity_dict=entity_dict, hook=hook, max_entity_types=config.entity_dict.max_entity_types, max_seq_len=config.model.max_seq_len, epochs=config.model.epochs, batch_size=config.model.batch_size, device=device, logger=logger)
-        reader.build_responses(config.response_template) #build response template index, will read response template and create entity need for each response template every time, but not search index.
-        reader.response_dict.build_mask()
+
+
 
         return cls(reader=reader, logger=logger, bert_model_name=config.tokenizer.bert_model_name, max_entity_types=config.entity_dict.max_entity_types, fc_responses=config.model.fc_responses, entity_layers=config.model.entity_layers, lstm_layers=config.model.lstm_layers, hidden_dim=config.model.hidden_dim, epochs=config.model.epochs, weight_decay=config.model.weight_decay, learning_rate=config.model.learning_rate, saved_model=config.model.saved_model, dropout=config.model.dropout, device=device)
 
 
     def __init_tracker(self):
         '''tracker'''
+        self.topic_manager = Topic_Manager()
+        
         self.tracker =  Dialog_Tracker(bert_model_name=self.bert_model_name, Nresponses=len(self.reader), max_entity_types=self.max_entity_types, fc_responses=self.fc_responses, entity_layers=self.entity_layers, lstm_layers=self.lstm_layers, hidden_dim=self.hidden_dim, dropout=self.dropout)
         
         self.tracker.to(self.device)

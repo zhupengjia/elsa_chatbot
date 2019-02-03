@@ -24,26 +24,20 @@ class Goal_Response(Skill_Base):
         Input:
             - tokenizer: instance of nlptools.text.tokenizer
             - hook: hook instance, please check src/hook/babi_gensays.py for example
-            - cached_index: path of cached index file for response search, will create the file if it is not existed
+            - template_file: template file path
 
         Special usage:
             - len(): return number of responses in template
             - __getitem__ : get most closed response id for response, input is response string
     '''
-    def __init__(self, tokenizer, hook, cached_index):
+    def __init__(self, tokenizer, hook, template_file):
         super().__init__()
-        self.response, self.response_ids, self.func_need = [], [], []
-                    #mask
-        self.entity_need = {'need':[], 'notneed':[]}
         self.tokenizer = tokenizer
         self.hook = hook
-        self.cached_vocab = cached_index + '.vocab'
-        self.vocab = Ngrams(ngrams=3, cached_vocab = self.cached_vocab) #response vocab, only used for searching best matched response template, independent with outside vocab.  
-        self.entity_maskdict = {}
-        self.__search = VecTFIDF(self.vocab, cached_index)
+        self.build_index(template_file)
 
 
-    def add(self, response):
+    def _add(self, response):
         '''
             add a response to dictionary, only used when building the dictionary
 
@@ -80,13 +74,31 @@ class Goal_Response(Skill_Base):
         self.func_need.append(func_need)
 
 
-    def build_index(self):
+    def build_index(self, template_file):
         '''
-            build search index for response template. no input needed. Use it after added all responses
+            build search index for response template. 
+            
+            Input:
+                - template_file: template file path
         '''
+        self.response, self.response_ids, self.func_need = [], [], []
+        self.entity_need = {'need':[], 'notneed':[]}
+         
+        cached_vocab = template_file + '.vocab'
+        cached_index = template_file + ".index"
+        self.vocab = Ngrams(ngrams=3, cached_vocab = cached_vocab) #response vocab, only used for searching best matched response template, independent with outside vocab.  
+        self.__search = VecTFIDF(self.vocab, cached_index)
+       
+        # add response from template
+        with open(template_file) as f:
+            for l in f:
+                l = l.strip()
+                if len(l) < 1:
+                    continue
+                self._add(l)
+        
         self.__search.load_index(self.response_ids)
         self.vocab.save()
-
 
     def __len__(self):
         '''
@@ -114,7 +126,7 @@ class Goal_Response(Skill_Base):
         return mask_need * mask_notneed
 
     
-    def build_mask(self):
+    def _build_mask(self):
         '''
             build entity mask of response template, converted from the template
         '''
@@ -122,7 +134,7 @@ class Goal_Response(Skill_Base):
         entity_maskdict = dict(zip(entity_maskdict, range(len(entity_maskdict))))
         self.masks = {'need': numpy.zeros((len(self.response), len(entity_maskdict)), 'bool_'), \
                 'notneed': numpy.zeros((len(self.response), len(entity_maskdict)), 'bool_')}
-        self.entity_maskdict = entity_maskdict #copy maskdict to entity_dict 
+        self.entity_maskdict = entity_maskdict 
         for i in range(len(self.entity_need['need'])):
             for e in self.entity_need['need'][i]:
                 self.masks['need'][i, entity_maskdict[e]] = True
@@ -203,7 +215,7 @@ class Goal_Response(Skill_Base):
     
     def get_response(self, current_status):
         '''
-            get response value from current status
+            predict response value from current status
 
             Input:
                 - current_status: dictionary of status, generated from Dialog_Status module
@@ -227,7 +239,7 @@ class Goal_Response(Skill_Base):
 
     def update_response(self, response_id, current_status):
         '''
-            update current response to the response status. Used for preparing training data
+            update current response to the response status. 
             
             Input:
                 - response id: int

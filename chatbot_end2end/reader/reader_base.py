@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import sys, os, numpy
-from ..module.response_dict import Response_Dict
 from ..module.dialog_status import Dialog_Status
 from ..module.entity_dict import Entity_Dict
 
@@ -8,15 +7,14 @@ from ..module.entity_dict import Entity_Dict
     Author: Pengjia Zhu (zhupengjia@gmail.com)
 '''
 
-class Reader_Goal(object):
+class Reader_Base(object):
     '''
        Reader base class for goal oriented chatbot to predeal the dialogs 
 
        Input:
             - tokenizer:  instance of nlptools.text.tokenizer.Tokenizer_BERT
             - ner: instance of nlptools.text.ner.NER
-            - entity_dict: instance of ..module.entity_dict.Entity_Dict
-            - hook: hook instance, see ..hook.behaviors for example
+            - response_skill: response skill instance, see class in ../skills
             - max_entity_types: int, number of entity types
             - max_seq_len: int, maximum sequence length
             - epochs, int, epoch for iterator, default is 100
@@ -29,13 +27,13 @@ class Reader_Goal(object):
             - iterator: return data in pytorch Variable used in tracker
     '''
 
-    def __init__(self, tokenizer, ner, entity_dict, hook, max_entity_types, max_seq_len=100, epochs=100, batch_size=20, device=None, logger = None):
+    def __init__(self, tokenizer, ner, response_skill,  max_entity_types, max_seq_len=100, epochs=100, batch_size=20, device=None, logger = None):
         self.logger = logger
         self.tokenizer = tokenizer
         self.ner = ner
         self.device = device
         self.vocab = self.tokenizer.vocab
-        self.entity_dict = entity_dict
+        self.response_skill = response_skill
         self.max_entity_types = max_entity_types
         self.max_seq_len = max_seq_len
         self.hook = hook
@@ -43,30 +41,6 @@ class Reader_Goal(object):
         self.batch_size = batch_size
         self.data = {}
    
-
-    def build_responses(self, template_file):
-        '''
-            build response index for response_template
-
-            Input:
-                - template_file: template file path
-        '''
-        self.response_dict = Response_Dict(self.tokenizer, self.entity_dict, template_file+".cache")
-        with open(template_file) as f:
-            for l in f:
-                l = l.strip()
-                if len(l) < 1:
-                    continue
-                self.response_dict.add(l)
-        self.response_dict.build_index()
-
-
-    def __len__(self):
-        '''
-            return total number of responses in template
-        '''
-        return len(self.response_dict)
-
      
     def predeal(self, data):
         '''
@@ -117,7 +91,7 @@ class Reader_Goal(object):
                         ripe['utterance'].append(token_ids)
                         ripe['ent_utterance'].append(entity_ids)
                     else:
-                        response_id = self.response_dict[tokens + list(entities.keys())]
+                        response_id = self.response_skill[tokens + list(entities.keys())]
                         ripe['ent_response'].append(entity_ids)
                         if response_id is None:
                             ripe['response'].append(0)
@@ -125,7 +99,7 @@ class Reader_Goal(object):
                             #print('='*60)
                             #print(response_id)
                             #print(' '.join(tokens))
-                            #print(self.response_dict.response[response_id[0]])
+                            #print(self.response_skill.response[response_id[0]])
                             ripe['response'].append(response_id[0])
         self.entity_dict.save()
         return ripe
@@ -135,7 +109,7 @@ class Reader_Goal(object):
         '''
             return a new dialog status instance
         '''
-        return  Dialog_Status(self.vocab, self.tokenizer, self.ner, self.entity_dict, self.response_dict, self.hook, self.max_seq_len)
+        return  Dialog_Status(self.vocab, self.tokenizer, self.ner, self.entity_dict, self.response_skill, self.hook, self.max_seq_len)
 
 
     def __iter__(self):

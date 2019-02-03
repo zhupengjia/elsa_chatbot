@@ -63,7 +63,6 @@ class Reader_Babi(Reader_Base):
             
             convs = self.predeal(convs)
             zdump(convs, cached_pkl)
-        self.response_dict.build_mask()
         self.data = convs
 
 

@@ -1,7 +1,7 @@
 %YAML 1.2
 ---
 #app setting
-APPNAME: END2END_DEMO
+skill_name: babi
 
 
 # for adversary chatbot
