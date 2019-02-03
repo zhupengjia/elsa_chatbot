@@ -157,25 +157,26 @@ class Goal_Response(Skill_Base):
         response[response_id] = 1
         return response
 
-    def __getitem__(self, response_tokens):
+    def __getitem__(self, response):
         '''
             get most closed response id from templates
             
             Input:
-                - response_tokens: list of string
+                - response: string
 
             Output:
                 - response_id, int. If not found return None.
         '''
-        response_ids = self.vocab.words2id(response_tokens)
+        response_lite = re.sub('(\{[A-Z]+\})|(\d+)','', response)
+        response_ids = self.vocab.words2id(self.tokenizer(response_lite)) 
         response_ids = numpy.concatenate(list(response_ids.values()))
         if len(response_ids) < 1:
-            return None
+            return 0
         result = self.__search.search_index(response_ids, topN=1)
         if len(result) > 0:
             return result[0]
         else:
-            return None
+            return 0
 
     
     def init_model(self, saved_model="dialog_tracker.pt", device='cpu', **args):
@@ -225,17 +226,6 @@ class Goal_Response(Skill_Base):
         y_pred = int(y_pred.cpu().numpy()[-1])
         return y_pred
 
-
-    def applyfunc(self, func, entities):
-        '''
-            apply function and put result to entities 
-
-            Input:
-                - func: function name
-        '''
-        entities_get = func(self.current_status["entity"])
-        for e in entities_get:
-            self.current_status["entity"][e] = entities_get[e]
 
     def update_response(self, response_id, current_status):
         '''

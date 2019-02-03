@@ -4,14 +4,13 @@ from torch import functional as F
 from .entity_dict import Entity_Dict
 from nlptools.utils import flat_list
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
-from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
 '''
     Author: Pengjia Zhu (zhupengjia@gmail.com)
 '''
 
 class Dialog_Status:
-    def __init__(self, vocab, tokenizer, ner, topic_manager, max_seq_len=100):
+    def __init__(self, vocab, tokenizer, ner, topic_manager, sentiment_analyzer, max_seq_len=100):
         '''
         Maintain the dialog status in a dialog
 
@@ -34,6 +33,7 @@ class Dialog_Status:
             - tokenizer:  instance of nlptools.text.Tokenizer
             - ner: instance of nlptools.text.ner
             - topic_manager: topic manager instance, see src/module/topic_manager
+            - sentiment_analyzer: sentiment analyzer instance
             - max_seq_len: int, maximum sequence length
 
         Special usage:
@@ -51,7 +51,7 @@ class Dialog_Status:
         self.current_status = self.__init_status()
 
         self.history_status = []
-        self.sentiment_analyzer =  SentimentIntensityAnalyzer()
+        self.sentiment_analyzer = sentiment_analyzer
         
 
     def __init_status(self):
@@ -66,13 +66,21 @@ class Dialog_Status:
                 }
         return initstatus
 
+    
+    @class_method
+    def new_dialog(cls, vocab, tokenizer, ner, topic_manager, sentiment_analyzer, max_seq_len=100):
+        '''
+            create a new dialog
+        '''
+        return cls(vocab, tokenizer, ner, topic_manager, sentiment_analyzer, max_seq_len)
+
 
     def add_utterance(self, utterance):
         '''
             add utterance to status
 
             Input:
-                - utterance: string or token_id list
+                - utterance: string
 
             Output:
                 - if success, return True, otherwise return None
@@ -103,20 +111,25 @@ class Dialog_Status:
         #get topic
         self.current_status["topic"] = self.topic_manager.get_topic(self.current_status)
 
+        #get sentiment
+        self.current_status["sentiment"] = self.sentiment_analyzer(utterance)
+        
         #response mask
         self.current_status["response_mask"] = self.topic_manager.update_response_masks(self.current_status)
 
-        return True
 
-
-    def update_response(self, response):
+    def add_response(self, response):
         '''
             add existed response
             
             Input:
-                - response: response target value
+                - response: string
         '''
-        self.current_status = self.topic_manager.update_response(response)
+        response = response.strip()
+        entities, response_replaced = self.ner.get(response, return_dict=True)
+
+        self.current_status = self.topic_manager.add_response(response_replaced)
+        self.history_status.append(copy.deepcopy(self.current_status))
     
     
     def get_response(self, response):
@@ -127,6 +140,7 @@ class Dialog_Status:
                 - response: response target value
         '''
         self.current_status = self.topic_manager.get_response(response)
+        self.history_status.append(copy.deepcopy(self.current_status))
 
     
     def __str__(self):

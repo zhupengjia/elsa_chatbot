@@ -8,6 +8,7 @@ from nlptools.text.ner import NER
 import torch.optim as optim
 from ..module.topic_manager import Topic_Manager
 from ..skills.goal_response import Goal_Response
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
 '''
     Author: Pengjia Zhu (zhupengjia@gmail.com)
@@ -74,8 +75,7 @@ class Goal_Supervised:
         goal_response = Goal_Response(tokenizer=tokenizer, hook=hook, template_file=config.response_template)
         topic_manager = Topic_Manager()
         topic_manager.register(config.skill_name, goal_response)
-
-
+        sentiment_analyzer = SentimentIntensityAnalyzer()
 
 
 

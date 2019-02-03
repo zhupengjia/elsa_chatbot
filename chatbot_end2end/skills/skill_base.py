@@ -9,6 +9,12 @@ class Skill_Base:
         Base skill class. Define some necessaryy methods for a skill
     '''
    
+    def __getitem__(self, response):
+        '''
+            convert response string to value
+        '''
+        return None
+
     def update_mask(self, current_status):
         '''
             Update response masks after retrieving utterance and before getting response
