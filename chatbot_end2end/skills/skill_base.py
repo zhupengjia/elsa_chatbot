@@ -33,7 +33,7 @@ class Skill_Base:
         '''
         return None
 
-    def update_response(self, response, current_status)
+    def update_response(self, response, current_status):
         '''
             update current response to the response status.
             

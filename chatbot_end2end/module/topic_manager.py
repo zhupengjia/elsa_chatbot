@@ -32,7 +32,8 @@ class Topic_Manager:
             Input:
                 - current_status: dictionary of status, generated from Dialog_Status module
         '''
-        return self.topics[self.current_topic].update_mask(current_status)
+        current_status["response_mask"][self.current_topic] = self.topics[self.current_topic].update_mask(current_status)
+        return current_status
 
 
     def get_topic(self, current_status):
@@ -43,8 +44,10 @@ class Topic_Manager:
                 - current_status: dictionary of status, generated from dialog_status module
         '''
         if len(self.topics) < 2:
-            return self.topics.keys()[0]
-        return self.topics_keys()[0]
+            self.current_topic = list(self.topics.keys())[0]
+            return self.current_topic
+        self.current_topic = list(self.topics.keys())[0]
+        return self.current_topic
 
 
     def update_response(self, response_value, current_status):
@@ -56,7 +59,7 @@ class Topic_Manager:
                 - current_status: dictionary of status, generated from dialog_status module
         '''
         current_status = self.topics[self.current_topic].update_response(response_value, current_status)
-        current_status["response"][self.current_topic] = response 
+        current_status["response"][self.current_topic] = response_value 
         return current_status
 
 

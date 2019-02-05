@@ -14,7 +14,7 @@ class Entity_Dict:
     '''
     
     @staticmethod
-    def name2id(self, entityname, max_entity_types):
+    def name2id(entityname, max_entity_types):
         '''
             entity name to id
 
@@ -29,7 +29,7 @@ class Entity_Dict:
         return hash(entityname)%max_entity_types
 
     @staticmethod
-    def name2onehot(self, entitynames, max_entity_types):
+    def name2onehot(entitynames, max_entity_types):
         '''
             return a entity name list to one-hot numpy array
 
@@ -41,7 +41,7 @@ class Entity_Dict:
         '''
         data = numpy.zeros(max_entity_types, 'float')
         for e in entitynames:
-            eid = Entity_Dict.name2id(e)
+            eid = Entity_Dict.name2id(e, max_entity_types)
             data[eid] = 1
         return data
 

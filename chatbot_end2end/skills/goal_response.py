@@ -99,6 +99,7 @@ class Goal_Response(Skill_Base):
         
         self.__search.load_index(self.response_ids)
         self.vocab.save()
+        self._build_mask()
 
     def __len__(self):
         '''
@@ -123,8 +124,8 @@ class Goal_Response(Skill_Base):
         mask_need = numpy.logical_not(mask_need)
         mask_notneed = numpy.matmul(self.masks['notneed'], numpy.logical_not(entity_mask)).reshape(1,-1)[0]
         mask_notneed = numpy.logical_not(mask_notneed)
-        return mask_need * mask_notneed
-
+        mask = mask_need * mask_notneed
+        return mask.astype("int") 
     
     def _build_mask(self):
         '''
@@ -174,7 +175,7 @@ class Goal_Response(Skill_Base):
             return 0
         result = self.__search.search_index(response_ids, topN=1)
         if len(result) > 0:
-            return result[0]
+            return result[0][0]
         else:
             return 0
 

@@ -10,7 +10,7 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 '''
 
 class Dialog_Status:
-    def __init__(self, vocab, tokenizer, ner, topic_manager, sentiment_analyzer, max_seq_len=100):
+    def __init__(self, vocab, tokenizer, ner, topic_manager, sentiment_analyzer, max_seq_len=100, max_entity_types=1024):
         '''
         Maintain the dialog status in a dialog
 
@@ -35,6 +35,7 @@ class Dialog_Status:
             - topic_manager: topic manager instance, see src/module/topic_manager
             - sentiment_analyzer: sentiment analyzer instance
             - max_seq_len: int, maximum sequence length
+            - max_entity_types: int, maximum entity types
 
         Special usage:
             - str(): print the current status
@@ -47,6 +48,7 @@ class Dialog_Status:
         self.vocab = vocab
         self.topic_manager = topic_manager
         self.max_seq_len = max_seq_len
+        self.max_entity_types = max_entity_types
 
         self.current_status = self.__init_status()
 
@@ -56,23 +58,24 @@ class Dialog_Status:
 
     def __init_status(self):
         initstatus =  {"entity":{}, \
+                "entity_emb": None, \
                 "utterance": None, \
                 "utterance_mask": None, \
                 "response_string": None, \
                 "response": {}, \
-                "response_masks": {}, \
+                "response_mask": {}, \
                 "sentiment": 0, \
                 "topic": None \
                 }
         return initstatus
 
     
-    @class_method
-    def new_dialog(cls, vocab, tokenizer, ner, topic_manager, sentiment_analyzer, max_seq_len=100):
+    @classmethod
+    def new_dialog(cls, vocab, tokenizer, ner, topic_manager, sentiment_analyzer, max_seq_len=100, max_entity_types=1024):
         '''
             create a new dialog
         '''
-        return cls(vocab, tokenizer, ner, topic_manager, sentiment_analyzer, max_seq_len)
+        return cls(vocab, tokenizer, ner, topic_manager, sentiment_analyzer, max_seq_len, max_entity_types)
 
 
     def add_utterance(self, utterance):
@@ -91,7 +94,8 @@ class Dialog_Status:
         entities, utterance_replaced = self.ner.get(utterance, return_dict=True)
         for e in entities:
             self.current_status["entity"][e] = entities[e][0] #only keep first value
-
+        self.current_status["entity_emb"] = Entity_Dict.name2onehot(self.current_status["entity"].keys(), self.max_entity_types)
+    
         #utterance to id 
         tokens = self.tokenizer(utterance_replaced)
         utterance_ids = self.vocab.words2id(tokens)
@@ -99,8 +103,8 @@ class Dialog_Status:
         utterance_ids = utterance_ids[:self.max_seq_len-2]
         seq_len = len(utterance_ids) + 2
        
-        self.current_status["utterance"] = numpy.zeros(self.max_seq_len)
-        self.current_status["utterance_mask"] = numpy.zeros(self.max_seq_len)
+        self.current_status["utterance"] = numpy.zeros(self.max_seq_len, 'int')
+        self.current_status["utterance_mask"] = numpy.zeros(self.max_seq_len, 'int')
         
         self.current_status["utterance"][0] = self.vocab.CLS_ID
         self.current_status["utterance"][1:seq_len-1] = utterance_ids
@@ -115,12 +119,12 @@ class Dialog_Status:
         self.current_status["sentiment"] = self.sentiment_analyzer(utterance)
         
         #response mask
-        self.current_status["response_mask"] = self.topic_manager.update_response_masks(self.current_status)
+        self.current_status = self.topic_manager.update_response_masks(self.current_status)
 
 
     def add_response(self, response):
         '''
-            add existed response
+            add existed response, usually for training data
             
             Input:
                 - response: string
@@ -128,18 +132,15 @@ class Dialog_Status:
         response = response.strip()
         entities, response_replaced = self.ner.get(response, return_dict=True)
 
-        self.current_status = self.topic_manager.add_response(response_replaced)
+        self.current_status = self.topic_manager.add_response(response_replaced, self.current_status)
         self.history_status.append(copy.deepcopy(self.current_status))
     
     
-    def get_response(self, response):
+    def get_response(self):
         '''
             get response from current status
-            
-            Input:
-                - response: response target value
         '''
-        self.current_status = self.topic_manager.get_response(response)
+        self.current_status = self.topic_manager.get_response(self.current_status)
         self.history_status.append(copy.deepcopy(self.current_status))
 
     
@@ -158,6 +159,57 @@ class Dialog_Status:
             length of dialog
         '''
         return len(self.history_status)
+   
+    
+    def data(self, topic_names=None, status_list=None):
+        '''
+            return pytorch data for all messages in this dialog
+
+            Input:
+                - topic_names: list of topic name need to return,  default is None to return all available topics
+                - status_list: list status need to predeal,default is None for history status
+        '''
+        if status_list is None:
+            status_list = self.history_status
+        N_status = len(status_list)
+        status = {\
+            "entity": numpy.zeros((N_status, self.max_entity_types), 'int'),\
+            "utterance": numpy.zeros((N_status, self.max_seq_len), 'int'),\
+            "utterance_mask": numpy.zeros((N_status, self.max_seq_len), 'int'),\
+            "sentiment": numpy.zeros(N_status, 'float'), \
+            "response": {},\
+            "response_mask":{} \
+        }
+        if topic_names is None:
+            topic_names = self.topic_manager.topics.keys()
+        for i, s in enumerate(status_list):
+            status["entity"][i] = s["entity_emb"]
+            status["utterance"][i] = s["utterance"]
+            status["utterance_mask"][i] = s["utterance_mask"]
+            status["sentiment"][i] = s["sentiment"]
+            for tk in topic_names:
+                for k in ["response", "response_mask"]:
+                    if tk in s[k]:
+                        if not tk in status[k]:
+                            if isinstance(s[k][tk], numpy.ndarray):
+                                status[k][tk] = numpy.repeat(numpy.expand_dims(numpy.zeros_like(s[k][tk]), axis=0), N_status, axis=0)
+                            else:
+                                status[k][tk] = numpy.zeros(N_status, type(s[k][tk]))
+                        status[k][tk][i] = s[k][tk]
+        for k in status.keys():
+            if k in ["response", "response_mask"]:
+                for tk in status[k]:
+                    status[k][tk] = torch.tensor(status[k][tk])
+            else:
+                status[k] = torch.tensor(status[k])
+        return status
+
+
+    def current(self, topic_names=None):
+        '''
+            return pytorch data for current loop 
+        '''
+        return self.data(topic_names, [self.current_status])
 
 
     @staticmethod 

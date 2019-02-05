@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import torch.nn as nn
 import torch.autograd as autograd
 from torch.nn.utils.rnn import PackedSequence
-from .sentene_encoder import Sentence_Encoder
+from .sentence_encoder import Sentence_Encoder
 from pytorch_pretrained_bert.modeling import BertModel
 
 '''

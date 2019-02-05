@@ -44,16 +44,13 @@ tokenizer:
     do_lower_case: 1
     stopwords_path: config/en_stopwords.txt
 
-
-entity_dict:
-    max_entity_types: 6
-    entity_dict_path: data/babi/entity.dict
+reader:
+    train_data: /home/pzhu/data/dialog/babi/dialog-babi-task5-full-dialogs-trn.txt
+    max_seq_len: 10
 
 model:
-    train_data: /home/pzhu/data/dialog/babi/dialog-babi-task5-full-dialogs-trn.txt
-    use_gpu: 1
-    max_seq_len: 10
-    max_dialog_len: 20
+    device: "cuda:0"
+    max_entity_types: 1024
     dropout: 0.8
     hidden_dim: 300
     fc_responses: 
@@ -74,7 +71,7 @@ reinforcement:
 
 logger:
     appname: babi
-    loglevel_console:  10
+    loglevel_console:  20
     loglevel_file: 0
     logfile: data/babi/train.log
 
