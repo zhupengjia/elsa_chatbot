@@ -19,11 +19,11 @@ def Collate_Fn(batch):
         return []
     data = {}
     dialog_lengths = numpy.array([b["utterance"].shape[0] for b in batch], "int")
-    perm_idx = dialog_lengths.argsort()[::-1]
+    perm_idx = dialog_lengths.argsort()[::-1].astype("int")
     dialog_lengths = dialog_lengths[perm_idx]
     max_dialog_len = int(dialog_lengths[0])
 
-    for k in ["entity", "utterance", "utterance_mask", "sentiment"]:
+    for k in ["entity", "utterance", "utterance_mask", "sentiment", "reward"]:
         #padding
         for b in batch:
             padshape = [0]*(b[k].dim()*2)
@@ -31,13 +31,8 @@ def Collate_Fn(batch):
             b[k] = F.pad(b[k],padshape)
         #stack
         data[k] = torch.stack([b[k] for b in batch])
-        
         #pack
-        print(perm_idx, data[k].shape, data[k])
-        data[k] = data[k][perm_idx]
-        print(data[k])
-        sys.exit()
-        #data[k] = pack_padded_sequence(data[k][perm_idx], dialog_lengths, batch_first=True)
+        data[k] = pack_padded_sequence(data[k][perm_idx], dialog_lengths, batch_first=True)
 
     for k in ["response", "response_mask"]:
         data[k] = {}
@@ -50,17 +45,19 @@ def Collate_Fn(batch):
             #stack
             data[k][tk] = torch.stack([b[k][tk] for b in batch])
             #pack
-            data[k] = data[k][perm_idx]
-            #data[k][tk] = pack_padded_sequence(data[k][tk][perm_idx], dialog_lengths, batch_first=True)
-    
-    print("="*60)
-    print(data)
-    sys.exit()
-
+            data[k][tk] = pack_padded_sequence(data[k][tk][perm_idx], dialog_lengths, batch_first=True)
+    # extract batch
+    data["pack_batch"] = data["utterance"].batch_sizes
+    for k in ["entity", "utterance", "utterance_mask", "sentiment", "reward"]:
+        data[k] = data[k].data
+    for k in ["response", "response_mask"]:
+        for tk in data[k].keys():
+            data[k][tk] = data[k][tk].data
+    return data 
 
 
 class Dialog_Status:
-    def __init__(self, vocab, tokenizer, ner, topic_manager, sentiment_analyzer, max_seq_len=100, max_entity_types=1024):
+    def __init__(self, vocab, tokenizer, ner, topic_manager, sentiment_analyzer, max_seq_len=100, max_entity_types=1024, rl_maxloop=20, rl_discount=0.95):
         '''
         Maintain the dialog status in a dialog
 
@@ -99,6 +96,8 @@ class Dialog_Status:
         self.topic_manager = topic_manager
         self.max_seq_len = max_seq_len
         self.max_entity_types = max_entity_types
+        self.rl_maxloop = rl_maxloop
+        self.rl_discount = rl_discount
 
         self.current_status = self.__init_status()
 
@@ -211,13 +210,14 @@ class Dialog_Status:
         return len(self.history_status)
    
     
-    def data(self, topic_names=None, status_list=None):
+    def data(self, topic_names=None, status_list=None, turn_start = 0):
         '''
             return pytorch data for all messages in this dialog
 
             Input:
                 - topic_names: list of topic name need to return,  default is None to return all available topics
                 - status_list: list status need to predeal,default is None for history status
+                - turn_start: int, which turn loop for first status, default is 0
         '''
         if status_list is None:
             status_list = self.history_status
@@ -226,17 +226,26 @@ class Dialog_Status:
             "entity": numpy.zeros((N_status, self.max_entity_types), 'int'),\
             "utterance": numpy.zeros((N_status, self.max_seq_len), 'int'),\
             "utterance_mask": numpy.zeros((N_status, self.max_seq_len), 'int'),\
+            "reward": numpy.zeros(N_status, 'float'), \
             "sentiment": numpy.zeros(N_status, 'float'), \
             "response": {},\
             "response_mask":{} \
         }
+
         if topic_names is None:
             topic_names = self.topic_manager.topics.keys()
+        
+        if N_status+turn_start < self.rl_maxloop:
+            reward_base = 1
+        else:
+            reward_base = 0
+        
         for i, s in enumerate(status_list):
             status["entity"][i] = s["entity_emb"]
             status["utterance"][i] = s["utterance"]
             status["utterance_mask"][i] = s["utterance_mask"]
             status["sentiment"][i] = s["sentiment"]
+            status["reward"][i] = reward_base * self.rl_discount**(i+turn_start)
             for tk in topic_names:
                 for k in ["response", "response_mask"]:
                     if tk in s[k]:
@@ -246,6 +255,8 @@ class Dialog_Status:
                             else:
                                 status[k][tk] = numpy.zeros(N_status, type(s[k][tk]))
                         status[k][tk][i] = s[k][tk]
+        status["reward"] = status["reward"]/(N_status+turn_start)
+
         for k in status.keys():
             if k in ["response", "response_mask"]:
                 for tk in status[k]:
@@ -259,102 +270,6 @@ class Dialog_Status:
         '''
             return pytorch data for current loop 
         '''
-        return self.data(topic_names, [self.current_status])
-
-
-    @staticmethod 
-    def torch(entity_dict, dialogs, max_entity_types, rl_maxloop=20, rl_discount=0.95, device=None):
-        '''
-            staticmethod, convert dialogs to batch
-
-            Input:
-                - entity_dict: src/module/entity_dict instance
-                - dialogs: list of src/module/dialog_status instance
-                - max_entity_types: int, number of entity types
-                - rl_maxloop: int, maximum dialog loop, default is 20
-                - rl_discount: float, discount rate for reinforcement learning, default is 0.95
-                - device: instance of torch.device, default is cpu device
-
-            Output:
-                - dictionary of pytorch variables with the keys of :
-                    - utterance: 2d long tensor
-                    - attention_mask: 2d long tensor for input mask
-                    - response: 1d long tensor
-                    - response_prev: 2d float tensor
-                    - mask: 2d float tensor for response mask
-                    - entity: 2d float tensor
-                    - reward: 1d float tensor, used in policy gradiant
-                    - batch_sizes: used in lstm pack_padded_sequence to speed up
-        '''
-        dialog_lengths = numpy.array([len(d.utterances) for d in dialogs], 'int')
-        perm_idx = dialog_lengths.argsort()[::-1]
-        N_dialogs = len(dialogs)
-        dialog_lengths = dialog_lengths[perm_idx]
-        max_dialog_len = int(dialog_lengths[0])
-
-        max_seq_len = len(dialogs[0].utterances[0])
-        
-        utterance = numpy.zeros((N_dialogs, max_dialog_len, max_seq_len), 'int')
-        attention_mask = numpy.zeros((N_dialogs, max_dialog_len, max_seq_len), 'int')
-        response = numpy.zeros((N_dialogs, max_dialog_len), 'int')
-        entity = numpy.zeros((N_dialogs, max_dialog_len, max_entity_types), 'float')
-        mask = numpy.zeros((N_dialogs, max_dialog_len, len(dialogs[0].masks[0])), 'float')
-        reward = numpy.zeros((N_dialogs, max_dialog_len), 'float')
-        response_prev = numpy.zeros((N_dialogs, max_dialog_len, len(dialogs[0].response_dict)), 'float') #previous response, onehot
-
-        if device is None:
-            device = torch.device('cpu')
-
-        for j, idx in enumerate(perm_idx):
-            dialog = dialogs[idx]
-            #check if dialog finished by measuring the length of dialog
-            if len(dialog) < rl_maxloop:
-                reward_base = 1
-            else:
-                reward_base = 0
-            response[j, :len(dialog.responses)] = torch.LongTensor(dialog.responses)
-            for i in range(dialog_lengths[j]):
-                entities = entity_dict.name2onehot(dialog.entities[i].keys(), max_entity_types) #all entity names
-                utterance[j, i] = dialog.utterances[i]
-                attention_mask[j, i] = dialog.utterance_masks[i]
-                entity[j, i, :] = entities
-                reward[j, i] = reward_base * rl_discount ** i
-                mask[j, i, :] = dialog.masks[i].astype('float')
-                if i > 0:
-                    response_prev[j, i, response[j, i-1]] = 1
-            reward[j] = reward[j]/dialog_lengths[j]
-       
-
-        #Get baseline of reward, an average return of the current policy, then do R-b
-        for r in numpy.unique(response):
-            rid = response == r
-            reward_mean = numpy.mean(reward[rid])
-            reward[rid] = reward[rid] - reward_mean
-
-
-        #to torch tensor
-        utterance = torch.LongTensor(utterance).to(device)
-        attention_mask = torch.LongTensor(attention_mask).to(device)
-        response = torch.LongTensor(response).to(device)
-        entity = torch.FloatTensor(entity).to(device)
-        mask = torch.FloatTensor(mask).to(device)
-        reward = torch.FloatTensor(reward).to(device)
-        response_prev = torch.FloatTensor(response_prev).to(device)
-
-
-        #pack them up for different dialogs
-        utterance = pack_padded_sequence(utterance, dialog_lengths, batch_first=True)
-        attention_mask = pack_padded_sequence(attention_mask, dialog_lengths, batch_first=True).data
-        response = pack_padded_sequence(response, dialog_lengths, batch_first=True).data
-        reward = pack_padded_sequence(reward, dialog_lengths, batch_first=True).data
-        entity = pack_padded_sequence(entity, dialog_lengths, batch_first=True).data
-        mask = pack_padded_sequence(mask, dialog_lengths, batch_first=True).data
-        response_prev = pack_padded_sequence(response_prev, dialog_lengths, batch_first=True).data
-        batch_sizes = utterance.batch_sizes
-        utterance = utterance.data
-
-        dialog_torch = {'utterance': utterance, 'attention_mask':attention_mask, 'response':response, 'mask':mask, 'entity':entity, 'reward':reward, 'batch_sizes':batch_sizes}
-        return dialog_torch
-
+        return self.data(topic_names, [self.current_status], len(self.history_status))
 
 
