@@ -9,7 +9,7 @@ from nlptools.utils import Config
 cfg = Config("config/babi.yml")
 hook = Behaviors()
 model = Goal_Supervised.build(cfg, Reader_Babi,  hook)
-#model.train()
+model.train()
 
 
 

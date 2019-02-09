@@ -7,6 +7,10 @@ from ..module.dialog_status import Dialog_Status
     Author: Pengjia Zhu (zhupengjia@gmail.com)
 '''
 
+def Collate_Fn(batch):
+    print(batch)
+    sys.exit()
+
 class Reader_Base(Dataset):
     '''
        Reader base class for goal oriented chatbot to predeal the dialogs 

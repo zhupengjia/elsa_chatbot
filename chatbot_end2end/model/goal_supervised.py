@@ -2,20 +2,21 @@
 import sys, torch, os, numpy
 from .dialog_tracker import Dialog_Tracker
 from nlptools.utils import Config, setLogger
-from ..module.entity_dict import Entity_Dict
 from nlptools.text.tokenizer import Tokenizer_BERT
 from nlptools.text.ner import NER
 import torch.optim as optim
 from ..module.topic_manager import Topic_Manager
 from ..skills.goal_response import Goal_Response
 from ..module.nltk_sentiment import NLTK_Sentiment
+from ..module.dialog_status import Collate_Fn
+from torch.utils.data import DataLoader
 
 '''
     Author: Pengjia Zhu (zhupengjia@gmail.com)
 '''
 
 class Goal_Supervised:
-    def __init__(self, reader, bert_model_name, max_entity_types=1024, Nresponses=10, fc_responses=5, entity_layers=2, lstm_layers=1, hidden_dim=300, batch_size=100, epochs=1000, weight_decay=0, learning_rate=0.001, saved_model="model.pt", dropout=0.2, device='cpu', logger=None):
+    def __init__(self, reader, bert_model_name, max_entity_types=1024, Nresponses=10, fc_responses=5, entity_layers=2, lstm_layers=1, hidden_dim=300, batch_size=100, num_workers=1, epochs=1000, weight_decay=0, learning_rate=0.001, saved_model="model.pt", dropout=0.2, device='cpu', logger=None):
         '''
             Supervised learning for end2end goal oriented chatbot
 
@@ -40,11 +41,13 @@ class Goal_Supervised:
         self.weight_decay = weight_decay
         self.max_entity_types = max_entity_types
         self.batch_size = batch_size
+        self.num_workers = num_workers
         self.epochs = epochs
         self.Nresponses = Nresponses
         self.device = device
         self.logger = logger 
 
+        self.reader = reader
         self.fc_responses = fc_responses
         self.lstm_layers = lstm_layers
         self.entity_layers = entity_layers
@@ -95,6 +98,8 @@ class Goal_Supervised:
 
         self.loss_function = torch.nn.NLLLoss()
         self.optimizer = optim.Adam(self.tracker.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
+        self.generator = DataLoader(self.reader, batch_size=self.batch_size, collate_fn=Collate_Fn, shuffle=True, num_workers=self.num_workers)
+
 
 
     def read(self, filepath):
@@ -108,29 +113,32 @@ class Goal_Supervised:
 
 
     def train(self):
-        self.tracker.train()
+        self.tracker.train() #set train flag
         
-        for epoch, d in enumerate(self.reader):
-            self.tracker.zero_grad()
-            y_prob = torch.log(self.tracker(d))
+        for epoch in range(self.epochs):
+            for it, d in enumerate(self.generator):
+                print(d)
+                sys.exit()
+                self.tracker.zero_grad()
+                y_prob = torch.log(self.tracker(d))
         
-            responses = d['response']
+                responses = d['response']
 
-            loss = self.loss_function(y_prob, responses)
+                loss = self.loss_function(y_prob, responses)
         
-            #precision
-            _, y_pred = torch.max(y_prob.data, 1)
-            
-            precision = y_pred.eq(responses).sum().item()/responses.numel()
-            
-            self.logger.info('{} {} {} {}'.format(epoch, self.epochs, loss.item(), precision))
+                #precision
+                _, y_pred = torch.max(y_prob.data, 1)
+                
+                precision = y_pred.eq(responses).sum().item()/responses.numel()
+                
+                self.logger.info('{} {} {} {}'.format(epoch, self.epochs, loss.item(), precision))
         
-            loss.backward()
-            self.optimizer.step()
+                loss.backward()
+                self.optimizer.step()
 
-            #save
-            if epoch > 0 and epoch%1000 == 0: 
-                model_state_dict = self.tracker.state_dict()
-                torch.save(model_state_dict, self.saved_model)
+                #save
+                if epoch > 0 and epoch%1000 == 0: 
+                    model_state_dict = self.tracker.state_dict()
+                    torch.save(model_state_dict, self.saved_model)
 
 

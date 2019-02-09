@@ -4,10 +4,60 @@ from torch import functional as F
 from .entity_dict import Entity_Dict
 from nlptools.utils import flat_list
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+import torch.nn.functional as F
 
 '''
     Author: Pengjia Zhu (zhupengjia@gmail.com)
 '''
+
+def Collate_Fn(batch):
+    '''
+        Collate function for torch.data.generator
+    '''
+    N_batch = len(batch)
+    if N_batch < 1:
+        return []
+    data = {}
+    dialog_lengths = numpy.array([b["utterance"].shape[0] for b in batch], "int")
+    perm_idx = dialog_lengths.argsort()[::-1]
+    dialog_lengths = dialog_lengths[perm_idx]
+    max_dialog_len = int(dialog_lengths[0])
+
+    for k in ["entity", "utterance", "utterance_mask", "sentiment"]:
+        #padding
+        for b in batch:
+            padshape = [0]*(b[k].dim()*2)
+            padshape[-1]= int(max_dialog_len - b[k].shape[0])
+            b[k] = F.pad(b[k],padshape)
+        #stack
+        data[k] = torch.stack([b[k] for b in batch])
+        
+        #pack
+        print(perm_idx, data[k].shape, data[k])
+        data[k] = data[k][perm_idx]
+        print(data[k])
+        sys.exit()
+        #data[k] = pack_padded_sequence(data[k][perm_idx], dialog_lengths, batch_first=True)
+
+    for k in ["response", "response_mask"]:
+        data[k] = {}
+        for tk in batch[0][k].keys():
+            #padding
+            for b in batch:
+                padshape = [0]*(b[k][tk].dim()*2)
+                padshape[-1]= int(max_dialog_len - b[k][tk].shape[0])
+                b[k][tk] = F.pad(b[k][tk],padshape)
+            #stack
+            data[k][tk] = torch.stack([b[k][tk] for b in batch])
+            #pack
+            data[k] = data[k][perm_idx]
+            #data[k][tk] = pack_padded_sequence(data[k][tk][perm_idx], dialog_lengths, batch_first=True)
+    
+    print("="*60)
+    print(data)
+    sys.exit()
+
+
 
 class Dialog_Status:
     def __init__(self, vocab, tokenizer, ner, topic_manager, sentiment_analyzer, max_seq_len=100, max_entity_types=1024):
