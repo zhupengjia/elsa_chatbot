@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import torch
+from torch.nn.utils.rnn import PackedSequence
 
 '''
     Author: Pengjia Zhu (zhupengjia@gmail.com)
@@ -42,7 +43,7 @@ class Dialog_Data(dict):
     @staticmethod
     def dict_to_device(dic, device):
         for k in dic.keys():
-            if isinstance(dic[k], torch.Tensor):
+            if isinstance(dic[k], (torch.Tensor, PackedSequence)):
                 dic[k] = dic[k].to(device)
             elif isinstance(dic[k], dict):
                 dic[k] = Dialog_Data.dict_to_device(dic[k], device)

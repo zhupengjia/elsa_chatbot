@@ -17,6 +17,7 @@ class Dialog_Tracker(nn.Module):
         dialog tracker for end2end chatbot 
 
         Input:
+            - skill_name: string, current skill name
             - bert_model_name: bert model file location or one of the supported model name
             - Nresponses: number of available responses
             - kernel_num: int
@@ -28,25 +29,23 @@ class Dialog_Tracker(nn.Module):
             - dropout: float, default is 0.2
             
     '''
-    def __init__(self, bert_model_name, Nresponses, max_entity_types, fc_responses=5, entity_layers=2, lstm_layers=1, hidden_dim=300, dropout=0.2):
+    def __init__(self, skill_name, bert_model_name, Nresponses, max_entity_types, entity_layers=2, entity_emb_dim=50, lstm_layers=1, hidden_dim=300, dropout=0.2):
         super().__init__()
+        self.skill_name = skill_name
         self.encoder = Sentence_Encoder(bert_model_name)
 
         self.dropout = nn.Dropout(dropout)
         self.pool = nn.AvgPool1d(2)
 
-        fc_entity_layers = [nn.Linear(max_entity_types, max_entity_types) for i in range(entity_layers)]
+        fc_entity_layers = [nn.Linear(max_entity_types, max_entity_types) for i in range(entity_layers-1)]
+        fc_entity_layers.append(nn.Linear(max_entity_types, entity_emb_dim))
         self.fc_entity = nn.Sequential(*fc_entity_layers)
 
-        if isinstance(fc_responses, int): fc_responses=[fc_responses]
-        fc_responses = [Nresponses] + fc_responses
-        
-        fc_response_layers = [nn.Linear(fc_responses[i], fc_responses[i+1]) for i in range(len(fc_responses)-1)]
-        self.fc_response = nn.Sequential(*fc_response_layers)
-        self.fc_dialog = nn.Linear(fc_responses[-1] + max_entity_types + self.encoder.hidden_size, hidden_dim)
+        self.fc_dialog = nn.Linear(self.encoder.hidden_size + entity_emb_dim + 1, hidden_dim)
         
         self.lstm = nn.LSTM(hidden_dim, hidden_dim, num_layers=lstm_layers, batch_first=True)
         self.fc_out = nn.Linear(hidden_dim, Nresponses)
+        self.loss_function = torch.nn.NLLLoss()
         self.softmax = nn.Softmax(dim=1)
 
     def entityencoder(self, x):
@@ -61,20 +60,8 @@ class Dialog_Tracker(nn.Module):
         x = self.dropout(x)
         return x
 
-    def responseencoder(self, x):
-        '''
-            response encoder, model framework:
-                - linear + linear 
-
-            Input:
-                - onehot present of response
-        '''
-        x = self.fc_response(x)
-        x = self.dropout(x)
-        return x
-
-
-    def dialog_embedding(self, utterance, attention_mask, entity,  response_prev):
+    
+    def dialog_embedding(self, utterance, utterance_mask, entity,  sentiment):
         '''
             Model framework:
                 - utterance_embedding + entityname_embedding + prev_response embedding -> linear
@@ -88,15 +75,15 @@ class Dialog_Tracker(nn.Module):
                 - dialog embedding
         '''
         #utterance embedding
-        sequence_output, pooled_output = self.encoder(utterance, attention_mask=attention_mask, output_all_encoded_layers=False)
+        sequence_output, pooled_output = self.encoder(utterance, attention_mask=utterance_mask, output_all_encoded_layers=False)
         
         #entity name embedding
         entity = self.entityencoder(entity) 
         
-        #previous response embedding
-        response_prev = self.responseencoder(response_prev)
+        sentiment = sentiment.unsqueeze(1)
+    
         #concat together and apply linear
-        utter = torch.cat((pooled_output, entity, response_prev), 1)
+        utter = torch.cat((pooled_output, entity, sentiment), 1)
         
         emb = self.fc_dialog(utter)
         return emb
@@ -114,16 +101,31 @@ class Dialog_Tracker(nn.Module):
                 - logsoftmax
         '''
         #first get dialog embedding
-        dialog_emb = self.dialog_embedding(dialogs['utterance'], dialogs["attention_mask"], dialogs['entity'], dialogs['response_prev'])
-        dialog_emb = PackedSequence(dialog_emb, dialogs['batch_sizes']) #feed batch_size and pack to packedsequence
+        pack_batch = dialogs['utterance'].batch_sizes
+
+        dialog_emb = self.dialog_embedding(dialogs['utterance'].data, dialogs["utterance_mask"].data, dialogs['entity'].data, dialogs["sentiment"].data)
+        
+        dialog_emb = PackedSequence(dialog_emb, pack_batch) #feed batch_size and pack to packedsequence
+        
         #dialog embedding to lstm as dialog tracker
+
         lstm_out, (ht, ct) = self.lstm(dialog_emb)
+        
         lstm_out = self.dropout(lstm_out.data)
+        
         hidden = self.fc_out(lstm_out)
         #output to softmax
         lstm_softmax = self.softmax(hidden)
+        
         #apply mask 
-        response = lstm_softmax * dialogs['mask'] + 1e-15
-        return response
+        response = lstm_softmax * dialogs['response_mask'][self.skill_name].data + 1e-15
+        
+        y_prob = torch.log(response)
+
+        if 'response' in dialogs:
+            loss = self.loss_function(y_prob, dialogs['response'][self.skill_name].data)
+            return y_prob, loss
+
+        return y_prob
 
 

@@ -125,7 +125,7 @@ class Goal_Response(Skill_Base):
         mask_notneed = numpy.matmul(self.masks['notneed'], numpy.logical_not(entity_mask)).reshape(1,-1)[0]
         mask_notneed = numpy.logical_not(mask_notneed)
         mask = mask_need * mask_notneed
-        return mask.astype("int") 
+        return mask.astype("float32") 
     
     def _build_mask(self):
         '''

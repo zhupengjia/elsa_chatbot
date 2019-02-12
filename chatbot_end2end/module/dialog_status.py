@@ -36,10 +36,6 @@ def Collate_Fn(batch):
                 targetdic[k] = torch.stack([b[k] for b in batchdic])
                 #pack
                 targetdic[k] = pack_padded_sequence(targetdic[k][perm_idx], dialog_lengths, batch_first=True)
-                #extract pack batch
-                if not "pack_batch"  in data:
-                    data["pack_batch"] = targetdic[k].batch_sizes
-                targetdic[k] = targetdic[k].data
             elif isinstance(batchdic[0][k], dict):
                 next_loop_batch = [b[k] for b in batchdic]
                 targetdic[k] = pack_loop(next_loop_batch, Dialog_Data({}))
@@ -118,6 +114,7 @@ class Dialog_Status:
     def new_dialog(cls, vocab, tokenizer, ner, topic_manager, sentiment_analyzer, max_seq_len=100, max_entity_types=1024):
         '''
             create a new dialog
+            data[k][tk] = data[k][tk].data
         '''
         return cls(vocab, tokenizer, ner, topic_manager, sentiment_analyzer, max_seq_len, max_entity_types)
 
@@ -138,7 +135,7 @@ class Dialog_Status:
         entities, utterance_replaced = self.ner.get(utterance, return_dict=True)
         for e in entities:
             self.current_status["entity"][e] = entities[e][0] #only keep first value
-        self.current_status["entity_emb"] = Entity_Dict.name2onehot(self.current_status["entity"].keys(), self.max_entity_types)
+        self.current_status["entity_emb"] = Entity_Dict.name2onehot(self.current_status["entity"].keys(), self.max_entity_types).astype("float32")
     
         #utterance to id 
         tokens = self.tokenizer(utterance_replaced)
@@ -169,7 +166,8 @@ class Dialog_Status:
     def add_response(self, response):
         '''
             add existed response, usually for training data
-            
+           Input 
+        print(entity.size())
             Input:
                 - response: string
         '''
@@ -218,11 +216,11 @@ class Dialog_Status:
             status_list = self.history_status
         N_status = len(status_list)
         status = Dialog_Data({\
-            "entity": numpy.zeros((N_status, self.max_entity_types), 'int'),\
+            "entity": numpy.zeros((N_status, self.max_entity_types), 'float32'),\
             "utterance": numpy.zeros((N_status, self.max_seq_len), 'int'),\
             "utterance_mask": numpy.zeros((N_status, self.max_seq_len), 'int'),\
-            "reward": numpy.zeros(N_status, 'float'), \
-            "sentiment": numpy.zeros(N_status, 'float'), \
+            "reward": numpy.zeros(N_status, 'float32'), \
+            "sentiment": numpy.zeros(N_status, 'float32'), \
             "response": {},\
             "response_mask":{} \
         })

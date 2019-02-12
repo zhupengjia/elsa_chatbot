@@ -1,7 +1,6 @@
 %YAML 1.2
 ---
 #app setting
-skill_name: babi
 
 
 # for adversary chatbot
@@ -49,14 +48,13 @@ reader:
     max_seq_len: 10
 
 model:
+    skill_name: babi
     device: "cuda:0"
     max_entity_types: 1024
     dropout: 0.8
     hidden_dim: 300
-    fc_responses: 
-        - 8
-        - 8
-    entity_layers: 2
+    entity_layers: 3
+    entity_emb_dim: 50
     lstm_layers: 1
     learning_rate: 0.001
     weight_decay: 0.00001
