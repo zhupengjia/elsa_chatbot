@@ -3,6 +3,7 @@ import numpy, torch, copy, time, sys
 from torch import functional as F
 from .entity_dict import Entity_Dict
 from nlptools.utils import flat_list
+from .dialog_data import Dialog_Data
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 import torch.nn.functional as F
 
@@ -17,42 +18,35 @@ def Collate_Fn(batch):
     N_batch = len(batch)
     if N_batch < 1:
         return []
-    data = {}
+    data = Dialog_Data({})
     dialog_lengths = numpy.array([b["utterance"].shape[0] for b in batch], "int")
     perm_idx = dialog_lengths.argsort()[::-1].astype("int")
     dialog_lengths = dialog_lengths[perm_idx]
     max_dialog_len = int(dialog_lengths[0])
 
-    for k in ["entity", "utterance", "utterance_mask", "sentiment", "reward"]:
-        #padding
-        for b in batch:
-            padshape = [0]*(b[k].dim()*2)
-            padshape[-1]= int(max_dialog_len - b[k].shape[0])
-            b[k] = F.pad(b[k],padshape)
-        #stack
-        data[k] = torch.stack([b[k] for b in batch])
-        #pack
-        data[k] = pack_padded_sequence(data[k][perm_idx], dialog_lengths, batch_first=True)
-
-    for k in ["response", "response_mask"]:
-        data[k] = {}
-        for tk in batch[0][k].keys():
-            #padding
-            for b in batch:
-                padshape = [0]*(b[k][tk].dim()*2)
-                padshape[-1]= int(max_dialog_len - b[k][tk].shape[0])
-                b[k][tk] = F.pad(b[k][tk],padshape)
-            #stack
-            data[k][tk] = torch.stack([b[k][tk] for b in batch])
-            #pack
-            data[k][tk] = pack_padded_sequence(data[k][tk][perm_idx], dialog_lengths, batch_first=True)
-    # extract batch
-    data["pack_batch"] = data["utterance"].batch_sizes
-    for k in ["entity", "utterance", "utterance_mask", "sentiment", "reward"]:
-        data[k] = data[k].data
-    for k in ["response", "response_mask"]:
-        for tk in data[k].keys():
-            data[k][tk] = data[k][tk].data
+    def pack_loop(batchdic, targetdic):
+        for k in batchdic[0].keys():
+            if isinstance(batchdic[0][k], torch.Tensor):
+                #padding
+                for b in batchdic:
+                    padshape = [0]*(b[k].dim()*2)
+                    padshape[-1]= int(max_dialog_len - b[k].shape[0])
+                    b[k] = F.pad(b[k],padshape)
+                #stack
+                targetdic[k] = torch.stack([b[k] for b in batchdic])
+                #pack
+                targetdic[k] = pack_padded_sequence(targetdic[k][perm_idx], dialog_lengths, batch_first=True)
+                #extract pack batch
+                if not "pack_batch"  in data:
+                    data["pack_batch"] = targetdic[k].batch_sizes
+                targetdic[k] = targetdic[k].data
+            elif isinstance(batchdic[0][k], dict):
+                next_loop_batch = [b[k] for b in batchdic]
+                targetdic[k] = pack_loop(next_loop_batch, Dialog_Data({}))
+        return targetdic
+               
+    data = pack_loop(batch, data)
+   
     return data 
 
 
@@ -106,7 +100,7 @@ class Dialog_Status:
         
 
     def __init_status(self):
-        initstatus =  {"entity":{}, \
+        initstatus =  Dialog_Data({"entity":{}, \
                 "entity_emb": None, \
                 "utterance": None, \
                 "utterance_mask": None, \
@@ -115,11 +109,12 @@ class Dialog_Status:
                 "response_mask": {}, \
                 "sentiment": 0, \
                 "topic": None \
-                }
+                })
         return initstatus
 
     
     @classmethod
+
     def new_dialog(cls, vocab, tokenizer, ner, topic_manager, sentiment_analyzer, max_seq_len=100, max_entity_types=1024):
         '''
             create a new dialog
@@ -222,7 +217,7 @@ class Dialog_Status:
         if status_list is None:
             status_list = self.history_status
         N_status = len(status_list)
-        status = {\
+        status = Dialog_Data({\
             "entity": numpy.zeros((N_status, self.max_entity_types), 'int'),\
             "utterance": numpy.zeros((N_status, self.max_seq_len), 'int'),\
             "utterance_mask": numpy.zeros((N_status, self.max_seq_len), 'int'),\
@@ -230,7 +225,7 @@ class Dialog_Status:
             "sentiment": numpy.zeros(N_status, 'float'), \
             "response": {},\
             "response_mask":{} \
-        }
+        })
 
         if topic_names is None:
             topic_names = self.topic_manager.topics.keys()

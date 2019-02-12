@@ -44,7 +44,7 @@ class Goal_Supervised:
         self.num_workers = num_workers
         self.epochs = epochs
         self.Nresponses = Nresponses
-        self.device = device
+        self.device = torch.device(device)
         self.logger = logger 
 
         self.reader = reader
@@ -117,6 +117,8 @@ class Goal_Supervised:
         
         for epoch in range(self.epochs):
             for it, d in enumerate(self.generator):
+
+                d.to(self.device)
                 print(d)
                 sys.exit()
                 self.tracker.zero_grad()
