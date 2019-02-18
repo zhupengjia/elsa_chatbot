@@ -1,12 +1,8 @@
 #!/usr/bin/env python
-import time
-import torch, sys
-import torch.nn.functional as F
+import torch
 import torch.nn as nn
-import torch.autograd as autograd
 from torch.nn.utils.rnn import PackedSequence
 from .sentence_encoder import Sentence_Encoder
-from pytorch_pretrained_bert.modeling import BertModel
 
 '''
     Author: Pengjia Zhu (zhupengjia@gmail.com)

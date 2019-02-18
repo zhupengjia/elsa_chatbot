@@ -9,10 +9,15 @@ from .reader_base import Reader_Base
 
 class Reader_Cornell(Reader_Base):
     '''
-        Read from babi training data, inherit from Reader_Base
+        Read from Cornell training data, inherit from Reader_Base
 
         Input:
             - see Reader_Base
     '''
+    
+    def __init__(self, **args):
+        Reader_Base.__init__(self, **args)
 
+    def read(self, lines_file, conv)
+        pass
 

@@ -1,29 +1,22 @@
 #!/usr/bin/env python
 
-'''
-    Author: Pengjia Zhu (zhupengjia@gmail.com)
-'''
+class Generative_Response(Skill_Base):
+    '''
+        Generative skill for chatbot
+    '''
 
-class Skill_Base:
-    '''
-        Base skill class. Define some necessaryy methods for a skill
-    '''
-   
+    def __init__(self, tokenizer):
+        super().__init__()
+        self.tokenizer = tokenizer
+
+
     def __getitem__(self, response):
         '''
-            convert response string to value
+            Predeal response string
         '''
-        return None
+        pass
 
-    def update_mask(self, current_status):
-        '''
-            Update response masks after retrieving utterance and before getting response
-            
-            Input:
-                - current_status: dictionary of status, generated from Dialog_Status module
-        '''
-        return None
-
+    
     def get_response(self, current_status):
         '''
             predict response value from current status
@@ -31,7 +24,7 @@ class Skill_Base:
             Input:
                 - current_status: dictionary of status, generated from Dialog_Status module
         '''
-        return None
+        pass
 
     def update_response(self, response, current_status):
         '''
@@ -41,4 +34,5 @@ class Skill_Base:
                 - response: value of response
                 - current_status: dictionary of status, generated from Dialog_Status module
         '''
-        return current_status
+        pass
+
