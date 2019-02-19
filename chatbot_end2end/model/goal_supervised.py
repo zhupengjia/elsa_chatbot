@@ -89,17 +89,6 @@ class Goal_Supervised:
         self.generator = DataLoader(self.reader, batch_size=self.batch_size, collate_fn=Collate_Fn, shuffle=True, num_workers=self.num_workers)
 
 
-
-    def read(self, filepath):
-        '''
-            read train data
-
-            Input:
-                - filepath: file location
-        '''
-        self.reader.read(filepath)
-
-
     def train(self):
         self.tracker.train() #set train flag
         

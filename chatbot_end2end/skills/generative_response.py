@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from .skill_base import Skill_Base
 
 class Generative_Response(Skill_Base):
     '''

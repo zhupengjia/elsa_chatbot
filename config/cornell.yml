@@ -15,7 +15,7 @@ tokenizer:
     stopwords_path: config/en_stopwords.txt
 
 reader:
-    train_data: /home/pzhu/data/dialog/cornell_movie_dialogs_corpus/movie_lines.txt
+    train_data: /home/pzhu/data/dialog/cornell_movie_dialogs_corpus
     max_seq_len: 10
 
 model:
