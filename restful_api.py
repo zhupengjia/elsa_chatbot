@@ -15,6 +15,5 @@ def query():
 if __name__ == '__main__':
     print('>>>>>>>>>>Flask server is running on 0.0.0.0:5000')
     app.run(host='0.0.0.0', port=5000, threaded=True)
-    http_server.serve_forever()
 
 
