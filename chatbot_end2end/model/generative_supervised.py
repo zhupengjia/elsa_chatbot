@@ -53,7 +53,7 @@ class Generative_Supervised(nn.Module):
         vocab = tokenizer.vocab
 
         #skill
-        response = Generative_Response(tokenizer=tokenizer) 
+        response = Generative_Response(tokenizer=tokenizer, vocab=vocab, max_seq_len=config.reader.max_seq_len) 
         topic_manager = Topic_Manager()
         topic_manager.register(config.model.skill_name, response)
 
