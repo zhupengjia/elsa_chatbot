@@ -228,11 +228,12 @@ class Goal_Response(Skill_Base):
         return y_pred
 
 
-    def update_response(self, response_id, current_status):
+    def update_response(self, skill_name, response_id, current_status):
         '''
             update current response to the response status. 
             
             Input:
+                - skill_name: string, name of current skill
                 - response id: int
                 - current_status: dictionary of status, generated from Dialog_Status module
         '''
@@ -244,6 +245,7 @@ class Goal_Response(Skill_Base):
             for e in entities_get:
                 current_status["entity"][e] = entities_get[e]
 
+        current_status['response'][skill_name] = response_id
         current_status["response_string"] = self.get_response_by_id(response_id, entity=current_status["entity"])
         return current_status
         

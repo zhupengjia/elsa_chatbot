@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import torch.nn as nn
+import torch,os
 from nlptools.utils import Config, setLogger
 from .generative_tracker import Generative_Tracker
 from ..skills.generative_response import Generative_Response
@@ -9,6 +9,7 @@ from nlptools.text.tokenizer import Tokenizer_BERT
 from ..module.topic_manager import Topic_Manager
 from ..module.nltk_sentiment import NLTK_Sentiment
 from ..module.dialog_status import Collate_Fn
+from .sentence_encoder import Sentence_Encoder
 from torch.utils.data import DataLoader
 
 
@@ -16,7 +17,7 @@ from torch.utils.data import DataLoader
     Author: Pengjia Zhu (zhupengjia@gmail.com)
 '''
 
-class Generative_Supervised(nn.Module):
+class Generative_Supervised:
     '''
         Generative based chatbot
     '''
@@ -61,11 +62,15 @@ class Generative_Supervised(nn.Module):
         reader = reader_cls(vocab=vocab, tokenizer=tokenizer, ner=ner, topic_manager=topic_manager, sentiment_analyzer=NLTK_Sentiment(), max_seq_len=config.reader.max_seq_len, logger=logger)
         reader.read(config.reader.train_data)
         
-        return cls(reader=reader, logger=logger, bert_model_name=config.tokenizer.bert_model_name, **config.model)
+        #sentence encoder
+        encoder = Sentence_Encoder(config.tokenizer.bert_model_name)
+        
+        return cls(reader=reader, logger=logger, encoder=encoder, **config.model)
 
 
     def __init_tracker(self, **args):
         self.tracker = Generative_Tracker(**args)
+       
         
         self.tracker.to(self.device)
 
@@ -78,4 +83,28 @@ class Generative_Supervised(nn.Module):
         self.optimizer = optim.Adam(self.tracker.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
         self.generator = DataLoader(self.reader, batch_size=self.batch_size, collate_fn=Collate_Fn, shuffle=True, num_workers=self.num_workers)
 
+    
+    def train(self):
+        self.tracker.train() #set train flag
+        
+        for epoch in range(self.epochs):
+            for it, d in enumerate(self.generator):
 
+                d.to(self.device)
+                self.tracker.zero_grad()
+
+                self.tracker(d)
+                
+                break
+                
+                self.logger.info('{} {} {}'.format(epoch, self.epochs, loss.item()))
+        
+                loss.backward()
+                self.optimizer.step()
+
+                #save
+                if epoch > 0 and epoch%1000 == 0: 
+                    model_state_dict = self.tracker.state_dict()
+                    torch.save(model_state_dict, self.saved_model)
+
+            break

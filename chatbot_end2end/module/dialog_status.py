@@ -96,7 +96,7 @@ class Dialog_Status:
         
 
     def __init_status(self):
-        initstatus =  Dialog_Data({"entity":{}, \
+        initstatus =  {"entity":{}, \
                 "entity_emb": None, \
                 "utterance": None, \
                 "utterance_mask": None, \
@@ -105,12 +105,11 @@ class Dialog_Status:
                 "response_mask": {}, \
                 "sentiment": 0, \
                 "topic": None \
-                })
+                }
         return initstatus
 
     
     @classmethod
-
     def new_dialog(cls, vocab, tokenizer, ner, topic_manager, sentiment_analyzer, max_seq_len=100, max_entity_types=1024):
         '''
             create a new dialog
@@ -215,7 +214,7 @@ class Dialog_Status:
         if status_list is None:
             status_list = self.history_status
         N_status = len(status_list)
-        status = Dialog_Data({\
+        status = {\
             "entity": numpy.zeros((N_status, self.max_entity_types), 'float32'),\
             "utterance": numpy.zeros((N_status, self.max_seq_len), 'int'),\
             "utterance_mask": numpy.zeros((N_status, self.max_seq_len), 'int'),\
@@ -223,7 +222,7 @@ class Dialog_Status:
             "sentiment": numpy.zeros(N_status, 'float32'), \
             "response": {},\
             "response_mask":{} \
-        })
+        }
 
         if topic_names is None:
             topic_names = self.topic_manager.topics.keys()

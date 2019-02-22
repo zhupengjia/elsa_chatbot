@@ -41,11 +41,12 @@ class Generative_Response(Skill_Base):
         '''
         pass
 
-    def update_response(self, response, current_status):
+    def update_response(self, skill_name, response, current_status):
         '''
             update current response to the response status.
             
             Input:
+                - skill_name: string, name of current skill
                 - response: value of response
                 - current_status: dictionary of status, generated from Dialog_Status module
         '''
@@ -53,12 +54,12 @@ class Generative_Response(Skill_Base):
         current_status['response_string'] = self.vocab.id2words(response) 
         response = response[:self.max_seq_len-2]
         seq_len = len(response) + 2
-        current_status['response'] = numpy.zeros(self.max_seq_len, 'int')
-        current_status['response_mask'] = numpy.zeros(self.max_seq_len, 'int')
-        current_status['response'][0] = self.vocab.CLS_ID
-        current_status['response'][1:seq_len-1] = response
-        current_status['response'][seq_len-1] = self.vocab.SEP_ID
-        current_status['response_mask'][:seq_len] = 1
+        current_status['response'][skill_name] = numpy.zeros(self.max_seq_len, 'int')
+        current_status['response_mask'][skill_name] = numpy.zeros(self.max_seq_len, 'int')
+        current_status['response'][skill_name][0] = self.vocab.CLS_ID
+        current_status['response'][skill_name][1:seq_len-1] = response
+        current_status['response'][skill_name][seq_len-1] = self.vocab.SEP_ID
+        current_status['response_mask'][skill_name][:seq_len] = 1
 
         return current_status
 

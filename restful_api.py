@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 from flask import Flask, request, Response, send_from_directory
-import json
+import json, random
 
 app = Flask(__name__)
 
-@app.route('/api/query', methods=['POST', 'GET'])
+@app.route('/api/query', methods=['POST'])
 def query():
-    req_args = request.args
-    query = req_args.get('query')
-    session_id = req_args.get('session')
-    print(query, session_id)
-    return Response(json.dumps({"response": "return: "+query, "session":session_id}), mimetype='application/json') 
+    query = request.form.get('text')
+    session_id = request.form.get('session')
+    if session_id is None:
+        session_id = str(random.randint(a=0, b=100000000))
+    return Response(json.dumps({"code":0, "message":"200 OK", 'session':session_id, "data":{"response": "return: "+query}}), mimetype='application/json') 
 
 if __name__ == '__main__':
     print('>>>>>>>>>>Flask server is running on 0.0.0.0:5000')

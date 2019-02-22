@@ -59,7 +59,6 @@ class Topic_Manager:
                 - current_status: dictionary of status, generated from dialog_status module
         '''
         current_status = self.topics[self.current_topic].update_response(response_value, current_status)
-        current_status["response"][self.current_topic] = response_value 
         return current_status
 
 
@@ -72,7 +71,7 @@ class Topic_Manager:
 
         '''
         response_value = self.topics[self.current_topic].get_response(current_status)
-        return self.update_response(response_value, current_status)
+        return self.topics[self.current_topic].update_response(self.current_topic, response_value, current_status)
         
     def add_response(self, response, current_status):
         '''
@@ -84,6 +83,7 @@ class Topic_Manager:
     
         '''
         response_value = self.topics[self.current_topic][response]
-        return self.update_response(response_value, current_status)
+        return self.topics[self.current_topic].update_response(self.current_topic, response_value, current_status)
+
 
 

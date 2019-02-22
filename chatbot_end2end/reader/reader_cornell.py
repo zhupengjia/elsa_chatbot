@@ -85,6 +85,7 @@ class Reader_Cornell(Reader_Base):
                 response = Reader_Cornell.clean_text(id2line[conv_map[i+1]])
                 conv.append([utterance, response])
             if len(conv) > 0:
+                #use both side of dialogs
                 convs.append(conv[::2])
                 if len(conv) > 1:
                     convs.append(conv[1::2])

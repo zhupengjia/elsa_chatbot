@@ -2,7 +2,6 @@
 import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import PackedSequence
-from .sentence_encoder import Sentence_Encoder
 
 '''
     Author: Pengjia Zhu (zhupengjia@gmail.com)
@@ -14,7 +13,7 @@ class Dialog_Tracker(nn.Module):
 
         Input:
             - skill_name: string, current skill name
-            - bert_model_name: bert model file location or one of the supported model name
+            - encoder: sentence encoder instance from .sentence_encoder
             - Nresponses: number of available responses
             - kernel_num: int
             - kernel_size: int
@@ -25,10 +24,11 @@ class Dialog_Tracker(nn.Module):
             - dropout: float, default is 0.2
             
     '''
-    def __init__(self, skill_name, bert_model_name, Nresponses, max_entity_types, entity_layers=2, entity_emb_dim=50, lstm_layers=1, hidden_dim=300, dropout=0.2):
+    def __init__(self, skill_name, encoder, Nresponses, max_entity_types, entity_layers=2, entity_emb_dim=50, lstm_layers=1, hidden_dim=300, dropout=0.2):
         super().__init__()
         self.skill_name = skill_name
-        self.encoder = Sentence_Encoder(bert_model_name)
+        #self.encoder = Sentence_Encoder(bert_model_name)
+        self.encoder = encoder
 
         self.dropout = nn.Dropout(dropout)
         self.pool = nn.AvgPool1d(2)

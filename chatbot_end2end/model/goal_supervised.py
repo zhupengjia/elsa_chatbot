@@ -70,7 +70,10 @@ class Goal_Supervised:
         reader = reader_cls(vocab=vocab, tokenizer=tokenizer, ner=ner, topic_manager=topic_manager, sentiment_analyzer=NLTK_Sentiment(), max_seq_len=config.reader.max_seq_len, max_entity_types=config.model.max_entity_types, logger=logger)
         reader.read(config.reader.train_data)
 
-        return cls(reader=reader, logger=logger, bert_model_name=config.tokenizer.bert_model_name, Nresponses=len(goal_response), **config.model)
+        #sentence encoder
+        encoder = Sentence_Encoder(config.tokenizer.bert_model_name)
+
+        return cls(reader=reader, logger=logger, encoder=encoder, Nresponses=len(goal_response), **config.model)
 
 
     def __init_tracker(self, **args):

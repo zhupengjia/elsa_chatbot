@@ -15,18 +15,13 @@ tokenizer:
     stopwords_path: config/en_stopwords.txt
 
 reader:
-    train_data: /home/pzhu/data/dialog/cornell_movie_dialogs_corpus
-    max_seq_len: 10
+    train_data: /home/pzhu/data/dialog/cornell_corpus
+    max_seq_len: 100
 
 model:
     skill_name: cornell
     device: "cuda:0"
-    max_entity_types: 1024
     dropout: 0.8
-    hidden_dim: 300
-    entity_layers: 3
-    entity_emb_dim: 50
-    lstm_layers: 1
     learning_rate: 0.001
     weight_decay: 0.00001
     epochs: 10000
