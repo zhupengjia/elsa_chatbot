@@ -30,7 +30,7 @@ class Generative_Supervised:
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.epochs = epochs
-        self.device = torch.device(device)
+        self.device = torch.device(device) if torch.cuda.is_available() else torch.device('cpu')
         self.logger = logger 
 
         self.__init_tracker(**tracker_args)
@@ -89,7 +89,6 @@ class Generative_Supervised:
         
         for epoch in range(self.epochs):
             for it, d in enumerate(self.generator):
-
                 d.to(self.device)
                 self.tracker.zero_grad()
 

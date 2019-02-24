@@ -7,7 +7,7 @@ from nlptools.utils import Config
 
 cfg = Config("config/cornell.yml")
 model = Generative_Supervised.build(cfg, Reader_Cornell)
-#model.train()
+model.train()
 
 
 

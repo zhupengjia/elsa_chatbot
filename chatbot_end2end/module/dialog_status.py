@@ -24,7 +24,7 @@ def Collate_Fn(batch):
     dialog_lengths = dialog_lengths[perm_idx]
     max_dialog_len = int(dialog_lengths[0])
 
-    for k in batch.keys():
+    for k in batch[0].keys():
         #padding
         for b in batch:
             padshape = [0]*(b[k].dim()*2)

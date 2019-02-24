@@ -26,7 +26,8 @@ class Dialog_Tracker(nn.Module):
     '''
     def __init__(self, skill_name, encoder, Nresponses, max_entity_types, entity_layers=2, entity_emb_dim=50, lstm_layers=1, hidden_dim=300, dropout=0.2):
         super().__init__()
-        self.skill_name = skill_name
+        self.response_key = 'response_' + skill_name
+        self.mask_key = 'response_mask_' + skill_name
         #self.encoder = Sentence_Encoder(bert_model_name)
         self.encoder = encoder
 
@@ -114,12 +115,12 @@ class Dialog_Tracker(nn.Module):
         lstm_softmax = self.softmax(hidden)
         
         #apply mask 
-        response = lstm_softmax * dialogs['response_mask'][self.skill_name].data + 1e-15
+        response = lstm_softmax * dialogs[self.mask_key].data + 1e-15
         
         y_prob = torch.log(response)
 
-        if 'response' in dialogs:
-            loss = self.loss_function(y_prob, dialogs['response'][self.skill_name].data)
+        if self.response_key in dialogs:
+            loss = self.loss_function(y_prob, dialogs[self.response_key].data)
             return y_prob, loss
 
         return y_prob
