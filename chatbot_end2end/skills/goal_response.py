@@ -245,7 +245,7 @@ class Goal_Response(Skill_Base):
             for e in entities_get:
                 current_status["entity"][e] = entities_get[e]
 
-        current_status['response'][skill_name] = response_id
+        current_status['response_' + skill_name] = response_id
         current_status["response_string"] = self.get_response_by_id(response_id, entity=current_status["entity"])
         return current_status
         

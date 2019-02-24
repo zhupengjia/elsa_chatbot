@@ -24,25 +24,17 @@ def Collate_Fn(batch):
     dialog_lengths = dialog_lengths[perm_idx]
     max_dialog_len = int(dialog_lengths[0])
 
-    def pack_loop(batchdic, targetdic):
-        for k in batchdic[0].keys():
-            if isinstance(batchdic[0][k], torch.Tensor):
-                #padding
-                for b in batchdic:
-                    padshape = [0]*(b[k].dim()*2)
-                    padshape[-1]= int(max_dialog_len - b[k].shape[0])
-                    b[k] = F.pad(b[k],padshape)
-                #stack
-                targetdic[k] = torch.stack([b[k] for b in batchdic])
-                #pack
-                targetdic[k] = pack_padded_sequence(targetdic[k][perm_idx], dialog_lengths, batch_first=True)
-            elif isinstance(batchdic[0][k], dict):
-                next_loop_batch = [b[k] for b in batchdic]
-                targetdic[k] = pack_loop(next_loop_batch, Dialog_Data({}))
-        return targetdic
-               
-    data = pack_loop(batch, data)
-   
+    for k in batch.keys():
+        #padding
+        for b in batch:
+            padshape = [0]*(b[k].dim()*2)
+            padshape[-1]= int(max_dialog_len - b[k].shape[0])
+            b[k] = F.pad(b[k],padshape)
+        #stack
+        data[k] = torch.stack([b[k] for b in batch])
+        #pack
+        data[k] = pack_padded_sequence(data[k][perm_idx], dialog_lengths, batch_first=True)
+
     return data 
 
 
@@ -101,8 +93,6 @@ class Dialog_Status:
                 "utterance": None, \
                 "utterance_mask": None, \
                 "response_string": None, \
-                "response": {}, \
-                "response_mask": {}, \
                 "sentiment": 0, \
                 "topic": None \
                 }
@@ -218,10 +208,8 @@ class Dialog_Status:
             "entity": numpy.zeros((N_status, self.max_entity_types), 'float32'),\
             "utterance": numpy.zeros((N_status, self.max_seq_len), 'int'),\
             "utterance_mask": numpy.zeros((N_status, self.max_seq_len), 'int'),\
-            "reward": numpy.zeros(N_status, 'float32'), \
-            "sentiment": numpy.zeros(N_status, 'float32'), \
-            "response": {},\
-            "response_mask":{} \
+            "reward": numpy.zeros((N_status, 1), 'float32'), \
+            "sentiment": numpy.zeros((N_status, 1), 'float32')
         }
 
         if topic_names is None:
@@ -236,25 +224,21 @@ class Dialog_Status:
             status["entity"][i] = s["entity_emb"]
             status["utterance"][i] = s["utterance"]
             status["utterance_mask"][i] = s["utterance_mask"]
-            status["sentiment"][i] = s["sentiment"]
-            status["reward"][i] = reward_base * self.rl_discount**(i+turn_start)
+            status["sentiment"][i, 0] = s["sentiment"]
+            status["reward"][i, 0] = reward_base * self.rl_discount**(i+turn_start)
             for tk in topic_names:
                 for k in ["response", "response_mask"]:
-                    if tk in s[k]:
-                        if not tk in status[k]:
-                            if isinstance(s[k][tk], numpy.ndarray):
-                                status[k][tk] = numpy.repeat(numpy.expand_dims(numpy.zeros_like(s[k][tk]), axis=0), N_status, axis=0)
-                            else:
-                                status[k][tk] = numpy.zeros(N_status, type(s[k][tk]))
-                        status[k][tk][i] = s[k][tk]
+                    rkey = k+'_'+tk
+                    if not rkey in status:
+                        if isinstance(s[rkey], numpy.ndarray):
+                            status[rkey] = numpy.repeat(numpy.expand_dims(numpy.zeros_like(s[rkey]), axis=0), N_status, axis=0)
+                        else:
+                            status[rkey] = numpy.zeros((N_status, 1), type(s[rkey]))
+                    status[rkey][i] = s[rkey]
         status["reward"] = status["reward"]/(N_status+turn_start)
 
-        for k in status.keys():
-            if k in ["response", "response_mask"]:
-                for tk in status[k]:
-                    status[k][tk] = torch.tensor(status[k][tk])
-            else:
-                status[k] = torch.tensor(status[k])
+        #for k in status.keys():
+        #    status[k] = torch.tensor(status[k])
         return status
 
 

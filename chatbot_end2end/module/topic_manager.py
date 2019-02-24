@@ -32,7 +32,7 @@ class Topic_Manager:
             Input:
                 - current_status: dictionary of status, generated from Dialog_Status module
         '''
-        current_status["response_mask"][self.current_topic] = self.topics[self.current_topic].update_mask(current_status)
+        current_status["response_mask_" + self.current_topic] = self.topics[self.current_topic].update_mask(current_status)
         return current_status
 
 

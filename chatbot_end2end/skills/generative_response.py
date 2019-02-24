@@ -54,12 +54,17 @@ class Generative_Response(Skill_Base):
         current_status['response_string'] = self.vocab.id2words(response) 
         response = response[:self.max_seq_len-2]
         seq_len = len(response) + 2
-        current_status['response'][skill_name] = numpy.zeros(self.max_seq_len, 'int')
-        current_status['response_mask'][skill_name] = numpy.zeros(self.max_seq_len, 'int')
-        current_status['response'][skill_name][0] = self.vocab.CLS_ID
-        current_status['response'][skill_name][1:seq_len-1] = response
-        current_status['response'][skill_name][seq_len-1] = self.vocab.SEP_ID
-        current_status['response_mask'][skill_name][:seq_len] = 1
+        response_key = 'response_' + skill_name
+        mask_key = 'response_mask_' + skill_name
+        
+        current_status[response_key] = numpy.zeros(self.max_seq_len, 'int')
+        current_status[mask_key] = numpy.zeros(self.max_seq_len, 'int')
+        
+        current_status[response_key][0] = self.vocab.CLS_ID
+        current_status[response_key][1:seq_len-1] = response
+        current_status[response_key][seq_len-1] = self.vocab.SEP_ID
+        
+        current_status[mask_key][:seq_len] = 1
 
         return current_status
 

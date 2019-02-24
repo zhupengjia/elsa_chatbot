@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-import glob, os, yaml, sys, re
-from nlptools.utils import zload, zdump, flat_list
+import os, h5py, re
 from .reader_base import Reader_Base
 
 '''
@@ -49,9 +48,9 @@ class Reader_Cornell(Reader_Base):
 
 
     def read(self, filepath):
-        cached_pkl = filepath + '.pkl'
-        if os.path.exists(cached_pkl):
-            self.data = zload(cached_pkl)
+        cached_data = filepath + '.h5'
+        if os.path.exists(cached_data) and os.path.getsize(cached_data) > 10240:
+            self.data = h5py.File(cached_data, 'r')
             return
         
         line_path = os.path.join(filepath, "movie_lines.txt")
@@ -66,30 +65,26 @@ class Reader_Cornell(Reader_Base):
                 if len(_line) == 5:
                     id2line[_line[0]] = _line[4]
      
-        # Create a list of all of the conversations' lines' ids.
-        with open(conv_path, encoding='utf-8', errors='ignore') as f:
-            convs_map = []
-            for line in f:
-                line = line.strip()
-                _line = line.split(' +++$+++ ')[-1][1:-1].replace("'","").replace(" ","")
-                convs_map.append(_line.split(','))
-    
-        # Sort the sentences into questions (inputs) and answers (targets)
-        convs = []
-        for conv_map in convs_map:
-            conv = []
-            for i in range(len(conv_map)-1):
-                if not conv_map[i] in id2line or not conv_map[i+1] in id2line:
-                    continue
-                utterance = Reader_Cornell.clean_text(id2line[conv_map[i]])
-                response = Reader_Cornell.clean_text(id2line[conv_map[i+1]])
-                conv.append([utterance, response])
-            if len(conv) > 0:
-                #use both side of dialogs
-                convs.append(conv[::2])
-                if len(conv) > 1:
-                    convs.append(conv[1::2])
+        def convs_iter(id2line):
+            with open(conv_path, encoding='utf-8', errors='ignore') as f:
+                for line in f:
+                    # Create conversations' lines' ids.
+                    line = line.strip()
+                    _line = line.split(' +++$+++ ')[-1][1:-1].replace("'","").replace(" ","")
+                    conv_map = _line.split(',')
+                    # Sort the sentences into questions (inputs) and answers (targets)
+                    conv = []
+                    for i in range(len(conv_map)-1):
+                        if not conv_map[i] in id2line or not conv_map[i+1] in id2line:
+                            continue
+                        utterance = Reader_Cornell.clean_text(id2line[conv_map[i]])
+                        response = Reader_Cornell.clean_text(id2line[conv_map[i+1]])
+                        conv.append([utterance, response])
+                    if len(conv) > 0:
+                        #use both side of dialogs
+                        yield conv[::2]
+                        if len(conv) > 1:
+                            yield conv[1::2]
 
-        self.data = self.predeal(convs)
-        zdump(self.data, cached_pkl)
+        self.data = self.predeal(convs_iter(id2line), cached_data)
 

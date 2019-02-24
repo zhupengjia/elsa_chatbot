@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-import glob, os, yaml, sys, re
-from nlptools.utils import zload, zdump, flat_list
+import os, re
 from .reader_base import Reader_Base
 
 '''
@@ -25,11 +24,12 @@ class Reader_Babi(Reader_Base):
             Input:
                 - filename: the path of training file
         '''
-        cached_pkl = filename + '.pkl'
-        if os.path.exists(cached_pkl):
-            convs = zload(cached_pkl)
-        else:
-            convs = []
+        cached_data = filepath + '.h5'
+        if os.path.exists(cached_data) and os.path.getsize(cached_data) > 10240:
+            self.data = h5py.File(cached_data, 'r')
+            return
+
+        def convs_iter():
             with open(filename) as f:
                 conv = []
                 utterance, response = '', ''
@@ -43,7 +43,7 @@ class Reader_Babi(Reader_Base):
                         if len(utterance) > 0 and len(response) > 0 :
                             conv.append([utterance, response])
                         if len(conv) > 0 :
-                            convs.append(conv)
+                            yield conv
                             conv = []
                         utterance, response = '', ''
                     else:
@@ -59,11 +59,8 @@ class Reader_Babi(Reader_Base):
                 if len(utterance) > 0 and len(response) > 0 :
                     conv.append([utterance, response])
                 if len(conv) > 0:
-                    convs.append(conv)
-            
-            convs = self.predeal(convs)
-            zdump(convs, cached_pkl)
-        self.data = convs
-
+                    yield conv
+        
+        self.data = self.predeal(convs_iter())
 
 
