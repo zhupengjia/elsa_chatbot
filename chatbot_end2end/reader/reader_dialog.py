@@ -82,7 +82,7 @@ class Reader_Dialog(Reader_Base):
                         if len(each_file_pairs) > 1:  # less than 1 dialog should not be saved
                             # robot_says contains three continuous same answers should be excluded
                             if not self._is_three_continuous_response(each_file_pairs):
-                                all_file_pairs.append(each_file_pairs)
+                                yield each_file_pairs
                         each_file_pairs = []
                         user_says = []
                         robot_says = []
@@ -119,25 +119,16 @@ class Reader_Dialog(Reader_Base):
             if len(each_file_pairs) > 1:  # less than 1 dialog should not be saved
                 # robot_says contains three continuous same answers should be excluded
                 if not self._is_three_continuous_response(each_file_pairs):
-                    all_file_pairs.append(each_file_pairs)
-
-        return all_file_pairs
-
+                    yield each_file_pairs
 
     def read(self, locdir):
         '''
             Input:
                 - locdir: The location of saved dialog history
         '''
-        cached_pkl = os.path.join(locdir, 'dialog.pkl')
-        if os.path.exists(cached_pkl):
-            convs = zload(cached_pkl)
-        else:
-            convs = self._read_file(locdir)
-            convs = self.predeal(convs)
-            zdump(convs, cached_pkl)
-        self.responses.build_mask()
-        self.data = convs
-
-
+        cached_data = locdir + ".h5"
+        if os.path.exists(cached_data) and os.path.getsize(cached_data) > 10240:
+            self.data = h5py.File(cached_data, 'r')
+            return
+        self.data = self.predeal(self._read_file(locdir))
 
