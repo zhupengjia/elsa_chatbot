@@ -67,35 +67,36 @@ class Reader_Base(Dataset):
         '''
         if os.path.exists(h5file):
             os.remove(h5file)
-        with h5py.File(h5file, 'w') as h5file:
-            h5datasets = {}
-            dialog_point = h5file.create_dataset('point', (0,2), dtype='i', chunks=(1, 2), compression='lzf', maxshape=(None, 2))
-            N_tot = 0
-            for i_d, dialog_data in enumerate(data):
-                if self.logger is not None:
-                    self.logger.info('predeal dialog {}'.format(i_d))
-                #dialog simulator
-                dialog = Dialog_Status.new_dialog(self.vocab, self.tokenizer, self.ner, self.topic_manager, self.sentiment_analyzer, self.max_seq_len, self.max_entity_types)
-                for i_p, pair in enumerate(dialog_data):
-                    dialog.add_utterance(pair[0])
-                    dialog.add_response(pair[1])
-                #save to hdf5
-                ddata = dialog.data()
-                for k in ddata.keys():
-                    kshape = ddata[k].shape
-                    if not k in h5datasets:
-                        initshape = list(kshape)
-                        initshape[0] = 0
-                        chunkshape = list(kshape)
-                        chunkshape[0] = 1
-                        maxshape = list(kshape)
-                        maxshape[0] = None
-                        h5datasets[k] = h5file.create_dataset(k, tuple(initshape), dtype=ddata[k].dtype, chunks=tuple(chunkshape), compression='lzf', maxshape=tuple(maxshape))
-                    self._add_trace(h5datasets[k], ddata[k])
-                self._add_trace(dialog_point, numpy.array([[N_tot, ddata['entity'].shape[0]]]))
-                N_tot += ddata['entity'].shape[0]
+        h5file = h5py.File(h5file, 'w')
+            
+        h5datasets = {}
+        h5datasets["point"] = h5file.create_dataset('point', (0,2), dtype='i', chunks=(1, 2), compression='lzf', maxshape=(None, 2))
+        N_tot = 0
+        for i_d, dialog_data in enumerate(data):
+            if self.logger is not None:
+                self.logger.info('predeal dialog {}'.format(i_d))
+            #dialog simulator
+            dialog = Dialog_Status.new_dialog(self.vocab, self.tokenizer, self.ner, self.topic_manager, self.sentiment_analyzer, self.max_seq_len, self.max_entity_types)
+            for i_p, pair in enumerate(dialog_data):
+                dialog.add_utterance(pair[0])
+                dialog.add_response(pair[1])
+            #save to hdf5
+            ddata = dialog.data()
+            for k in ddata.keys():
+                kshape = ddata[k].shape
+                if not k in h5datasets:
+                    initshape = list(kshape)
+                    initshape[0] = 0
+                    chunkshape = list(kshape)
+                    chunkshape[0] = 1
+                    maxshape = list(kshape)
+                    maxshape[0] = None
+                    h5datasets[k] = h5file.create_dataset(k, tuple(initshape), dtype=ddata[k].dtype, chunks=tuple(chunkshape), compression='lzf', maxshape=tuple(maxshape))
+                self._add_trace(h5datasets[k], ddata[k])
+            self._add_trace(h5datasets['point'], numpy.array([[N_tot, ddata['entity'].shape[0]]]))
+            N_tot += ddata['entity'].shape[0]
         
-        return h5datasets
+        return h5file
 
     def __len__(self):
         return len(self.data['point'])

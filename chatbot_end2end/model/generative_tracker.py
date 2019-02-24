@@ -30,7 +30,7 @@ class Generative_Tracker(nn.Module):
         sequence_output, pooled_output = self.encoder(dialogs['utterance'].data, attention_mask=dialogs['utterance_mask'].data, output_all_encoded_layers=False)
 
 
-        print(pooled_output)
+        print(pooled_output.size())
         return 0
         
 
