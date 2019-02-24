@@ -70,8 +70,6 @@ class Generative_Supervised:
 
     def __init_tracker(self, **args):
         self.tracker = Generative_Tracker(**args)
-       
-        
         self.tracker.to(self.device)
 
         #checkpoint
