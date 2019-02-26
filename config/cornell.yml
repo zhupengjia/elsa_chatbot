@@ -16,7 +16,7 @@ tokenizer:
 
 reader:
     train_data: /home/pzhu/data/dialog/cornell_corpus
-    max_seq_len: 20
+    max_seq_len: 50
 
 model:
     skill_name: cornell
@@ -25,7 +25,7 @@ model:
     learning_rate: 0.001
     weight_decay: 0.00001
     epochs: 10000
-    batch_size: 2
+    batch_size: 10
     num_workers: 1
     saved_model: 'data/cornell/model.pt'
 

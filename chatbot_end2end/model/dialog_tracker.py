@@ -42,7 +42,7 @@ class Dialog_Tracker(nn.Module):
         
         self.lstm = nn.LSTM(hidden_dim, hidden_dim, num_layers=lstm_layers, batch_first=True)
         self.fc_out = nn.Linear(hidden_dim, Nresponses)
-        self.loss_function = torch.nn.NLLLoss()
+        self.loss_function = nn.NLLLoss()
         self.softmax = nn.Softmax(dim=1)
 
     def entityencoder(self, x):
@@ -86,7 +86,7 @@ class Dialog_Tracker(nn.Module):
         return emb
 
 
-    def forward(self, dialogs):
+    def forward(self, dialogs, train_mode=True):
         '''
             Model framework:
                 - dialogs -> dialog_embedding -> lstm -> softmax*mask -> logsoftmax
@@ -119,7 +119,7 @@ class Dialog_Tracker(nn.Module):
         
         y_prob = torch.log(response)
 
-        if self.response_key in dialogs:
+        if train_mode and self.response_key in dialogs:
             loss = self.loss_function(y_prob, dialogs[self.response_key].data)
             return y_prob, loss
 

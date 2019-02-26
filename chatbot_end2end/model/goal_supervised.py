@@ -79,23 +79,24 @@ class Goal_Supervised:
     def __init_tracker(self, **args):
         '''tracker'''
         self.tracker =  Dialog_Tracker(**args)
-        
         self.tracker.to(self.device)
+        
+        self.optimizer = optim.Adam(self.tracker.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
 
         #checkpoint
         if os.path.exists(self.saved_model):
             checkpoint = torch.load(self.saved_model, map_location=lambda storage, location: self.device)
-            self.tracker.load_state_dict(checkpoint['model'])
-        
+            self.tracker.load_state_dict(checkpoint['state_dict'])
+            self.optimizer.load_state_dict(checkpoint['optimizer']) 
+            start_epoch = checkpoint['epoch']
 
-        self.optimizer = optim.Adam(self.tracker.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
         self.generator = DataLoader(self.reader, batch_size=self.batch_size, collate_fn=Collate_Fn, shuffle=True, num_workers=self.num_workers)
 
 
     def train(self):
         self.tracker.train() #set train flag
         
-        for epoch in range(self.epochs):
+        for epoch in range(start_epoch, self.epochs):
             for it, d in enumerate(self.generator):
 
                 d.to(self.device)
@@ -114,8 +115,12 @@ class Goal_Supervised:
                 self.optimizer.step()
 
                 #save
-                if epoch > 0 and epoch%1000 == 0: 
-                    model_state_dict = self.tracker.state_dict()
-                    torch.save(model_state_dict, self.saved_model)
+            if epoch > 0 and epoch%1000 == 0: 
+                state = {
+                            'epoch': epoch,
+                            'state_dict': self.tracker.state_dict(),
+                            'optimizer': self.optimizer.state_dict(),
+                        }
+                torch.save(state, self.saved_model)
 
 
