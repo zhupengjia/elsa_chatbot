@@ -82,13 +82,14 @@ class Goal_Supervised:
         self.tracker.to(self.device)
         
         self.optimizer = optim.Adam(self.tracker.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
+        self.start_epoch = 0
 
         #checkpoint
         if os.path.exists(self.saved_model):
             checkpoint = torch.load(self.saved_model, map_location=lambda storage, location: self.device)
             self.tracker.load_state_dict(checkpoint['state_dict'])
             self.optimizer.load_state_dict(checkpoint['optimizer']) 
-            start_epoch = checkpoint['epoch']
+            self.start_epoch = checkpoint['epoch']
 
         self.generator = DataLoader(self.reader, batch_size=self.batch_size, collate_fn=Collate_Fn, shuffle=True, num_workers=self.num_workers)
 
@@ -96,7 +97,7 @@ class Goal_Supervised:
     def train(self):
         self.tracker.train() #set train flag
         
-        for epoch in range(start_epoch, self.epochs):
+        for epoch in range(self.start_epoch, self.epochs):
             for it, d in enumerate(self.generator):
 
                 d.to(self.device)

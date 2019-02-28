@@ -15,12 +15,12 @@ class Generative_Tracker(nn.Module):
             - skill_name: string, current skill name
             - encoder: sentence encoder instance from .sentence_encoder
     '''
-    def __init__(self, skill_name, encoder, decoder_hidden_layers=6, decoder_attention_heads=8, decode_intermediate_size=1024, dropout=0.2):
+    def __init__(self, skill_name, encoder, decoder_hidden_layers=6, decoder_attention_heads=8, decoder_intermediate_size=1024, dropout=0.2):
         super().__init__()
         self.response_key = 'response_' + skill_name
         self.mask_key = 'response_mask_' + skill_name
         self.encoder = encoder
-        self.decoder = TransformerDecoder(self.encoder.embedding, decoder_hidden_layers, decoder_attention_heads, decode_intermediate_size, dropout) 
+        self.decoder = TransformerDecoder(self.encoder.embedding, decoder_hidden_layers, decoder_attention_heads, decoder_intermediate_size, dropout) 
         self.loss_function = nn.NLLLoss(ignore_index=0)
         self.logsoftmax = nn.LogSoftmax(dim=2)
 
@@ -32,8 +32,11 @@ class Generative_Tracker(nn.Module):
         
         prev_output = dialogs[self.response_key].data[:, :-1]
         target_output = dialogs[self.response_key].data[:, 1:]
+        
+        print("="*60)
 
         output, attn = self.decoder(prev_output, sequence_output, dialogs['utterance_mask'].data)
+        print(output)
         output_probs = self.logsoftmax(output)
        
         target_masks = dialogs[self.mask_key].data[:, 1:]
@@ -47,7 +50,6 @@ class Generative_Tracker(nn.Module):
             output_probs_expand = output_probs.contiguous().view(-1, output_probs.size(2))
            
             loss = self.loss_function(output_probs_expand, target_output)
-            
             return output_probs, loss
         
         return output_probs
