@@ -22,13 +22,13 @@ model:
     skill_name: cornell
     device: "cuda:0"
     dropout: 0.2
-    decoder_hidden_layers: 6
-    decoder_attention_heads: 8
-    decoder_intermediate_size: 1024
+    decoder_hidden_layers: 1
+    decoder_attention_heads: 1
+    decoder_hidden_size: 1024
     learning_rate: 0.001
     weight_decay: 0.00001
     epochs: 10000
-    batch_size: 10
+    batch_size: 2
     num_workers: 1
     saved_model: 'data/cornell/model.pt'
 
