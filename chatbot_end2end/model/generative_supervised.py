@@ -11,6 +11,7 @@ from ..module.nltk_sentiment import NLTK_Sentiment
 from ..module.dialog_status import Collate_Fn
 from .sentence_encoder import Sentence_Encoder
 from torch.utils.data import DataLoader
+from torchnet.logger import VisdomPlotLogger
 
 
 '''
@@ -31,8 +32,8 @@ class Generative_Supervised:
         self.num_workers = num_workers
         self.epochs = epochs
         self.device = torch.device(device) if torch.cuda.is_available() else torch.device('cpu')
-        self.logger = logger 
-
+        self.logger = logger
+        self.visdomlogger = VisdomPlotLogger('line', server='0.0.0.0', port=58500, opts={'title': 'Train Loss'},env='main')
         self.__init_tracker(**tracker_args)
    
 
@@ -88,7 +89,10 @@ class Generative_Supervised:
     
     def train(self):
         self.tracker.train() #set train flag
-        
+        #for name, param in self.tracker.named_parameters():
+        #    print(name, param.requires_grad)
+
+        totepoch = 0
         for epoch in range(self.start_epoch, self.epochs):
             for it, d in enumerate(self.generator):
                 d.to(self.device)
@@ -96,12 +100,14 @@ class Generative_Supervised:
 
                 y_probs, loss = self.tracker(d)
                 
-                self.logger.info('{} {} {}'.format(epoch, self.epochs, loss.item()))
-        
+                self.visdomlogger.log(totepoch, loss.item())
+                self.logger.info('{} {} {}'.format(epoch, it, loss.item()))
+                totepoch += 1
+
                 loss.backward()
                 self.optimizer.step()
             #save
-            if epoch > 0 and epoch%1000 == 0:
+            if epoch > 0:
                 state = {
                             'epoch': epoch,
                             'state_dict': self.tracker.state_dict(),
