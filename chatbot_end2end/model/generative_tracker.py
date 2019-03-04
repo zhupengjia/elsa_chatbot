@@ -21,7 +21,7 @@ class Generative_Tracker(nn.Module):
         self.mask_key = 'response_mask_' + skill_name
         self.encoder = encoder
         self.decoder = TransformerDecoder(self.encoder.embedding, decoder_hidden_layers, decoder_attention_heads, decoder_hidden_size, dropout) 
-        self.loss_function = nn.NLLLoss(ignore_index=0)
+        self.loss_function = nn.NLLLoss(ignore_index=0) #ignore padding loss
         self.logsoftmax = nn.LogSoftmax(dim=2)
 
     def forward(self, dialogs, train_mode=True):
@@ -33,10 +33,7 @@ class Generative_Tracker(nn.Module):
         prev_output = dialogs[self.response_key].data[:, :-1]
         target_output = dialogs[self.response_key].data[:, 1:]
         
-        print("="*60)
-
         output, attn = self.decoder(prev_output, sequence_output, dialogs['utterance_mask'].data)
-        print(output.size())
         output_probs = self.logsoftmax(output)
        
         target_masks = dialogs[self.mask_key].data[:, 1:]
