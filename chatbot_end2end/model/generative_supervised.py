@@ -33,7 +33,7 @@ class Generative_Supervised:
         self.epochs = epochs
         self.device = torch.device(device) if torch.cuda.is_available() else torch.device('cpu')
         self.logger = logger
-        self.visdomlogger = VisdomPlotLogger('line', server='0.0.0.0', port=58500, opts={'title': 'Train Loss'},env='main')
+        #self.visdomlogger = VisdomPlotLogger('line', server='0.0.0.0', port=58500, opts={'title': 'Train Loss'},env='main')
         self.__init_tracker(**tracker_args)
    
 
@@ -79,7 +79,7 @@ class Generative_Supervised:
 
         #checkpoint
         if os.path.exists(self.saved_model):
-            checkpoint = torch.load(self.saved_model, map_location=lambda storage, location: self.device)
+            checkpoint = torch.load(self.saved_model, map_location=lambda storage, location: storage)
             self.tracker.load_state_dict(checkpoint['state_dict'])
             self.optimizer.load_state_dict(checkpoint['optimizer']) 
             self.start_epoch = checkpoint['epoch']
@@ -92,7 +92,7 @@ class Generative_Supervised:
         #for name, param in self.tracker.named_parameters():
         #    print(name, param.requires_grad)
 
-        totepoch = 0
+        #totepoch = 0
         for epoch in range(self.start_epoch, self.epochs):
             for it, d in enumerate(self.generator):
                 d.to(self.device)
@@ -100,9 +100,11 @@ class Generative_Supervised:
 
                 y_probs, loss = self.tracker(d)
                 
-                self.visdomlogger.log(totepoch, loss.item())
                 self.logger.info('{} {} {}'.format(epoch, it, loss.item()))
-                totepoch += 1
+                
+                #if it%100 == 0:
+                #    self.visdomlogger.log(totepoch, loss.item())
+                #    totepoch += 1
 
                 loss.backward()
                 self.optimizer.step()
