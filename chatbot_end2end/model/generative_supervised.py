@@ -100,9 +100,6 @@ class Generative_Supervised:
         
                 loss.backward()
                 self.optimizer.step()
-                if numpy.isnan(loss.item()):
-                    break
-            break
             #save
             if epoch > 0 and epoch%1000 == 0:
                 state = {
