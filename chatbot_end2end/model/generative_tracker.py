@@ -20,28 +20,45 @@ class Generative_Tracker(nn.Module):
         self.response_key = 'response_' + skill_name
         self.mask_key = 'response_mask_' + skill_name
         self.encoder = encoder
+        embedding_dim = self.encoder.embedding.word_embeddings.embedding_dim 
+        self.control_layer = nn.Linear(embedding_dim+1, embedding_dim)
         self.decoder = TransformerDecoder(self.encoder.embedding, decoder_hidden_layers, decoder_attention_heads, decoder_hidden_size, dropout) 
         self.loss_function = nn.NLLLoss(ignore_index=0) #ignore padding loss
         self.logsoftmax = nn.LogSoftmax(dim=2)
 
+
+    def dialog_embedding(self, utterance, utterance_mask, sentiment):
+        #utterance embedding
+        sequence_output, pooled_output = self.encoder(utterance, attention_mask=utterance_mask, output_all_encoded_layers=False)
+
+        #sentiment
+        sentiment = sentiment.unsqueeze(1).expand(-1, sequence_output.size(1), 1)
+
+        #combine together
+        sequence_out = torch.cat((sequence_output, sentiment), 2)
+        sequence_out = self.control_layer(sequence_out)
+
+        return sequence_out
+
+
     def forward(self, dialogs, train_mode=True):
         pack_batch = dialogs['utterance'].batch_sizes
         
-        #utterance embedding
-        sequence_output, pooled_output = self.encoder(dialogs['utterance'].data, attention_mask=dialogs['utterance_mask'].data, output_all_encoded_layers=False)
+        #encoder
+        encoder_out = self.dialog_embedding(dialogs['utterance'].data, dialogs["utterance_mask"].data, dialogs["sentiment"].data)
        
         prev_output = dialogs[self.response_key].data[:, :-1]
         target_output = dialogs[self.response_key].data[:, 1:]
-        
-        output, attn = self.decoder(prev_output, sequence_output, dialogs['utterance_mask'].data)
+      
+        #decoder
+        output, attn = self.decoder(prev_output, encoder_out, dialogs['utterance_mask'].data)
         output_probs = self.logsoftmax(output)
        
-        target_masks = dialogs[self.mask_key].data[:, 1:]
-        target_masks = target_masks.unsqueeze(-1).expand_as(output_probs)
-
+        #target_masks = dialogs[self.mask_key].data[:, 1:]
+        #target_masks = target_masks.unsqueeze(-1).expand_as(output_probs)
 
         if train_mode:
-            target_masks = target_masks.unsqueeze(-1).contiguous().view(-1, target_masks.size(2))
+            #target_masks = target_masks.unsqueeze(-1).contiguous().view(-1, target_masks.size(2))
             target_output = target_output.unsqueeze(-1).contiguous().view(-1)
             
             output_probs_expand = output_probs.contiguous().view(-1, output_probs.size(2))
