@@ -33,8 +33,8 @@ class Supervised:
         '''
         self.reader = reader
         topic_manager = self.reader.topic_manager
-        topic_name = topic_manager.get_topic()
-        self.skill = topic_manager.topics[topic_name]
+        self.skill_name = topic_manager.get_topic()
+        self.skill = topic_manager.topics[self.skill_name]
         self.save_per_epoch = save_per_epoch
         
         self.saved_model = saved_model
@@ -79,14 +79,14 @@ class Supervised:
         #sentence encoder
         encoder = Sentence_Encoder(config.tokenizer.bert_model_name)
 
-        return cls(reader=reader, logger=logger, encoder=encoder, **config.model)
+        return cls(reader=reader, logger=logger, encoder=encoder, skill_name=config.skill.name, **config.model)
 
 
     def __init_tracker(self, **args):
         '''tracker'''
         self.skill.init_model(saved_model=self.saved_model, device=str(self.device), **args)
         
-        self.optimizer = optim.Adam(self.tracker.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
+        self.optimizer = optim.Adam(self.skill.model.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
         self.start_epoch = 0
 
         #checkpoint

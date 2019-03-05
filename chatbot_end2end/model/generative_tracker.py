@@ -15,10 +15,10 @@ class Generative_Tracker(nn.Module):
             - skill_name: string, current skill name
             - encoder: sentence encoder instance from .sentence_encoder
     '''
-    def __init__(self, skill_name, encoder, decoder_hidden_layers=1, decoder_attention_heads=2, decoder_hidden_size=1024, dropout=0):
+    def __init__(self, skill_name, encoder, decoder_hidden_layers=1, decoder_attention_heads=2, decoder_hidden_size=1024, dropout=0, **args):
         super().__init__()
         self.config = {
-                    "bert_model_name": bert_model_name,
+                    "bert_model_name": encoder.bert_model_name,
                     "decoder_hidden_layers": decoder_hidden_layers,
                     "decoder_attention_heads": decoder_attention_heads,
                     "decoder_hidden_size": decoder_hidden_size

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys, numpy
+import os, numpy, torch
 from .skill_base import Skill_Base
 from ..model.generative_tracker import Generative_Tracker
 
@@ -43,8 +43,8 @@ class Generative_Response(Skill_Base):
                 - see ..model.generative_tracker.Generative_Tracker for more parameters if path of saved_model not existed
         '''
         if os.path.exists(saved_model):
-            self.checkpoint = torch.load(self.saved_model, map_location=lambda storage, location: torch.device(device))
-            self.model = Generative_Tracker(**self.checkpoint['config_model']) 
+            self.checkpoint = torch.load(saved_model, map_location=lambda storage, location: storage)
+            self.model = Generative_Tracker(**{**args, **self.checkpoint['config_model']}) 
             self.model.to(device)
             self.model.load_state_dict(self.checkpoint['state_dict'])
         else:

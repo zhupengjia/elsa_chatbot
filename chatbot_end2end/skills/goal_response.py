@@ -193,7 +193,7 @@ class Goal_Response(Skill_Base):
         '''
         if os.path.exists(saved_model):
             self.checkpoint = torch.load(self.saved_model, map_location=lambda storage, location: torch.device(device))
-            self.model = Dialog_Tracker(**self.checkpoint['config_model']) 
+            self.model = Dialog_Tracker(**{**args, **self.checkpoint['config_model']}) 
             self.model.to(device)
             self.model.load_state_dict(self.checkpoint['state_dict'])
         else:

@@ -24,10 +24,10 @@ class Dialog_Tracker(nn.Module):
             - dropout: float, default is 0.2
             
     '''
-    def __init__(self, skill_name, encoder, Nresponses, max_entity_types, entity_layers=2, entity_emb_dim=50, lstm_layers=1, hidden_dim=300, dropout=0):
+    def __init__(self, skill_name, encoder, Nresponses, max_entity_types, entity_layers=2, entity_emb_dim=50, lstm_layers=1, hidden_dim=300, dropout=0, **args):
         super().__init__()
         self.config = {
-                    "bert_model_name": bert_model_name,
+                    "bert_model_name": encoder.bert_model_name,
                     "Nresponses": Nresponses,
                     "max_entity_types": max_entity_types,
                     "entity_layers": entity_layers,

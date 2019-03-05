@@ -13,7 +13,7 @@ ner:
     regex:  
 
 tokenizer:
-    bert_model_name: /home/pzhu/data/bert/bert-base-uncased
+    bert_model_name: bert-base-uncased
     do_lower_case: 1
     stopwords_path: config/en_stopwords.txt
 
@@ -26,7 +26,7 @@ model:
     dropout: 0.1
     decoder_hidden_layers: 4
     decoder_attention_heads: 3
-    decoder_hidden_size: 1024
+    decoder_hidden_size: 3072
     learning_rate: 0.0001
     weight_decay: 0
     epochs: 10000
