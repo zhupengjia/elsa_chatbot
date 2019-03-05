@@ -2,6 +2,9 @@
 ---
 #app setting
 
+skill:
+    name: cornell
+
 ner:
     tokenizer: spacy
     ner_name_replace:
@@ -19,7 +22,6 @@ reader:
     max_seq_len: 50
 
 model:
-    skill_name: cornell
     device: "cuda:0"
     dropout: 0.1
     decoder_hidden_layers: 4

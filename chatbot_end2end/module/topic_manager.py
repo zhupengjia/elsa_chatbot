@@ -36,12 +36,12 @@ class Topic_Manager:
         return current_status
 
 
-    def get_topic(self, current_status):
+    def get_topic(self, current_status=None):
         '''
             get current topic
             
             Input:
-                - current_status: dictionary of status, generated from dialog_status module
+                - current_status: dictionary of status, generated from dialog_status module. Default is None. If only one skill in topic_manager, will return the only topic name
         '''
         if len(self.topics) < 2:
             self.current_topic = list(self.topics.keys())[0]

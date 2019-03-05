@@ -1,0 +1,15 @@
+%YAML 1.2
+
+#Config for elsa chatbot, interactive mode only
+
+tokenizer:
+    bert_model_name: /home/pzhu/data/bert/bert-base-uncased
+    do_lower_case: 1
+    stopwords_path: config/en_stopwords.txt
+
+skills:
+    cornell: 
+    babi:
+
+
+

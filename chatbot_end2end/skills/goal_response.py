@@ -4,6 +4,7 @@ from nlptools.text import VecTFIDF
 from nlptools.text.ngrams import Ngrams
 from nlptools.utils import flat_list
 from .skill_base import Skill_Base
+from ..model.dialog_tracker import Dialog_Tracker
 
 '''
     Author: Pengjia Zhu (zhupengjia@gmail.com)
@@ -30,7 +31,7 @@ class Goal_Response(Skill_Base):
             - len(): return number of responses in template
             - __getitem__ : get most closed response id for response, input is response string
     '''
-    def __init__(self, tokenizer, hook, template_file):
+    def __init__(self, tokenizer, hook, template_file, **args):
         super().__init__()
         self.tokenizer = tokenizer
         self.hook = hook
@@ -187,16 +188,18 @@ class Goal_Response(Skill_Base):
             Input:
                 - saved_model: str, default is "dialog_tracker.pt"
                 - device: string, model location, default is 'cpu'
-                - see ..model.dialog_tracker.Dialog_Tracker
-        '''
-        self.model =  Dialog_Tracker(**args)
-        
-        self.model.to(torch.device(device))
+                - see ..model.dialog_tracker.Dialog_Tracker for more parameters if path of saved_model not existed
 
+        '''
         if os.path.exists(saved_model):
-            checkpoint = torch.load(saved_model, map_location=lambda storage, location: device)
-            self.model.load_state_dict(checkpoint)
-    
+            self.checkpoint = torch.load(self.saved_model, map_location=lambda storage, location: torch.device(device))
+            self.model = Dialog_Tracker(**self.checkpoint['config_model']) 
+            self.model.to(device)
+            self.model.load_state_dict(self.checkpoint['state_dict'])
+        else:
+            self.model = Dialog_Tracker(Nresponses=len(self.response), **args)
+            self.model.to(device)
+        
     
     def get_response_by_id(self, responseid, entity=None):
         '''
@@ -222,10 +225,13 @@ class Goal_Response(Skill_Base):
             Input:
                 - current_status: dictionary of status, generated from Dialog_Status module
         '''
-        y_prob = self.tracker(data)
-        _, y_pred = torch.max(y_prob.data, 1)
-        y_pred = int(y_pred.cpu().numpy()[-1])
-        return y_pred
+        if self.model.training: 
+            return self.model(data)
+        else:
+            y_prob = self.model(data)
+            _, y_pred = torch.max(y_prob.data, 1)
+            y_pred = int(y_pred.cpu().numpy()[-1])
+            return y_pred
 
 
     def update_response(self, skill_name, response_id, current_status):

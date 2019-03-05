@@ -15,6 +15,11 @@ class Skill_Base:
         '''
         return None
 
+    def init_model(self, **args):
+        '''
+            model initialization, used for getting response
+        '''
+
     def update_mask(self, current_status):
         '''
             Update response masks after retrieving utterance and before getting response

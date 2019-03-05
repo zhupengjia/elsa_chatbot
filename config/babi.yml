@@ -24,7 +24,9 @@ rule_based:
     min_score: 0.6 #jump the rule if less than this score
 
 #
-response_template: data/babi/template.txt
+skill:
+    name: babi
+    response_template: data/babi/template.txt
 
 ner:
     tokenizer: spacy
@@ -48,7 +50,6 @@ reader:
     max_seq_len: 10
 
 model:
-    skill_name: babi
     device: "cuda:0"
     max_entity_types: 1024
     dropout: 0.8

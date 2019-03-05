@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import sys, numpy
 from .skill_base import Skill_Base
+from ..model.generative_tracker import Generative_Tracker
 
 '''
     Author: Pengjia Zhu (zhupengjia@gmail.com)
@@ -16,7 +17,7 @@ class Generative_Response(Skill_Base):
             - max_seq_len: int, maximum sequence length
     '''
 
-    def __init__(self, tokenizer, vocab, max_seq_len=100):
+    def __init__(self, tokenizer, vocab,  max_seq_len=100, **args):
         super().__init__()
         self.tokenizer = tokenizer
         self.vocab = vocab
@@ -31,6 +32,25 @@ class Generative_Response(Skill_Base):
         response_ids = self.vocab.words2id(response_tokens)
         return response_ids
 
+
+    def init_model(self, saved_model="generative_tracker.pt", device='cpu', **args):
+        '''
+            Initialize model
+            
+            Input:
+                - saved_model: str, default is "dialog_tracker.pt"
+                - device: string, model location, default is 'cpu'
+                - see ..model.generative_tracker.Generative_Tracker for more parameters if path of saved_model not existed
+        '''
+        if os.path.exists(saved_model):
+            self.checkpoint = torch.load(self.saved_model, map_location=lambda storage, location: torch.device(device))
+            self.model = Generative_Tracker(**self.checkpoint['config_model']) 
+            self.model.to(device)
+            self.model.load_state_dict(self.checkpoint['state_dict'])
+        else:
+            self.model = Generative_Tracker(**args)
+            self.model.to(device)
+
     
     def get_response(self, current_status):
         '''
@@ -39,7 +59,11 @@ class Generative_Response(Skill_Base):
             Input:
                 - current_status: dictionary of status, generated from Dialog_Status module
         '''
-        pass
+        if self.model.training:
+            return self.model(current_status)
+        else:
+            pass
+
 
     def update_response(self, skill_name, response, current_status):
         '''

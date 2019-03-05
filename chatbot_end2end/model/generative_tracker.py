@@ -15,8 +15,15 @@ class Generative_Tracker(nn.Module):
             - skill_name: string, current skill name
             - encoder: sentence encoder instance from .sentence_encoder
     '''
-    def __init__(self, skill_name, encoder, decoder_hidden_layers=1, decoder_attention_heads=2, decoder_hidden_size=1024, dropout=0.2):
+    def __init__(self, skill_name, encoder, decoder_hidden_layers=1, decoder_attention_heads=2, decoder_hidden_size=1024, dropout=0):
         super().__init__()
+        self.config = {
+                    "bert_model_name": bert_model_name,
+                    "decoder_hidden_layers": decoder_hidden_layers,
+                    "decoder_attention_heads": decoder_attention_heads,
+                    "decoder_hidden_size": decoder_hidden_size
+                }
+
         self.response_key = 'response_' + skill_name
         self.mask_key = 'response_mask_' + skill_name
         self.encoder = encoder
@@ -41,7 +48,7 @@ class Generative_Tracker(nn.Module):
         return sequence_out
 
 
-    def forward(self, dialogs, train_mode=True):
+    def forward(self, dialogs):
         pack_batch = dialogs['utterance'].batch_sizes
         
         #encoder
@@ -57,7 +64,7 @@ class Generative_Tracker(nn.Module):
         #target_masks = dialogs[self.mask_key].data[:, 1:]
         #target_masks = target_masks.unsqueeze(-1).expand_as(output_probs)
 
-        if train_mode:
+        if self.training:
             #target_masks = target_masks.unsqueeze(-1).contiguous().view(-1, target_masks.size(2))
             target_output = target_output.unsqueeze(-1).contiguous().view(-1)
             

@@ -13,6 +13,7 @@ class Sentence_Encoder(nn.Module):
     def __init__(self, bert_model_name):
         super().__init__()
         self.encoder = BertModel.from_pretrained(bert_model_name)
+        self.bert_model_name = bert_model_name
         self.embedding = self.encoder.embeddings
         self.config = self.encoder.config
         for param in self.encoder.parameters():

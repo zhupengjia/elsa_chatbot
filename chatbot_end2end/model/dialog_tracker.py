@@ -24,8 +24,19 @@ class Dialog_Tracker(nn.Module):
             - dropout: float, default is 0.2
             
     '''
-    def __init__(self, skill_name, encoder, Nresponses, max_entity_types, entity_layers=2, entity_emb_dim=50, lstm_layers=1, hidden_dim=300, dropout=0.2):
+    def __init__(self, skill_name, encoder, Nresponses, max_entity_types, entity_layers=2, entity_emb_dim=50, lstm_layers=1, hidden_dim=300, dropout=0):
         super().__init__()
+        self.config = {
+                    "bert_model_name": bert_model_name,
+                    "Nresponses": Nresponses,
+                    "max_entity_types": max_entity_types,
+                    "entity_layers": entity_layers,
+                    "entity_emb_dim": entity_emb_dim,
+                    "lstm_layers": lstm_layers,
+                    "hidden_dim": hidden_dim
+                }
+
+
         self.response_key = 'response_' + skill_name
         self.mask_key = 'response_mask_' + skill_name
         #self.encoder = Sentence_Encoder(bert_model_name)
@@ -86,7 +97,7 @@ class Dialog_Tracker(nn.Module):
         return emb
 
 
-    def forward(self, dialogs, train_mode=True):
+    def forward(self, dialogs):
         '''
             Model framework:
                 - dialogs -> dialog_embedding -> lstm -> softmax*mask -> logsoftmax
@@ -119,7 +130,7 @@ class Dialog_Tracker(nn.Module):
         
         y_prob = torch.log(response)
 
-        if train_mode and self.response_key in dialogs:
+        if self.training and self.response_key in dialogs:
             loss = self.loss_function(y_prob, dialogs[self.response_key].data)
             return y_prob, loss
 
