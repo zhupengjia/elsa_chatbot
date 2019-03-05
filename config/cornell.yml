@@ -33,6 +33,7 @@ model:
     batch_size: 20
     num_workers: 1
     saved_model: 'data/cornell/model.pt'
+    save_per_epoch: 1
 
 reinforcement:
     learning_rate: 0.0001

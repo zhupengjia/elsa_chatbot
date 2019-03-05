@@ -108,7 +108,7 @@ class Supervised:
                 
                 y_prob, loss = self.skill.get_response(d)
 
-                self.logger.info('{} {} {}'.format(epoch, self.epochs, loss.item()))
+                self.logger.info('{} {} {}'.format(it, epoch, loss.item()))
         
                 loss.backward()
                 self.optimizer.step()
