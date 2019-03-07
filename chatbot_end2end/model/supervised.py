@@ -57,7 +57,6 @@ class Supervised:
 
             Input:
                 - config: configure dictionary
-                - hook: hook instance, please check src/hook/babi_gensays.py for example. Default is None
         '''
         logger = setLogger(**config.logger)
         ner = NER(**config.ner)

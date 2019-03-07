@@ -19,9 +19,20 @@ tokenizer:
     do_lower_case: 1
     stopwords_path: config/en_stopwords.txt
 
+model:
+    device: "cuda:0"
+    max_seq_len: 50
+    max_entity_types: 1024
+
 skills:
     cornell: 
-    babi:
+        wrapper: Generative_Response 
+        saved_model: 'data/cornell/model.pt'
+
+    babi: 
+        wrapper: Goal_Response
+        saved_model: 'data/babi/model.pt'
+
 
 
 

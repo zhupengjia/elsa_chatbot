@@ -63,12 +63,12 @@ model:
     entity_emb_dim: 50
     lstm_layers: 1
     learning_rate: 0.001
-    weight_decay: 0.00001
+    weight_decay: 0
     epochs: 10000
     batch_size: 2
     num_workers: 1
     saved_model: 'data/babi/model.pt'
-    save_per_epoch: 1000
+    save_per_epoch: 1
 
 reinforcement:
     learning_rate: 0.0001
