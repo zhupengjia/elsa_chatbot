@@ -7,6 +7,7 @@ from nlptools.text.tokenizer import Tokenizer_BERT
 from ..module.topic_manager import Topic_Manager
 from ..module.nltk_sentiment import NLTK_Sentiment
 from ..module.dialog_status import Collate_Fn
+from .. import reader as Reader, skills as Skills, hooks as Hooks
 from .sentence_encoder import Sentence_Encoder
 from torch.utils.data import DataLoader
 
@@ -50,14 +51,12 @@ class Supervised:
 
 
     @classmethod
-    def build(cls, config, reader_cls, skill_cls, hook=None): 
+    def build(cls, config): 
         '''
             construct model from config
 
             Input:
                 - config: configure dictionary
-                - reader_cls: class for reader
-                - skill_cls: class for skill 
                 - hook: hook instance, please check src/hook/babi_gensays.py for example. Default is None
         '''
         logger = setLogger(**config.logger)
@@ -65,9 +64,29 @@ class Supervised:
         tokenizer = Tokenizer_BERT(**config.tokenizer) 
         vocab = tokenizer.vocab
         
+        #reader and skill class
+        if not hasattr(Reader, config.reader.wrapper):
+            raise RuntimeError("Error!! Reader {} not implemented!".format(config.reader.wrapper))
+        if not hasattr(Skills, config.skill.wrapper):
+            raise RuntimeError("Error!! Skill {} not implemented!".format(config.skill.wrapper))
+        skill_cls = getattr(Skills, config.skill.wrapper)
+        reader_cls = getattr(Reader, config.reader.wrapper)
+
+        #hook
+        if "hook" in config:
+            if not hasattr(Reader, config.hook.wrapper):
+                raise RuntimeError("Error!! Hook {} not implemented!".format(config.hook.wrapper))
+            hook_cls = getattr(Hooks, config.hook.wrapper)
+            if not "parameters"  in config.hook:
+                hook = hook_cls()
+            else:
+                hook = hook_cls(**config.hook.parameters) 
+
         #skill
         response = skill_cls(tokenizer=tokenizer, vocab=vocab, hook=hook, max_seq_len=config.reader.max_seq_len, **config.skill)
         topic_manager = Topic_Manager()
+
+
         topic_manager.register(config.skill.name, response)
 
         #reader

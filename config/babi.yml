@@ -26,7 +26,11 @@ rule_based:
 #
 skill:
     name: babi
+    wrapper: Goal_Response
     response_template: data/babi/template.txt
+
+hook:
+    wrapper: Behaviors
 
 ner:
     tokenizer: spacy
