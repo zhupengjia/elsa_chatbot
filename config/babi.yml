@@ -27,7 +27,7 @@ rule_based:
 skill:
     name: babi
     wrapper: Goal_Response
-    response_template: data/babi/template.txt
+    template_file: data/babi/template.txt
 
 hook:
     wrapper: Behaviors
@@ -50,6 +50,7 @@ tokenizer:
     stopwords_path: config/en_stopwords.txt
 
 reader:
+    wrapper: Reader_Babi
     train_data: /home/pzhu/data/dialog/babi/dialog-babi-task5-full-dialogs-trn.txt
     max_seq_len: 10
 

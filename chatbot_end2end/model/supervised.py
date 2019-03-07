@@ -74,13 +74,15 @@ class Supervised:
 
         #hook
         if "hook" in config:
-            if not hasattr(Reader, config.hook.wrapper):
+            if not hasattr(Hooks, config.hook.wrapper):
                 raise RuntimeError("Error!! Hook {} not implemented!".format(config.hook.wrapper))
             hook_cls = getattr(Hooks, config.hook.wrapper)
             if not "parameters"  in config.hook:
                 hook = hook_cls()
             else:
                 hook = hook_cls(**config.hook.parameters) 
+        else:
+            hook = None
 
         #skill
         response = skill_cls(tokenizer=tokenizer, vocab=vocab, hook=hook, max_seq_len=config.reader.max_seq_len, **config.skill)

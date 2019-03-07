@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import os, re
+import os, re, h5py
 from .reader_base import Reader_Base
 
 '''
@@ -19,10 +19,10 @@ class Reader_Babi(Reader_Base):
     def _rm_index(self, row):
         return [' '.join(row[0].split(' ')[1:])] + row[1:]
 
-    def read(self, filename):
+    def read(self, filepath):
         '''
             Input:
-                - filename: the path of training file
+                - filepath: the path of training file
         '''
         cached_data = filepath + '.h5'
         if os.path.exists(cached_data) and os.path.getsize(cached_data) > 10240:
@@ -30,7 +30,7 @@ class Reader_Babi(Reader_Base):
             return
 
         def convs_iter():
-            with open(filename) as f:
+            with open(filepath) as f:
                 conv = []
                 utterance, response = '', ''
                 for l in f:
@@ -61,6 +61,6 @@ class Reader_Babi(Reader_Base):
                 if len(conv) > 0:
                     yield conv
         
-        self.data = self.predeal(convs_iter())
+        self.data = self.predeal(convs_iter(), cached_data)
 
 

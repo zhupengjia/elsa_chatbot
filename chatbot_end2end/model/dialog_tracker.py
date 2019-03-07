@@ -88,12 +88,11 @@ class Dialog_Tracker(nn.Module):
         #entity name embedding
         entity = self.entityencoder(entity) 
         
-        sentiment = sentiment.unsqueeze(1)
-    
         #concat together and apply linear
         utter = torch.cat((pooled_output, entity, sentiment), 1)
         
         emb = self.fc_dialog(utter)
+        
         return emb
 
 
@@ -131,7 +130,8 @@ class Dialog_Tracker(nn.Module):
         y_prob = torch.log(response)
 
         if self.training and self.response_key in dialogs:
-            loss = self.loss_function(y_prob, dialogs[self.response_key].data)
+            y_true = dialogs[self.response_key].data
+            loss = self.loss_function(y_prob, y_true.squeeze(1))
             return y_prob, loss
 
         return y_prob

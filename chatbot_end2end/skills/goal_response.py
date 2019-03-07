@@ -226,9 +226,9 @@ class Goal_Response(Skill_Base):
                 - current_status: dictionary of status, generated from Dialog_Status module
         '''
         if self.model.training: 
-            return self.model(data)
+            return self.model(current_status)
         else:
-            y_prob = self.model(data)
+            y_prob = self.model(current_status)
             _, y_pred = torch.max(y_prob.data, 1)
             y_pred = int(y_pred.cpu().numpy()[-1])
             return y_pred
