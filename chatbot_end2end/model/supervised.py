@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import torch, os, numpy
 import torch.optim as optim
-from nlptools.utils import Config, setLogger
+from nlptools.utils import setLogger
 from nlptools.text.ner import NER
 from nlptools.text.tokenizer import Tokenizer_BERT
 from ..module.topic_manager import Topic_Manager

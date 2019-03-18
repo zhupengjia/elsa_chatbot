@@ -173,6 +173,7 @@ class Dialog_Status:
         '''
         self.current_status = self.topic_manager.get_response(self.current_status)
         self.history_status.append(copy.deepcopy(self.current_status))
+        return self.current_status['response_string']
 
     
     def __str__(self):

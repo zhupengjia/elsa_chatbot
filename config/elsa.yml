@@ -1,4 +1,5 @@
 %YAML 1.2
+---
 
 #Config for elsa chatbot, interactive mode only
 
@@ -29,10 +30,18 @@ skills:
         wrapper: Generative_Response 
         saved_model: 'data/cornell/model.pt'
 
-    babi: 
-        wrapper: Goal_Response
-        saved_model: 'data/babi/model.pt'
+        #    babi: 
+        #        wrapper: Goal_Response
+        #        saved_model: 'data/babi/model.pt'
+        #        template_file: data/babi/template.txt
+        #        hook: 
+        #            wrapper: Behaviors
 
 
+logger:
+    appname: elsa
+    loglevel_console:  20
+    loglevel_file: 0
+    logfile: /tmp/elsa.log
 
 

@@ -47,6 +47,7 @@ class Topic_Manager:
             self.current_topic = list(self.topics.keys())[0]
             return self.current_topic
         self.current_topic = list(self.topics.keys())[0]
+        # Need to implement
         return self.current_topic
 
 
