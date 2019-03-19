@@ -50,19 +50,18 @@ class Generative_Response(Skill_Base):
         else:
             self.model = Generative_Tracker(**args)
             self.model.to(device)
-
-    
-    def get_response(self, current_status):
+ 
+    def get_response(self, status_data):
         '''
-            predict response value from current status
+            predict response value from status
 
             Input:
-                - current_status: dictionary of status, generated from Dialog_Status module
+                - status_data: data converted from dialog status
         '''
         if self.model.training:
-            return self.model(current_status)
+            return self.model(current_data)
         else:
-            pass
+            return self.model(current_data)
 
 
     def update_response(self, skill_name, response, current_status):

@@ -32,7 +32,7 @@ class InteractSession:
 
         super().__init__()
         self.logger = logger
-        self.device = device
+        self.device = torch.device(device)
         self.tokenizer = tokenizer
         self.vocab = vocab
         self.ner = ner
@@ -102,7 +102,7 @@ class InteractSession:
             return ''
 
         self.dialog_status[session_id].add_utterance(query)
-        return self.dialog_status[session_id].get_response()
+        return self.dialog_status[session_id].get_response(self.device)
 
         
 

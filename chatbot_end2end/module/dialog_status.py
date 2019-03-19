@@ -155,8 +155,7 @@ class Dialog_Status:
     def add_response(self, response):
         '''
             add existed response, usually for training data
-           Input 
-        print(entity.size())
+            
             Input:
                 - response: string
         '''
@@ -167,11 +166,16 @@ class Dialog_Status:
         self.history_status.append(copy.deepcopy(self.current_status))
     
     
-    def get_response(self):
+    def get_response(self, device):
         '''
             get response from current status
+
+            Input:
+                - device: torch device
         '''
-        self.current_status = self.topic_manager.get_response(self.current_status)
+        current_data = self.status2data()
+        current_data.to(device)
+        self.current_status = self.topic_manager.get_response(current_data, self.current_status)
         self.history_status.append(copy.deepcopy(self.current_status))
         return self.current_status['response_string']
 
@@ -238,15 +242,22 @@ class Dialog_Status:
                     status[rkey][i] = s[rkey]
         status["reward"] = status["reward"]/(N_status+turn_start)
 
-        #for k in status.keys():
-        #    status[k] = torch.tensor(status[k])
         return status
 
 
-    def current(self, topic_names=None):
+    def status2data(self, topic_names=None, status=None):
         '''
-            return pytorch data for current loop 
+            convert to pytorch data for status 
+
+            Input:
+                - topic_names: list of topic name need to return,  default is None to return all available topics
+                - status: status dictionary generated from this class, default is None for current status
         '''
-        return self.data(topic_names, [self.current_status], len(self.history_status))
+        if status is None:
+            status = self.current_status
+        data = self.data(topic_names, [status], len(self.history_status))
+        for k in data:
+            data[k] = torch.tensor(self.data[k])
+        return Dialog_Data(data)
 
 
