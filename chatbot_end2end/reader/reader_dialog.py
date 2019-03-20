@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 import glob, os, yaml, sys, re
 from nlptools.utils import zload, zdump
-from .reader_base import Reader_Base
+from .reader_base import ReaderBase
 import codecs
 
 '''
     Author: Pengjia Zhu (zhupengjia@gmail.com)
 '''
 
-class Reader_Dialog(Reader_Base):
+class ReaderDialog(ReaderBase):
     '''
         Read from dialog history (HR chatbot history), inherit from Reader_Base 
 

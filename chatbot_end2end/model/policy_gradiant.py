@@ -1,11 +1,11 @@
 #!/usr/bin/env python
-import sys, torch, os, numpy
+import torch, os
 from .rule_based import Rule_Based
 from .dialog_tracker import Dialog_Tracker
-from ..module.dialog_status import Dialog_Status
-from ..module.entity_dict import Entity_Dict
-from torch.nn.utils.rnn import PackedSequence, pack_padded_sequence, pad_packed_sequence
-from nlptools.utils import Config, setLogger
+from ..module.dialog_status import DialogStatus
+from ..module.entity_dict import EntityDict
+from torch.nn.utils.rnn import PackedSequence
+from nlptools.utils import setLogger
 from nlptools.text.tokenizer import Tokenizer_BERT
 from nlptools.text.ner import NER
 import torch.optim as optim
@@ -14,9 +14,12 @@ import torch.optim as optim
     Author: Pengjia Zhu (zhupengjia@gmail.com)
 '''
 
-class Policy_Gradiant:
-    def __init__(self, adversal_chatbot, reader, bert_model_name, max_entity_types, fc_responses=5, entity_layers=2, lstm_layers=1, hidden_dim=300, epochs=1000, weight_decay=0, learning_rate=0.0001, maxloop=20, discount=0.95, saved_model="model.pt", dropout=0.2, device=None, logger=None):
-        '''
+
+class PolicyGradiant:
+    def __init__(self, adversal_chatbot, reader, bert_model_name, max_entity_types, fc_responses=5, entity_layers=2,
+                 lstm_layers=1, hidden_dim=300, epochs=1000, weight_decay=0, learning_rate=0.0001, maxloop=20,
+                 discount=0.95, saved_model="model.pt", dropout=0.2, device=None, logger=None):
+        """
             Policy Gradiant for end2end chatbot
 
             Input:
@@ -37,7 +40,7 @@ class Policy_Gradiant:
                 - dropout: float, default is 0.2
                 - device: instance of torch.device, default is cpu device
                 - logger: logger instance ,default is None
-        '''
+        """
        
         self.reader = reader
         self.bert_model_name = bert_model_name
@@ -64,7 +67,7 @@ class Policy_Gradiant:
 
     @classmethod
     def build(cls, config, reader_cls, hook, adversal_hook):
-        '''
+        """
             construct model from config
 
             Input:
@@ -73,7 +76,7 @@ class Policy_Gradiant:
                 - hook: hook instance, please check src/hook/babi_gensays.py for example
                 - adversal_hook: adversal hook instance, please check src/hook/babi_gensays.py for example
 
-        '''
+        """
         logger = setLogger(**config.logger)        
 
         ner = NER(**config.ner)
@@ -81,52 +84,64 @@ class Policy_Gradiant:
         
         device = torch.device("cuda:0" if config.model.use_gpu and torch.cuda.is_available() else "cpu")
 
-        entity_dict = Entity_Dict(**config.entity_dict) 
+        entity_dict = EntityDict(**config.entity_dict)
        
-        #reader
-        reader = reader_cls(tokenizer=tokenizer, ner=ner, entity_dict=entity_dict, hook=hook, max_entity_types=config.entity_dict.max_entity_types, max_seq_len=config.model.max_seq_len, epochs=config.model.epochs, batch_size=config.model.batch_size, device=device, logger=logger)
+        # reader
+        reader = reader_cls(tokenizer=tokenizer, ner=ner, entity_dict=entity_dict, hook=hook,
+                            max_entity_types=config.entity_dict.max_entity_types, max_seq_len=config.model.max_seq_len,
+                            epochs=config.model.epochs, batch_size=config.model.batch_size,
+                            device=device, logger=logger)
         reader.build_responses(config.response_template) #build response template index, will read response template and create entity need for each response template every time, but not search index.
         reader.response_dict.build_mask()
 
-        #adversal chatbot
+        # adversal chatbot
         ad_chatbot = Rule_Based.build(config.rule_based, adversal_hook)
 
-        return cls(adversal_chatbot = ad_chatbot, reader=reader, logger=logger, bert_model_name=config.tokenizer.bert_model_name, max_entity_types=config.entity_dict.max_entity_types, fc_responses=config.model.fc_responses, entity_layers=config.model.entity_layers, lstm_layers=config.model.lstm_layers, hidden_dim=config.model.hidden_dim, epochs=config.model.epochs, weight_decay=config.model.weight_decay, learning_rate=config.reinforcement.learning_rate, maxloop=config.reinforcement.maxloop, discount=config.reinforcement.discount, saved_model=config.model.saved_model, dropout=config.model.dropout, device=device)
-
+        return cls(adversal_chatbot = ad_chatbot, reader=reader, logger=logger,
+                   bert_model_name=config.tokenizer.bert_model_name,
+                   max_entity_types=config.entity_dict.max_entity_types,
+                   fc_responses=config.model.fc_responses, entity_layers=config.model.entity_layers,
+                   lstm_layers=config.model.lstm_layers, hidden_dim=config.model.hidden_dim,
+                   epochs=config.model.epochs, weight_decay=config.model.weight_decay,
+                   learning_rate=config.reinforcement.learning_rate, maxloop=config.reinforcement.maxloop,
+                   discount=config.reinforcement.discount, saved_model=config.model.saved_model,
+                   dropout=config.model.dropout, device=device)
 
     def __init_tracker(self):
-        '''tracker'''
-        self.tracker =  Dialog_Tracker(bert_model_name=self.bert_model_name, Nresponses=len(self.reader), max_entity_types=self.max_entity_types, fc_responses=self.fc_responses, entity_layers=self.entity_layers, lstm_layers=self.lstm_layers, hidden_dim=self.hidden_dim, dropout=self.dropout)
+        """tracker"""
+        self.tracker = Dialog_Tracker(bert_model_name=self.bert_model_name, Nresponses=len(self.reader),
+                                      max_entity_types=self.max_entity_types, fc_responses=self.fc_responses,
+                                      entity_layers=self.entity_layers, lstm_layers=self.lstm_layers,
+                                      hidden_dim=self.hidden_dim, dropout=self.dropout)
         
         self.tracker.to(self.device)
 
-        #checkpoint
+        # checkpoint
         if os.path.exists(self.saved_model):
             checkpoint = torch.load(self.saved_model, map_location={'cuda:0': self.device.type})
             self.tracker.load_state_dict(checkpoint['model'])
-        
 
         self.loss_function = torch.nn.NLLLoss()
         self.optimizer = optim.Adam(self.tracker.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
 
-
     def __memory_replay(self):
-        '''memory replay'''
+        """memory replay"""
         dialogs = []
         N_true = 0
         for batch in range(self.reader.batch_size):
             self.logger.debug('--------- new dialog ------')
-            #reset adversal chatbot
+            # reset adversal chatbot
             self.ad_chatbot.reset(self.clientid)
-            #greeting utterance
+            # greeting utterance
             utterance = self.ad_chatbot.get_reply('', self.clientid)
-            #new dialog status
+            # new dialog status
             dialog_status = self.reader.new_dialog()
-            #dialog loop
+            # dialog loop
             for loop in range(self.maxloop):
                 dialog_status.add_utterance(utterance)
 
-                data = Dialog_Status.torch(self.reader.entity_dict, [dialog_status], self.reader.max_seq_len, self.reader.max_entity_types, device=self.reader.device)
+                data = DialogStatus.torch(self.reader.entity_dict, [dialog_status], self.reader.max_seq_len,
+                                          self.reader.max_entity_types, device=self.reader.device)
                 
                 y_prob = self.tracker(data)
                 _, y_pred = torch.max(y_prob.data, 1)
@@ -142,21 +157,20 @@ class Policy_Gradiant:
                     N_true += 1
                     break
             
-                #get new utterance
+                # get new utterance
                 utterance = self.ad_chatbot.get_reply(response, self.clientid)
             dialogs.append(dialog_status) 
-            
-        
-        #convert to torch variable
-        dialogs = Dialog_Status.torch(self.reader.entity_dict, dialogs, self.reader.max_seq_len, self.reader.max_entity_types, device=self.reader.device)
+
+        # convert to torch variable
+        dialogs = DialogStatus.torch(self.reader.entity_dict, dialogs, self.reader.max_seq_len,
+                                     self.reader.max_entity_types, device=self.reader.device)
 
         return dialogs, float(N_true)/self.reader.batch_size
 
-
     def train(self):
-        '''
+        """
             Train the model. No input needed
-        '''
+        """
         for epoch in range(self.epochs):
             dialogs, precision = self.__memory_replay()
             self.tracker.zero_grad()
@@ -172,9 +186,6 @@ class Policy_Gradiant:
             loss.sum().backward()
             self.optimizer.step()
 
-
             if epoch > 0 and epoch%10 == 0: 
                 model_state_dict = self.tracker.state_dict()
                 torch.save(model_state_dict, self.saved_model)
-            
-             

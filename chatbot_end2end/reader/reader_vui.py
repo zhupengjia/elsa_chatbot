@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 import glob, os, json, sys, re
 from nlptools.utils import setLogger
-from .reader_base import Reader_Base
+from .reader_base import ReaderBase
 
 '''
     Author: Pengjia Zhu (zhupengjia@gmail.com)
 '''
 
-class Reader_VUI(Reader_Base):
+class ReaderVUI(ReaderBase):
     '''
         Read from VUI json files (compatible with old api.ai format), inherit from Reader_Base 
 

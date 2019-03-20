@@ -8,7 +8,7 @@ from torch.autograd import Variable
     Author: Pengjia Zhu (zhupengjia@gmail.com)
 '''
 
-class Reader_Quora(object):
+class ReaderQuora:
     '''
         Reader for quora's duplicated QA. Used for training the sentence embedding with supervised learning, use __getitem__ method or iterator to get the data
         

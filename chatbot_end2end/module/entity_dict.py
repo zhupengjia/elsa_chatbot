@@ -1,21 +1,20 @@
 #!/usr/bin/env python
-from bidict import bidict
-from nlptools.utils import zload, zdump
-import os, numpy
+import numpy
 
-'''
+"""
     Author: Pengjia Zhu (zhupengjia@gmail.com)
-'''
+"""
 
-class Entity_Dict:
-    '''
+
+class EntityDict:
+    """
         Entity Dict.
 
-    '''
+    """
     
     @staticmethod
-    def name2id(entityname, max_entity_types):
-        '''
+    def name2id(entity_name, max_entity_types):
+        """
             entity name to id
 
 
@@ -25,12 +24,12 @@ class Entity_Dict:
 
             Output:
                 - entityname_id: int
-        '''
-        return hash(entityname)%max_entity_types
+        """
+        return hash(entity_name)%max_entity_types
 
     @staticmethod
-    def name2onehot(entitynames, max_entity_types):
-        '''
+    def name2onehot(entity_names, max_entity_types):
+        """
             return a entity name list to one-hot numpy array
 
             Input:
@@ -38,10 +37,10 @@ class Entity_Dict:
                
             Output:
                 - 1d numpy array
-        '''
+        """
         data = numpy.zeros(max_entity_types, 'float')
-        for e in entitynames:
-            eid = Entity_Dict.name2id(e, max_entity_types)
+        for e in entity_names:
+            eid = EntityDict.name2id(e, max_entity_types)
             data[eid] = 1
         return data
 

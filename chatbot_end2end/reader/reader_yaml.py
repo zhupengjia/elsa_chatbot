@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 import glob, os, yaml, sys, re
 from nlptools.utils import setLogger
-from .reader_base import Reader_Base
+from .reader_base import ReaderBase
 
 '''
     Author: Pengjia Zhu (zhupengjia@gmail.com)
 '''
 
-class Reader_YAML(Reader_Base):
+class ReaderYAML(ReaderBase):
     '''
         Read from yaml dialogs, inherit from Reader_Base
 

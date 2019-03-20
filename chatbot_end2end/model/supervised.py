@@ -1,12 +1,12 @@
 #!/usr/bin/env python
-import torch, os, numpy
+import torch, os
 import torch.optim as optim
 from nlptools.utils import setLogger
 from nlptools.text.ner import NER
 from nlptools.text.tokenizer import Tokenizer_BERT
-from ..module.topic_manager import Topic_Manager
-from ..module.nltk_sentiment import NLTK_Sentiment
-from ..module.dialog_status import Collate_Fn
+from ..module.topic_manager import TopicManager
+from ..module.nltk_sentiment import NLTKSentiment
+from ..module.dialog_status import dialog_collate
 from .. import reader as Reader, skills as Skills, hooks as Hooks
 from .sentence_encoder import Sentence_Encoder
 from torch.utils.data import DataLoader
@@ -15,9 +15,11 @@ from torch.utils.data import DataLoader
     Author: Pengjia Zhu (zhupengjia@gmail.com)
 '''
 
+
 class Supervised:
-    def __init__(self, reader,  batch_size=100, num_workers=1, epochs=1000, weight_decay=0, learning_rate=0.001, saved_model="model.pt", device='cpu', save_per_epoch=1, logger=None, **tracker_args):
-        '''
+    def __init__(self, reader,  batch_size=100, num_workers=1, epochs=1000, weight_decay=0, learning_rate=0.001,
+                 saved_model="model.pt", device='cpu', save_per_epoch=1, logger=None, **tracker_args):
+        """
             Supervised learning for chatbot
 
             Input:
@@ -31,7 +33,7 @@ class Supervised:
                 - device: string of torch device, default is "cpu"
                 - logger: logger instance ,default is None
                 - see Tracker class for other more args
-        '''
+        """
         self.reader = reader
         topic_manager = self.reader.topic_manager
         self.skill_name = topic_manager.get_topic()
@@ -49,21 +51,20 @@ class Supervised:
 
         self.__init_tracker(**tracker_args)
 
-
     @classmethod
     def build(cls, config): 
-        '''
+        """
             construct model from config
 
             Input:
                 - config: configure dictionary
-        '''
+        """
         logger = setLogger(**config.logger)
         ner = NER(**config.ner)
         tokenizer = Tokenizer_BERT(**config.tokenizer) 
         vocab = tokenizer.vocab
         
-        #reader and skill class
+        # reader and skill class
         if not hasattr(Reader, config.reader.wrapper):
             raise RuntimeError("Error!! Reader {} not implemented!".format(config.reader.wrapper))
         if not hasattr(Skills, config.skill.wrapper):
@@ -71,54 +72,57 @@ class Supervised:
         skill_cls = getattr(Skills, config.skill.wrapper)
         reader_cls = getattr(Reader, config.reader.wrapper)
 
-        #hook
+        # hook
         if "hook" in config:
             if not hasattr(Hooks, config.hook.wrapper):
                 raise RuntimeError("Error!! Hook {} not implemented!".format(config.hook.wrapper))
             hook_cls = getattr(Hooks, config.hook.wrapper)
-            if not "parameters"  in config.hook:
+            if "parameters" not in config.hook:
                 hook = hook_cls()
             else:
                 hook = hook_cls(**config.hook.parameters) 
         else:
             hook = None
 
-        #skill
-        response = skill_cls(tokenizer=tokenizer, vocab=vocab, hook=hook, max_seq_len=config.reader.max_seq_len, **config.skill)
-        topic_manager = Topic_Manager()
-
+        # skill
+        response = skill_cls(tokenizer=tokenizer, vocab=vocab, hook=hook, max_seq_len=config.reader.max_seq_len,
+                             **config.skill)
+        topic_manager = TopicManager()
 
         topic_manager.register(config.skill.name, response)
 
-        #reader
+        # reader
         max_entity_types = config.model.max_entity_types if 'max_entity_types' in config.model else 1024
-        reader = reader_cls(vocab=vocab, tokenizer=tokenizer, ner=ner, topic_manager=topic_manager, sentiment_analyzer=NLTK_Sentiment(), max_seq_len=config.reader.max_seq_len, max_entity_types=max_entity_types, logger=logger)
+        reader = reader_cls(vocab=vocab, tokenizer=tokenizer, ner=ner, topic_manager=topic_manager,
+                            sentiment_analyzer=NLTKSentiment(), max_seq_len=config.reader.max_seq_len,
+                            max_entity_types=max_entity_types, logger=logger)
         reader.read(config.reader.train_data)
 
-        #reader
-        #sentence encoder
+        # sentence encoder
         encoder = Sentence_Encoder(config.tokenizer.bert_model_name)
 
         return cls(reader=reader, logger=logger, encoder=encoder, skill_name=config.skill.name, **config.model)
 
-
     def __init_tracker(self, **args):
-        '''tracker'''
+        """
+        tracker
+        """
         self.skill.init_model(saved_model=self.saved_model, device=str(self.device), **args)
         
-        self.optimizer = optim.Adam(self.skill.model.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
+        self.optimizer = optim.Adam(self.skill.model.parameters(), lr=self.learning_rate,
+                                    weight_decay=self.weight_decay)
         self.start_epoch = 0
 
-        #checkpoint
+        # checkpoint
         if os.path.exists(self.saved_model):
             self.optimizer.load_state_dict(self.skill.checkpoint["optimizer"])
             self.start_epoch = self.skill.checkpoint['epoch']
 
-        self.generator = DataLoader(self.reader, batch_size=self.batch_size, collate_fn=Collate_Fn, shuffle=True, num_workers=self.num_workers)
-
+        self.generator = DataLoader(self.reader, batch_size=self.batch_size, collate_fn=dialog_collate,
+                                    shuffle=True, num_workers=self.num_workers)
 
     def train(self):
-        self.skill.model.train() #set train flag
+        self.skill.model.train() # set train flag
         
         for epoch in range(self.start_epoch, self.epochs):
             for it, d in enumerate(self.generator):
@@ -133,7 +137,7 @@ class Supervised:
                 loss.backward()
                 self.optimizer.step()
 
-            #save
+            # save
             if epoch > 0 and epoch%self.save_per_epoch == 0: 
                 state = {
                             'state_dict': self.skill.model.state_dict(),

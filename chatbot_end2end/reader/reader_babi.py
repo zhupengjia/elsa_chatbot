@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 import os, re, h5py
-from .reader_base import Reader_Base
+from .reader_base import ReaderBase
 
 '''
     Author: Pengjia Zhu (zhupengjia@gmail.com)
 '''
 
-class Reader_Babi(Reader_Base):
+class ReaderBabi(ReaderBase):
     '''
         Read from babi training data, inherit from Reader_Base
 

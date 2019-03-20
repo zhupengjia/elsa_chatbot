@@ -27,11 +27,11 @@ model:
 
 skills:
     cornell: 
-        wrapper: Generative_Response 
+        wrapper: GenerativeResponse 
         saved_model: 'data/cornell/model.pt'
 
         #    babi: 
-        #        wrapper: Goal_Response
+        #        wrapper: GoalResponse
         #        saved_model: 'data/babi/model.pt'
         #        template_file: data/babi/template.txt
         #        hook: 

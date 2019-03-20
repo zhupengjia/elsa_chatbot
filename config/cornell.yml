@@ -4,7 +4,7 @@
 
 skill:
     name: cornell
-    wrapper: Generative_Response
+    wrapper: GenerativeResponse
 
 ner:
     tokenizer: spacy
@@ -19,7 +19,7 @@ tokenizer:
     stopwords_path: config/en_stopwords.txt
 
 reader:
-    wrapper: Reader_Cornell
+    wrapper: ReaderCornell
     train_data: /home/pzhu/data/dialog/cornell_corpus
     max_seq_len: 50
 

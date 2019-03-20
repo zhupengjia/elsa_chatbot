@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 import os, h5py, re
-from .reader_base import Reader_Base
+from .reader_base import ReaderBase
 
 '''
     Author: Pengjia Zhu (zhupengjia@gmail.com)
 '''
 
-class Reader_Cornell(Reader_Base):
+class ReaderCornell(ReaderBase):
     '''
         Read from Cornell training data, inherit from Reader_Base
 
