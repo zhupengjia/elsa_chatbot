@@ -5,5 +5,3 @@ from nlptools.utils import Config
 cfg = Config('config/elsa.yml')
 s = InteractSession.build(cfg)
 s.response("hello")
-
-
