@@ -28,7 +28,7 @@ class SkillBase:
             Input:
                 - current_status: dictionary of status, generated from Dialog_Status module
         """
-        return None
+        return 0
 
     def get_response(self, current_status):
         """
@@ -37,7 +37,7 @@ class SkillBase:
             Input:
                 - current_status: dictionary of status, generated from Dialog_Status module
         """
-        return None
+        return 0
 
     def update_response(self, response, current_status):
         """

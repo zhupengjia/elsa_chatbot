@@ -15,7 +15,7 @@ class ReaderCornell(ReaderBase):
     '''
     
     def __init__(self, **args):
-        Reader_Base.__init__(self, **args)
+        ReaderBase.__init__(self, **args)
 
 
     @staticmethod

@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-from .reader_vui import Reader_VUI
-from .reader_yaml import Reader_YAML
-from .reader_dialog import Reader_Dialog
-from .reader_babi import Reader_Babi
-from .reader_cornell import Reader_Cornell
+from .reader_vui import ReaderVUI
+from .reader_yaml import ReaderYAML
+from .reader_dialog import ReaderDialog
+from .reader_babi import ReaderBabi
+from .reader_cornell import ReaderCornell
 
-__all__ = ['Reader_VUI', "Reader_YAML", 'READER_Dialog', 'Reader_Babi', 'Reader_Cornell']
+__all__ = ['ReaderVUI', "ReaderYAML", 'ReaderDialog', 'ReaderBabi', 'ReaderCornell']
 
 

@@ -39,7 +39,7 @@ class Supervised:
         self.skill_name = topic_manager.get_topic()
         self.skill = topic_manager.topics[self.skill_name]
         self.save_per_epoch = save_per_epoch
-        
+
         self.saved_model = saved_model
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
@@ -47,12 +47,12 @@ class Supervised:
         self.num_workers = num_workers
         self.epochs = epochs
         self.device = torch.device(device) if torch.cuda.is_available() else torch.device('cpu')
-        self.logger = logger 
+        self.logger = logger
 
         self.__init_tracker(**tracker_args)
 
     @classmethod
-    def build(cls, config): 
+    def build(cls, config):
         """
             construct model from config
 
@@ -61,9 +61,9 @@ class Supervised:
         """
         logger = setLogger(**config.logger)
         ner = NER(**config.ner)
-        tokenizer = Tokenizer_BERT(**config.tokenizer) 
+        tokenizer = Tokenizer_BERT(**config.tokenizer)
         vocab = tokenizer.vocab
-        
+
         # reader and skill class
         if not hasattr(Reader, config.reader.wrapper):
             raise RuntimeError("Error!! Reader {} not implemented!".format(config.reader.wrapper))
@@ -80,7 +80,7 @@ class Supervised:
             if "parameters" not in config.hook:
                 hook = hook_cls()
             else:
-                hook = hook_cls(**config.hook.parameters) 
+                hook = hook_cls(**config.hook.parameters)
         else:
             hook = None
 
@@ -108,7 +108,7 @@ class Supervised:
         tracker
         """
         self.skill.init_model(saved_model=self.saved_model, device=str(self.device), **args)
-        
+
         self.optimizer = optim.Adam(self.skill.model.parameters(), lr=self.learning_rate,
                                     weight_decay=self.weight_decay)
         self.start_epoch = 0
@@ -123,22 +123,22 @@ class Supervised:
 
     def train(self):
         self.skill.model.train() # set train flag
-        
+
         for epoch in range(self.start_epoch, self.epochs):
             for it, d in enumerate(self.generator):
 
                 d.to(self.device)
                 self.skill.model.zero_grad()
-                
+
                 y_prob, loss = self.skill.get_response(d)
 
                 self.logger.info('{} {} {}'.format(it, epoch, loss.item()))
-        
+
                 loss.backward()
                 self.optimizer.step()
 
             # save
-            if epoch > 0 and epoch%self.save_per_epoch == 0: 
+            if epoch > 0 and epoch%self.save_per_epoch == 0:
                 state = {
                             'state_dict': self.skill.model.state_dict(),
                             'config_model': self.skill.model.config,

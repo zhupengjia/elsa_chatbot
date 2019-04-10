@@ -16,17 +16,17 @@ class TopicManager:
     def register(self, topic_name, topic_instance):
         """
             Register topic
-        
+
             Input:
                 - topic_name: string
                 - topic_instance: instance of topic
         """
         self.topics[topic_name] = topic_instance
-    
+
     def update_response_masks(self, current_status):
         """
             Update response masks after retrieving utterance and before getting response
-            
+
             Input:
                 - current_status: dictionary of status, generated from Dialog_Status module
         """
@@ -37,7 +37,7 @@ class TopicManager:
     def get_topic(self, current_status=None):
         """
             get current topic
-            
+
             Input:
                 - current_status: dictionary of status, generated from dialog_status module. Default is None. If only one skill in topic_manager, will return the only topic name
         """
@@ -62,7 +62,7 @@ class TopicManager:
     def get_response(self, current_data, current_status):
         """
             get response from current status
-            
+
             Input:
                 - current_data: data converted from current status
                 - current_status: dictionary of status, generated from dialog_status module
@@ -70,11 +70,11 @@ class TopicManager:
         """
         response_value = self.topics[self.current_topic].get_response(current_data)
         return self.topics[self.current_topic].update_response(self.current_topic, response_value, current_status)
-        
+
     def add_response(self, response, current_status):
         """
             add response to current status
-            
+
             Input:
                 - response: string
                 - current_status: dictionary of status, generated from dialog_status module

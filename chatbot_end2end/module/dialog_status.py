@@ -1,22 +1,21 @@
 #!/usr/bin/env python
+"""
+    Author: Pengjia Zhu (zhupengjia@gmail.com)
+"""
+import copy
 import numpy
 import torch
-import copy
-from torch import functional as F
+from torch.nn import functional as F
+from torch.nn.utils.rnn import pack_padded_sequence
 from .entity_dict import EntityDict
 from .dialog_data import DialogData
-from torch.nn.utils.rnn import pack_padded_sequence
-
-'''
-    Author: Pengjia Zhu (zhupengjia@gmail.com)
-'''
 
 
 def dialog_collate(batch):
     """
         Collate function for torch.data.generator
     """
-    if len(batch) < 1:
+    if not batch:
         return []
     data = DialogData({})
     dialog_lengths = numpy.array([b["utterance"].shape[0]
@@ -273,7 +272,7 @@ class DialogStatus:
 
     def status2data(self, topic_names=None, status=None):
         """
-            convert to pytorch data for status
+            convert to pytorch data for one status
 
             Input:
                 - topic_names: list of topic name need to return,
@@ -285,6 +284,6 @@ class DialogStatus:
             status = self.current_status
         data = self.data(topic_names, [status], len(self.history_status))
         for k in data:
-            print(k, data[k])
             data[k] = torch.tensor(data[k])
-        return DialogData(data)
+        return dialog_collate([data])        
+        

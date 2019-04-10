@@ -15,7 +15,7 @@ class ReaderYAML(ReaderBase):
             - see Reader_Base
     '''
     def __init__(self, **args):
-        Reader_Base.__init__(self, **args)
+        ReaderBase.__init__(self, **args)
 
     def read(self, yamlfile, bidirectional=False):
         '''

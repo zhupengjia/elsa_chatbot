@@ -49,30 +49,31 @@ class Generative_Tracker(nn.Module):
 
 
     def forward(self, dialogs):
-        pack_batch = dialogs['utterance'].batch_sizes
-        
         #encoder
         encoder_out = self.dialog_embedding(dialogs['utterance'].data, dialogs["utterance_mask"].data, dialogs["sentiment"].data)
-       
+
         prev_output = dialogs[self.response_key].data[:, :-1]
-        target_output = dialogs[self.response_key].data[:, 1:]
-      
+
+        print(encoder_out)
+        print(prev_output)
+        sys.exit()
+
         #decoder
         output, attn = self.decoder(prev_output, encoder_out, dialogs['utterance_mask'].data)
         output_probs = self.logsoftmax(output)
-       
+
         #target_masks = dialogs[self.mask_key].data[:, 1:]
         #target_masks = target_masks.unsqueeze(-1).expand_as(output_probs)
 
         if self.training:
             #target_masks = target_masks.unsqueeze(-1).contiguous().view(-1, target_masks.size(2))
+            target_output = dialogs[self.response_key].data[:, 1:]
             target_output = target_output.unsqueeze(-1).contiguous().view(-1)
-            
+
             output_probs_expand = output_probs.contiguous().view(-1, output_probs.size(2))
-           
+
             loss = self.loss_function(output_probs_expand, target_output)
             return output_probs, loss
-        
+
         return output_probs
-        
 

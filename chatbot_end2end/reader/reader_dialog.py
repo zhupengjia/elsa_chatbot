@@ -16,7 +16,7 @@ class ReaderDialog(ReaderBase):
             - see Reader_Base
     '''
     def __init__(self, **args):
-        Reader_Base.__init__(self, **args)
+        ReaderBase.__init__(self, **args)
 
     def _is_Chinese(self, input_text):
         """
