@@ -148,9 +148,9 @@ class DialogStatus:
         self.current_status["utterance_mask"] = numpy.zeros(self.max_seq_len,
                                                             'int')
 
-        self.current_status["utterance"][0] = self.vocab.CLS_ID
+        self.current_status["utterance"][0] = self.vocab.BOS_ID
         self.current_status["utterance"][1:seq_len-1] = utterance_ids
-        self.current_status["utterance"][seq_len-1] = self.vocab.SEP_ID
+        self.current_status["utterance"][seq_len-1] = self.vocab.EOS_ID
 
         self.current_status["utterance_mask"][:seq_len] = 1
 

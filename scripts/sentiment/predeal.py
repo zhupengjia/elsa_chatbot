@@ -32,9 +32,9 @@ def jsonconvert(jsonstr):
     temp_ids = vocab(tokenizer(text))[:max_seq_len-2]
     seq_len = len(temp_ids) + 2
 
-    text_ids[0] = vocab.CLS_ID
+    text_ids[0] = vocab.BOS_ID
     text_ids[1:seq_len-1]  = temp_ids
-    text_ids[seq_len-1] = vocab.SEP_ID
+    text_ids[seq_len-1] = vocab.EOS_ID
     
     text_mask[:seq_len] = 1
     return text_ids, text_mask, rate

@@ -18,11 +18,12 @@ class GenerativeResponse(SkillBase):
             - max_seq_len: int, maximum sequence length
     """
 
-    def __init__(self, tokenizer, vocab,  max_seq_len=100, **args):
+    def __init__(self, tokenizer, vocab,  max_seq_len=100, beam_size=1, **args):
         super().__init__()
         self.tokenizer = tokenizer
         self.vocab = vocab
         self.max_seq_len = max_seq_len
+        self.beam_size = beam_size
 
     def __getitem__(self, response):
         """
@@ -43,7 +44,7 @@ class GenerativeResponse(SkillBase):
         """
         if os.path.exists(saved_model):
             self.checkpoint = torch.load(saved_model, map_location=lambda storage, location: storage)
-            self.model = Generative_Tracker(**{**args, **self.checkpoint['config_model']}) 
+            self.model = Generative_Tracker(**{**args, **self.checkpoint['config_model', **{beam_size=self.beam_size}]}) 
             self.model.to(device)
             self.model.load_state_dict(self.checkpoint['state_dict'])
         else:
@@ -81,9 +82,9 @@ class GenerativeResponse(SkillBase):
         current_status[response_key] = numpy.zeros(self.max_seq_len, 'int')
         current_status[mask_key] = numpy.zeros(self.max_seq_len, 'int')
         
-        current_status[response_key][0] = self.vocab.CLS_ID
+        current_status[response_key][0] = self.vocab.BOS_ID
         current_status[response_key][1:seq_len-1] = response
-        current_status[response_key][seq_len-1] = self.vocab.SEP_ID
+        current_status[response_key][seq_len-1] = self.vocab.EOS_ID
         
         current_status[mask_key][:seq_len] = 1
 

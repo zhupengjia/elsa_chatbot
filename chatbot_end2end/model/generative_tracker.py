@@ -15,7 +15,7 @@ class Generative_Tracker(nn.Module):
             - skill_name: string, current skill name
             - encoder: sentence encoder instance from .sentence_encoder
     '''
-    def __init__(self, skill_name, encoder, decoder_hidden_layers=1, decoder_attention_heads=2, decoder_hidden_size=1024, dropout=0, **args):
+    def __init__(self, skill_name, encoder, decoder_hidden_layers=1, decoder_attention_heads=2, decoder_hidden_size=1024, dropout=0, BOS_ID=1, EOS_ID=2, max_seq_len=100, **args):
         super().__init__()
         self.config = {
                     "bert_model_name": encoder.bert_model_name,
@@ -29,7 +29,10 @@ class Generative_Tracker(nn.Module):
         self.encoder = encoder
         embedding_dim = self.encoder.embedding.word_embeddings.embedding_dim 
         self.control_layer = nn.Linear(embedding_dim+1, embedding_dim)
-        self.decoder = TransformerDecoder(self.encoder.embedding, decoder_hidden_layers, decoder_attention_heads, decoder_hidden_size, dropout) 
+        self.decoder = TransformerDecoder(self.encoder.embedding, decoder_hidden_layers, decoder_attention_heads, decoder_hidden_size, dropout)
+        self.BOS_ID = BOS_ID
+        self.EOS_ID = EOS_ID
+        self.max_seq_len = max_seq_len
         self.loss_function = nn.NLLLoss(ignore_index=0) #ignore padding loss
         self.logsoftmax = nn.LogSoftmax(dim=2)
 
@@ -52,28 +55,25 @@ class Generative_Tracker(nn.Module):
         #encoder
         encoder_out = self.dialog_embedding(dialogs['utterance'].data, dialogs["utterance_mask"].data, dialogs["sentiment"].data)
 
-        prev_output = dialogs[self.response_key].data[:, :-1]
-
-        print(encoder_out)
-        print(prev_output)
-        sys.exit()
-
         #decoder
-        output, attn = self.decoder(prev_output, encoder_out, dialogs['utterance_mask'].data)
-        output_probs = self.logsoftmax(output)
-
-        #target_masks = dialogs[self.mask_key].data[:, 1:]
-        #target_masks = target_masks.unsqueeze(-1).expand_as(output_probs)
-
         if self.training:
-            #target_masks = target_masks.unsqueeze(-1).contiguous().view(-1, target_masks.size(2))
+            prev_output = dialogs[self.response_key].data[:, :-1]
             target_output = dialogs[self.response_key].data[:, 1:]
+            
             target_output = target_output.unsqueeze(-1).contiguous().view(-1)
+            output, attn = self.decoder(prev_output, encoder_out, dialogs['utterance_mask'].data)
+            output_probs = self.logsoftmax(output)
 
             output_probs_expand = output_probs.contiguous().view(-1, output_probs.size(2))
 
             loss = self.loss_function(output_probs_expand, target_output)
             return output_probs, loss
+        else:
+            
+            print(encoder_out.shape)
+            print(self.BOS_ID, self.EOS_ID)
+
+        sys.exit()
 
         return output_probs
 

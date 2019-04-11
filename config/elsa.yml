@@ -28,6 +28,7 @@ model:
 skills:
     cornell: 
         wrapper: GenerativeResponse 
+        beam_size: 5
         saved_model: 'data/cornell/model.pt'
 
         #    babi: 
