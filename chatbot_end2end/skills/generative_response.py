@@ -42,9 +42,11 @@ class GenerativeResponse(SkillBase):
                 - device: string, model location, default is 'cpu'
                 - see ..model.generative_tracker.Generative_Tracker for more parameters if path of saved_model not existed
         """
+        additional_args = {"beam_size": self.beam_size}
+        args = {**args, **additional_args}
         if os.path.exists(saved_model):
             self.checkpoint = torch.load(saved_model, map_location=lambda storage, location: storage)
-            self.model = Generative_Tracker(**{**args, **self.checkpoint['config_model', **{beam_size=self.beam_size}]}) 
+            self.model = Generative_Tracker(**{**args, **self.checkpoint['config_model']}) 
             self.model.to(device)
             self.model.load_state_dict(self.checkpoint['state_dict'])
         else:

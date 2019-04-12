@@ -1,17 +1,22 @@
 #!/usr/bin/env python
-import sys
+import argparse, sys
 
-def usage():
-    sys.exit("Usage: ./train config_file_path")
-    
+parser = argparse.ArgumentParser(description='Training script for chatbot')
+parser.add_argument('-c', '--config', dest='config', help='yaml configuration file')
+
+args = parser.parse_args()
+
 if len(sys.argv) < 2:
-    usage()
+    parser.print_help()
+    parser.exit()
 
 from chatbot_end2end.model.supervised import Supervised
 from nlptools.utils import Config
 import torch
 
-cfg = Config(sys.argv[1])
+print(args.config)
+
+cfg = Config(args.config)
 model = Supervised.build(cfg)
 model.train()
 
