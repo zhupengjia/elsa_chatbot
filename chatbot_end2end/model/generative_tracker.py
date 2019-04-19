@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import torch
+import torch, sys
 import torch.nn as nn
 from nlptools.zoo.encoders.transformer_decoder import TransformerDecoder
 
@@ -52,6 +52,14 @@ class Generative_Tracker(nn.Module):
 
         return sequence_out
 
+    def beam_search(self, encoder_out, utterance_mask):
+        bsz = encoder_out.size(0)
+        src_len = encoder_out.size(1)
+        #initialize buffers
+        
+
+
+    
 
     def forward(self, dialogs):
         #encoder
@@ -72,6 +80,9 @@ class Generative_Tracker(nn.Module):
             loss = self.loss_function(output_probs_expand, target_output)
             return output_probs, loss
         else:
+            self.beam_search(encoder_out, utterance_mask)
+            
+
             output_buf = torch.zeros((1, encoder_out.size(1)), 
                                      dtype=torch.long, device=encoder_out.device)
             output_buf[0][0] = self.BOS_ID
@@ -91,7 +102,6 @@ class Generative_Tracker(nn.Module):
             print(output_buf.shape)
             print(scores_buf.shape)
             print(output_probs)
-            print(incremental_state
 
             sys.exit()
 
