@@ -99,6 +99,7 @@ class InteractSession:
                 device=config.model.device,
                 BOS_ID=vocab.BOS_ID,
                 EOS_ID=vocab.EOS_ID,
+                UNK_ID=vocab.UNK_ID,
                 max_seq_len = config.model.max_seq_len,
                 skill_name=skill_name, encoder=encoder)
             response.model.eval() # set to eval mode
