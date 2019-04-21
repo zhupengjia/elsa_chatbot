@@ -97,10 +97,11 @@ class InteractSession:
             response.init_model(
                 saved_model=config.skills[skill_name].saved_model,
                 device=config.model.device,
-                BOS_ID=vocab.BOS_ID,
-                EOS_ID=vocab.EOS_ID,
-                UNK_ID=vocab.UNK_ID,
-                max_seq_len = config.model.max_seq_len,
+                pad_id=vocab.PAD_ID,
+                bos_id=vocab.BOS_ID,
+                eos_id=vocab.EOS_ID,
+                unk_id=vocab.UNK_ID,
+                beam_size=config.skills[skill_name].beam_size,
                 skill_name=skill_name, encoder=encoder)
             response.model.eval() # set to eval mode
             topic_manager.register(skill_name, response)

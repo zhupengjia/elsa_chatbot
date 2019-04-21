@@ -2,7 +2,6 @@
 import torch, math, sys
 import torch.nn as nn
 from nlptools.zoo.encoders.transformer_decoder import TransformerDecoder
-from .sequence_generator import SequenceGenerator
 
 '''
     Author: Pengjia Zhu (zhupengjia@gmail.com)
@@ -13,11 +12,21 @@ class Generative_Tracker(nn.Module):
         Generative based chatbot
 
         Input:
-            - skill_name: string, current skill name
+            - skill_name (string): current skill name
             - encoder: sentence encoder instance from .sentence_encoder
-            - **generator_args: arguments to sequence generator
+            - decoder_hidden_layers (int, optional): number of decoder layers, used for training only, default is 1
+            - decoder_attention_heads (int, optional): number of decoder heads, used for training only, default is 2
+            - decoder_hidden_size (int, optional): decoder hidden size, used for training only, default is 1024
+            - dropout (float, option): dropout, default is 0
+            - pad_id (int, option): PAD ID, used for prediction only, default is 0
+            - bos_id (int, option): BOS ID, used for prediction only, default is 1
+            - eos_id (int, option): EOS ID, used for prediction only, default is 2
+            - unk_id (int, option): UNK ID, used for prediction only, default is 3
+            - beam_size (int, optional): beam width, used for prediction only, default is 1
+            - len_penalty (float, optional): length penalty, where < 1.0 favors shorter, >1.0 favors longer sentences. Used for prediction only, Default is 1.0
+            - unk_penalty (float, optional): unknown word penalty, where < 1.0 favors more unks, >1.0 favors less. Used for prediction only. default is 1.0
     '''
-    def __init__(self, skill_name, encoder, decoder_hidden_layers=1, decoder_attention_heads=2, decoder_hidden_size=1024, dropout=0, bos_id=1, eos_id=2, max_seq_len=100, beam_size=1, **args):
+    def __init__(self, skill_name, encoder, decoder_hidden_layers=1, decoder_attention_heads=2, decoder_hidden_size=1024, dropout=0, pad_id=0, bos_id=1, eos_id=2, unk_id=3, beam_size=1, len_penalty=1., unk_penalty=1., **args):
         super().__init__()
         self.config = {
                     "bert_model_name": encoder.bert_model_name,
@@ -28,18 +37,20 @@ class Generative_Tracker(nn.Module):
 
         self.response_key = 'response_' + skill_name
         self.mask_key = 'response_mask_' + skill_name
-        self.encoder = encode
-        embedding_dim = self.encoder.embedding.word_embeddings.embedding_dim 
+        self.encoder = encoder
+        embedding_dim = self.encoder.embedding.word_embeddings.embedding_dim
         self.num_embeddings = self.encoder.embedding.word_embeddings.num_embeddings
         self.control_layer = nn.Linear(embedding_dim+1, embedding_dim)
         self.decoder = TransformerDecoder(self.encoder.embedding, decoder_hidden_layers, decoder_attention_heads, decoder_hidden_size, dropout)
+        self.pad_id = pad_id
         self.bos_id = bos_id
         self.eos_id = eos_id
+        self.unk_id = unk_id
         self.beam_size = beam_size
-        self.max_seq_len = max_seq_len
+        self.len_penalty = len_penalty
+        self.unk_penalty = unk_penalty
         self.loss_function = nn.NLLLoss(ignore_index=0) #ignore padding loss
         self.logsoftmax = nn.LogSoftmax(dim=2)
-
 
     def dialog_embedding(self, utterance, utterance_mask, sentiment):
         #utterance embedding
@@ -56,13 +67,78 @@ class Generative_Tracker(nn.Module):
 
     def beam_search(self, encoder_out, utterance_mask):
         bsz = encoder_out.size(0)
-        src_len = encoder_out.size(1)
+        max_len = encoder_out.size(1)
+
         # initialize buffers
-        scores = encoder_out.new_zeros(bsz * self.beam_size, self.max_seq_len+1)
-        scores_buf = scores.clone()
-        tokens = encoder_out.new_zeros(bsz * self.beam_size, self.max_seq_len + 2).long()
-        tokens_buf = tokens.clone()
-        tokens[:, 0] = self.bos_id
+        scores_buf = encoder_out.new_zeros(bsz * self.beam_size, max_len)
+        output_buf = encoder_out.new_zeros(bsz * self.beam_size, max_len).long()
+        output_buf[:, 0] = self.bos_id
+        finalized = utterance_mask.new_zeros(bsz * self.beam_size, max_len).byte()
+
+        #expand encoder out and utterance mask
+        encoder_out = encoder_out.repeat(self.beam_size, 1, 1)
+        utterance_mask = utterance_mask.repeat(self.beam_size, 1)
+        
+        incremental_state = {}
+
+        for i in range(max_len - 1):
+            output, attn = self.decoder(output_buf[:,i:i+1], encoder_out, utterance_mask, 
+                                    time_step=i, incremental_state=incremental_state)
+            output_probs = self.logsoftmax(output)
+            output_probs = output_probs.contiguous().view(-1, output_probs.size(2))
+            
+            # prob union with previous outputs, normalized with sentence length
+            prev_scores = scores_buf[:, i:i+1].expand(-1, output_probs.size(1)) 
+            
+            print(output_probs)
+            
+            output_probs = (output_probs + prev_scores)/2 
+            
+            # remove special characters
+            output_probs[:, self.pad_id] = -1e9
+            output_probs[:, self.bos_id] = -1e9
+
+            # add unk penalty
+            output_probs[:, self.unk_id] *= self.unk_penalty
+            
+            # force set score of finalized sequence to previous sequence, with length penalty
+            output_probs[finalized[:, i], :] = -1e9
+            output_probs[finalized[:, i], 0] =\
+                    scores_buf[finalized[:, i], i] * self.len_penalty 
+            
+            # get maximum probs 
+            output_probs = output_probs.view(bsz, -1)
+            
+            output_max = output_probs.topk(self.beam_size)
+           
+            output_max_current = output_max[1].fmod(self.num_embeddings)
+            output_max_prev = output_max[1].div(self.num_embeddings).long()
+
+            output_max_current = output_max_current.view(-1)
+            output_max_prev = output_max_prev.view(-1)
+
+            #reorder previous outputs
+            for j in range(bsz):
+                output_buf[j*self.beam_size:(j+1)*self.beam_size, :i+1] =\
+                        output_buf[j*self.beam_size:(j+1)*self.beam_size, :i+1][output_max_prev, :]
+                scores_buf[j*self.beam_size:(j+1)*self.beam_size, :i+1] =\
+                        scores_buf[j*self.beam_size:(j+1)*self.beam_size, :i+1][output_max_prev, :]
+                finalized[j*self.beam_size:(j+1)*self.beam_size, :i+1] =\
+                        finalized[j*self.beam_size:(j+1)*self.beam_size, :i+1][output_max_prev, :]
+           
+            self.decoder.reorder_incremental_state(incremental_state, output_max_prev) 
+
+            output_buf[:, i+1] = output_max_current
+            scores_buf[:, i+1] = output_max[0].view(-1)
+            
+            finalized[:, i+1] = finalized[:, i] & output_max_current.eq(self.eos_id)
+
+            if finalized[:, i+1].all():
+                break
+
+        print(scores_buf)
+        print(output_buf)
+        sys.exit()
 
     def forward(self, dialogs):
         #encoder
@@ -83,27 +159,5 @@ class Generative_Tracker(nn.Module):
             loss = self.loss_function(output_probs_expand, target_output)
             return output_probs, loss
         else:
-            self.beam_search(encoder_out, utterance_mask)
-            
-
-            incremental_state = {}
-            
-            print(output_buf.shape)
-            print(output_buf[:,:1].shape)
-            print(output_buf)
-
-            output, attn = self.decoder(output_buf[:,:1], encoder_out, utterance_mask, 
-                                        time_step=0, incremental_state=incremental_state)
-            output_probs = self.logsoftmax(output)
-
-            print(encoder_out.shape)
-            print(output_buf.shape)
-            print(scores_buf.shape)
-            print(output_probs)
-
-            sys.exit()
-
-        sys.exit()
-
-        return output_probs
+            return self.beam_search(encoder_out, utterance_mask)
 
