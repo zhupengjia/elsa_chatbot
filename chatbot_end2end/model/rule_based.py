@@ -159,8 +159,8 @@ class Rule_Based:
                 - entities: dictionary, current entities
         '''
         data = data.loc[random.choice(data.index)] # random pickup one
-        if isinstance(data.webhook, str):
-            entities = self._call_hook(data.webhook, entities)
+        if isinstance(data.hook, str):
+            entities = self._call_hook(data.hook, entities)
         if not isinstance(entities['RESPONSE'], str) and isinstance(data.response, str):
             entities['RESPONSE'] = data.response
         if data.childID is not None:
