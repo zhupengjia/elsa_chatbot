@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import torch, math, sys
 import torch.nn as nn
-from nlptools.zoo.encoders.transformer_decoder import TransformerDecoder
+from nlptools.zoo.encoders.transformer import TransformerDecoder
 
 '''
     Author: Pengjia Zhu (zhupengjia@gmail.com)
@@ -82,15 +82,18 @@ class Generative_Tracker(nn.Module):
         incremental_state = {}
 
         for i in range(max_len - 1):
-            output, attn = self.decoder(output_buf[:,i:i+1], encoder_out, utterance_mask, 
+            print("="*20)
+            print("output_buf", output_buf[:, i:i+1].size())
+            output = self.decoder(output_buf[:,i:i+1], encoder_out, utterance_mask, 
                                     time_step=i, incremental_state=incremental_state)
+            
             output_probs = self.logsoftmax(output)
             output_probs = output_probs.contiguous().view(-1, output_probs.size(2))
             
+            print("output_probs", output_probs.size())
+
             # prob union with previous outputs, normalized with sentence length
             prev_scores = scores_buf[:, i:i+1].expand(-1, output_probs.size(1)) 
-            
-            print(output_probs)
             
             output_probs = (output_probs + prev_scores)/2 
             
@@ -126,7 +129,7 @@ class Generative_Tracker(nn.Module):
                 finalized[j*self.beam_size:(j+1)*self.beam_size, :i+1] =\
                         finalized[j*self.beam_size:(j+1)*self.beam_size, :i+1][output_max_prev, :]
            
-            self.decoder.reorder_incremental_state(incremental_state, output_max_prev) 
+            #self.decoder.reorder_incremental_state(incremental_state, output_max_prev) 
 
             output_buf[:, i+1] = output_max_current
             scores_buf[:, i+1] = output_max[0].view(-1)
@@ -136,9 +139,8 @@ class Generative_Tracker(nn.Module):
             if finalized[:, i+1].all():
                 break
 
-        print(scores_buf)
+        print("scores_buf", scores_buf)
         print(output_buf)
-        sys.exit()
 
     def forward(self, dialogs):
         #encoder
@@ -151,12 +153,14 @@ class Generative_Tracker(nn.Module):
             target_output = dialogs[self.response_key].data[:, 1:]
            
             target_output = target_output.unsqueeze(-1).contiguous().view(-1)
-            output, attn = self.decoder(prev_output, encoder_out, utterance_mask)
+            
+            output = self.decoder(prev_output, encoder_out, utterance_mask)
             output_probs = self.logsoftmax(output)
 
             output_probs_expand = output_probs.contiguous().view(-1, output_probs.size(2))
 
             loss = self.loss_function(output_probs_expand, target_output)
+            sys.exit()
             return output_probs, loss
         else:
             return self.beam_search(encoder_out, utterance_mask)
