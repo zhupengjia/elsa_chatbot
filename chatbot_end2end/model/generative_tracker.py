@@ -75,22 +75,22 @@ class Generative_Tracker(nn.Module):
         output_buf[:, 0] = self.bos_id
         finalized = utterance_mask.new_zeros(bsz * self.beam_size, max_len).byte()
 
-        #expand encoder out and utterance mask
+        # expand encoder out and utterance mask
         encoder_out = encoder_out.repeat(self.beam_size, 1, 1)
         utterance_mask = utterance_mask.repeat(self.beam_size, 1)
         
-        incremental_state = {}
+        incre_state = {}
 
         for i in range(max_len - 1):
-            print("="*20)
-            print("output_buf", output_buf[:, i:i+1].size())
+            # print("="*20)
+            # print("output_buf", output_buf[:, i:i+1].size())
             output = self.decoder(output_buf[:,i:i+1], encoder_out, utterance_mask, 
-                                    time_step=i, incremental_state=incremental_state)
+                                    time_step=i, incre_state=incre_state)
             
             output_probs = self.logsoftmax(output)
             output_probs = output_probs.contiguous().view(-1, output_probs.size(2))
             
-            print("output_probs", output_probs.size())
+            # print("output_probs", output_probs.size())
 
             # prob union with previous outputs, normalized with sentence length
             prev_scores = scores_buf[:, i:i+1].expand(-1, output_probs.size(1)) 
@@ -129,7 +129,7 @@ class Generative_Tracker(nn.Module):
                 finalized[j*self.beam_size:(j+1)*self.beam_size, :i+1] =\
                         finalized[j*self.beam_size:(j+1)*self.beam_size, :i+1][output_max_prev, :]
            
-            #self.decoder.reorder_incremental_state(incremental_state, output_max_prev) 
+            self.decoder.reorder_incremental_state(incre_state, output_max_prev) 
 
             output_buf[:, i+1] = output_max_current
             scores_buf[:, i+1] = output_max[0].view(-1)
@@ -138,9 +138,11 @@ class Generative_Tracker(nn.Module):
 
             if finalized[:, i+1].all():
                 break
-
-        print("scores_buf", scores_buf)
-        print(output_buf)
+        
+        
+        #print("scores_buf", scores_buf)
+        #print("output_buf", output_buf)
+        return output_buf
 
     def forward(self, dialogs):
         #encoder
@@ -160,7 +162,6 @@ class Generative_Tracker(nn.Module):
             output_probs_expand = output_probs.contiguous().view(-1, output_probs.size(2))
 
             loss = self.loss_function(output_probs_expand, target_output)
-            sys.exit()
             return output_probs, loss
         else:
             return self.beam_search(encoder_out, utterance_mask)
