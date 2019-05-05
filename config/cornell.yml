@@ -27,12 +27,12 @@ model:
     device: "cuda:0"
     dropout: 0.1
     decoder_hidden_layers: 4
-    decoder_attention_heads: 3
+    decoder_attention_heads: 8
     decoder_hidden_size: 3072
     learning_rate: 0.0001
     weight_decay: 0
     epochs: 10000
-    batch_size: 20
+    batch_size: 50
     num_workers: 1
     saved_model: 'data/cornell/model.pt'
     save_per_epoch: 1
