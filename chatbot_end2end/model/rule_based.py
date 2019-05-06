@@ -10,7 +10,7 @@ from ..reader.rulebased import Reader
     Author: Pengjia Zhu (zhupengjia@gmail.com)
 '''
 
-class Rule_Based:
+class RuleBased:
     '''
         Rule based chatbot
 

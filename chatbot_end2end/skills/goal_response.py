@@ -15,13 +15,13 @@ class GoalResponse(SkillBase):
     """
         Response skill for goal oriented chatbot. Used to index the response template, get the most closed
         response_template from a response string, call model to get the response from utterance
-        
+
         First you need a response template file, the format in each line is:  
             - needed_entity | notneeded_entity | func_call | response  
                 - needed_entity means this response is available only those entities existed  
                 - notneeded_entity means this response is not available if those entities existed  
                 - func_call is the needed function defined in hook function before return the response. 
-  
+
         The class will build a tf-idf index for template, the __getitem__ method is to get the most closed response
         via the tf-idf algorithm.(only used for training, the response string in training data will convert to a response id via tfidf search)
 

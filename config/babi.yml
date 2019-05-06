@@ -3,27 +3,6 @@
 #app setting
 
 
-# for adversary chatbot
-rule_based:
-      
-    hook_keywords:
-        PARTY_SIZE: data/babi/entities/party_size.txt
-        LOCATION: data/babi/entities/location.txt
-        CUISINE: data/babi/entities/cuisine.txt
-        REST_TYPE: data/babi/entities/rest_type.txt
-    
-    logger:
-        appname: ad_babi
-        loglevel_console:  20
-        loglevel_file: 0
-        logfile: data/babi/train.log
-    
-    bert_model_name: bert-base-uncased
-    dialog_file: data/babi/babi_adversary.xlsx 
-    batch_size: 50
-    min_score: 0.6 #jump the rule if less than this score
-
-#
 skill:
     name: babi
     wrapper: Goal_Response
@@ -53,6 +32,12 @@ reader:
     wrapper: Reader_Babi
     train_data: /home/pzhu/data/dialog/babi/dialog-babi-task5-full-dialogs-trn.txt
     max_seq_len: 10
+
+skills:
+    babi:
+        wrapper: RuleResponse
+
+
 
 model:
     device: "cuda:0"
