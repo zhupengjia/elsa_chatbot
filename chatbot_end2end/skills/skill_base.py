@@ -20,6 +20,13 @@ class SkillBase:
         """
             model initialization, used for getting response
         """
+        pass
+
+    def eval(self):
+        """
+            set model to eval mode
+        """
+        pass
 
     def update_mask(self, current_status):
         """

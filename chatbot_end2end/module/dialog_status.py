@@ -39,6 +39,26 @@ def dialog_collate(batch):
     return data
 
 
+def format_sentence(vocab, token_ids, max_seq_len):
+    """
+        Format token ids to sentence and masks
+
+        Input:
+            - vocab:  instance of nlptools.text.vocab
+            - token_ids: list of token ids
+            - max_seq_len: int
+    """
+    token_ids = token_ids[:self.max_seq_len-2]
+    seq_len = len(token_ids) + 2
+    sentence = numpy.zeros(max_seq_len, 'int')
+    sentence_mask = numpy.zeros(max_seq_len, 'int')
+    sentence[0] = vocab.BOS_ID
+    sentence[1:seq_len-1] = token_ids
+    sentence[seq_len-1] = vocab.EOS_ID
+    sentence_mask[:seq_len] = 1
+    return sentence, sentence_mask
+
+
 class DialogStatus:
     def __init__(self, vocab, tokenizer, ner, topic_manager,
                  sentiment_analyzer, max_seq_len=100,
@@ -141,18 +161,8 @@ class DialogStatus:
         tokens = self.tokenizer(utterance_replaced)
         utterance_ids = self.vocab.words2id(tokens)
 
-        utterance_ids = utterance_ids[:self.max_seq_len-2]
-        seq_len = len(utterance_ids) + 2
-
-        self.current_status["utterance"] = numpy.zeros(self.max_seq_len, 'int')
-        self.current_status["utterance_mask"] = numpy.zeros(self.max_seq_len,
-                                                            'int')
-
-        self.current_status["utterance"][0] = self.vocab.BOS_ID
-        self.current_status["utterance"][1:seq_len-1] = utterance_ids
-        self.current_status["utterance"][seq_len-1] = self.vocab.EOS_ID
-
-        self.current_status["utterance_mask"][:seq_len] = 1
+        self.current_status["utterance"], self.current_status["utterance_mask"] =\
+                format_sentence(self.vocab, utterance_ids, self.max_seq_len)
 
         # get topic
         self.current_status["topic"] = self.topic_manager.get_topic(

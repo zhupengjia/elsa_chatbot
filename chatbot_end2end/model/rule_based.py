@@ -23,8 +23,8 @@ class RuleBased:
             - device: string or instance of torch.device, default is "cpu"
             - logger: logger instance ,default is None
     '''
-    def __init__(self, bert_model_name, hook, dialog_file, min_score=0.6, batch_size=100, device='cpu', logger=None):
-        self.embedding = Sentence_Embedding(bert_model_name=bert_model_name, device=str(device))
+    def __init__(self, encoder, hook, dialog_file, min_score=0.6, batch_size=100, device='cpu', logger=None):
+        self.encoder = encoder
         self.hook = hook
         self.reader = Reader(dialog_file)
         self.min_score = min_score

@@ -197,6 +197,12 @@ class GoalResponse(SkillBase):
         else:
             self.model = Dialog_Tracker(Nresponses=len(self.response), **args)
             self.model.to(device)
+    
+    def eval(self):
+        """
+        Set model to eval mode
+        """
+        self.model.eval()
 
     def get_response_by_id(self, response_id, entity=None):
         """

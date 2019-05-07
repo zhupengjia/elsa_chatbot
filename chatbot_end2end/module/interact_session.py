@@ -95,15 +95,15 @@ class InteractSession:
                                  max_seq_len=config.model.max_seq_len,
                                  **response_params)
             response.init_model(
-                saved_model=config.skills[skill_name].saved_model,
+                encoder=encoder,
                 device=config.model.device,
                 pad_id=vocab.PAD_ID,
                 bos_id=vocab.BOS_ID,
                 eos_id=vocab.EOS_ID,
                 unk_id=vocab.UNK_ID,
-                beam_size=config.skills[skill_name].beam_size,
-                skill_name=skill_name, encoder=encoder)
-            response.model.eval() # set to eval mode
+                skill_name=skill_name,
+                **config.skills[skill_name])
+            response.eval() # set to eval mode
             topic_manager.register(skill_name, response)
 
         return cls(vocab=vocab, tokenizer=tokenizer, ner=ner,

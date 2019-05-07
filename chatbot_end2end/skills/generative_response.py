@@ -2,6 +2,7 @@
 import os, numpy, torch
 from .skill_base import SkillBase
 from ..model.generative_tracker import Generative_Tracker
+from ..module.dialog_status import format_sentence
 
 """
     Author: Pengjia Zhu (zhupengjia@gmail.com)
@@ -52,7 +53,13 @@ class GenerativeResponse(SkillBase):
         else:
             self.model = Generative_Tracker(**args)
             self.model.to(device)
- 
+
+    def eval(self):
+        """
+        Set model to eval mode
+        """
+        self.model.eval()
+
     def get_response(self, status_data):
         """
             predict response value from status
@@ -76,19 +83,11 @@ class GenerativeResponse(SkillBase):
         """
         
         current_status['response_string'] = self.vocab.id2words(response) 
-        response = response[:self.max_seq_len-2]
-        seq_len = len(response) + 2
         response_key = 'response_' + skill_name
         mask_key = 'response_mask_' + skill_name
         
-        current_status[response_key] = numpy.zeros(self.max_seq_len, 'int')
-        current_status[mask_key] = numpy.zeros(self.max_seq_len, 'int')
+        current_status[response_key], self.current_status[mask_key] =\
+                format_sentence(self.vocab, response, self.max_seq_len)
         
-        current_status[response_key][0] = self.vocab.BOS_ID
-        current_status[response_key][1:seq_len-1] = response
-        current_status[response_key][seq_len-1] = self.vocab.EOS_ID
-        
-        current_status[mask_key][:seq_len] = 1
-
         return current_status
 
