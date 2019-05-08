@@ -1,9 +1,15 @@
 #!/usr/bin/env python
-import os, pandas, re
-
 '''
     Author: Pengjia Zhu (zhupengjia@gmail.com)
+
+    Reader for dialog flow excel format config
 '''
+import os, re, pandas, random, numpy
+from nlptools.utils import decode_child_id, flat_list
+from nlptools.text.ngrams import Ngrams
+from nlptools.text import VecTFIDF
+from nlptools.text.tokenizer import Tokenizer_Simple
+
 
 class ReaderXLSX:
     '''
@@ -11,47 +17,133 @@ class ReaderXLSX:
 
         Input:
             - dialog_file: xlsx file of rule definition
-
+            - tokenizer
     '''
 
-    def __init__(self, dialog_file):
+    def __init__(self, dialog_file, tokenizer=None):
         self.dialog_file = dialog_file
-        self._read()
-
-    def _read(self):
         if not os.path.exists(self.dialog_file):
             raise('{} not exists!!!'.format(self.dialog_file))
-        
+        self.tokenizer = Tokenizer_Simple() if tokenizer is None else tokenizer 
+        self.index = None
+
         self.dialogs = self._parse_dialog()
         self.entities = self._parse_entity()
         self.actions = self._parse_action()
 
+    def __len__(self):
+        """
+            return number of intents
+        """
+        return self.dialogs.index.max()
+
+    def get_action(self, idx):
+        """
+            return action list via intent id
+            
+            Input:
+                - id: int, intent id
+        """
+        return self.dialogs.loc[idx, "action"]
+
+    def get_response(self, idx):
+        """
+            return response template via idx. If multiple response template available, will randomly return one
+            
+            Input:
+                - id: int, intent id
+        """
+        response = self.dialogs.loc[idx, "response"]
+        if response is None:
+            return None
+        return random.choice(response) 
+
     def _parse_dialog(self):
-        dialogs = pandas.read_excel(self.dialog_file, sheet_name="dialogs", index_col='id')
-        dialogs['child_id'] = dialogs['child_id'].apply(self.__decode_childID)
-        dialogs["needed_entity"]  = dialogs["needed_entity"].apply(lambda x: [s.strip() for s in re.split("[,| ]", x) if len(s.strip())>0] if isinstance(x, str) else None)
-        dialogs["unneeded_entity"]  = dialogs["unneeded_entity"].apply(lambda x: [s.strip() for s in re.split("[,| ]", x) if len(s.strip())>0] if isinstance(x, str) else None)
-        dialogs["user_says"]  = dialogs["user_says"].apply(lambda x: [s.strip() for s in re.split("\n", x) if len(s.strip())>0] if isinstance(x, str) else None)
-        dialogs["response"]  = dialogs["response"].apply(lambda x: [s.strip() for s in re.split("\n", x) if len(s.strip())>0] if isinstance(x, str) else None)
-        dialogs["action"] = dialogs["action"].apply(lambda x: x.strip() if isinstance(x, str) and len(x.strip()) > 0 else None)
+        try:
+            dialogs = pandas.read_excel(self.dialog_file, sheet_name="dialogs", index_col='id')
+        except Exception as error:
+            print(error)
+            return None
+        if dialogs.shape[0] < 1:
+            return None
+        dialogs['child_id'] = dialogs['child_id'].apply(decode_child_id)
+        dialogs["needed_entity"] = dialogs["needed_entity"].apply(
+            lambda x: [s.strip().upper() for s in re.split("[,| ]", x) if s.strip()]\
+            if isinstance(x, str) else None)
+        dialogs["unneeded_entity"] = dialogs["unneeded_entity"].apply(
+            lambda x: [s.strip().upper() for s in re.split("[,| ]", x) if s.strip()]\
+            if isinstance(x, str) else None)
+        dialogs["user_says"] = dialogs["user_says"].apply(
+            lambda x: [s.strip() for s in re.split("\n", x) if s.strip()]\
+            if isinstance(x, str) else None)
+        dialogs["response"] = dialogs["response"].apply(
+            lambda x: [s.strip() for s in re.split("\n", x) if s.strip()]\
+            if isinstance(x, str) else None)
+        dialogs["action"] = dialogs["action"].apply(
+            lambda x: [s.strip() for s in re.split("[\s,|]", x) if s.strip()]
+            if isinstance(x, str) else None)
+        self.index = {}
+        self.index["response"] = self._build_index(dialogs["response"])
+        self.index["user_says"] = self._build_index(dialogs["user_says"])
+        self.entity_maskdict, self.entity_masks = \
+                self._build_entity_mask(dialogs[["needed_entity", "unneeded_entity"]])
         return dialogs
 
+    def _build_index(self, data):
+        data_flat, ids_flat = [], []
+        data, ids = data.tolist(), list(data.index)
+        for i, rl in enumerate(data):
+            if rl is None:
+                continue
+            for r in rl:
+                data_flat.append(r)
+                ids_flat.append(ids[i])
+        data_flat = [re.sub('[^^a-zA-Z ]', '', d) for d in data_flat]
+        vocab = Ngrams(ngrams=3)
+        search_index = VecTFIDF(vocab)
+        data_ids = [flat_list(vocab(self.tokenizer(d)).values()) for d in data_flat]
+        vocab.freeze()
+        search_index.load_index(data_ids)
+        return {"vocab":vocab, "index":search_index, "ids": ids_flat}
+
+    def search(self, sentence, target="response", n_top=10):
+        """
+            Search the most closed response or user_says from dialogflows and return related ids
+            Input:
+                - sentence: string
+                - target: "response" or "user_says", default is "response"
+                - n_top, int, default is 10
+        """
+        if not target in self.index:
+            raise("target must be 'response' or 'user_says'")
+        sentence = re.sub('[^^a-zA-Z ]', '', sentence)
+        token_ids = flat_list(self.index[target]["vocab"](self.tokenizer(sentence)).values())
+        result = self.index[target]["index"].search_index(token_ids, topN=n_top)
+        return [self.index[target]["ids"][r[0]] for r in result]
+
     def _parse_entity(self):
+        try:
+            entities_table = pandas.read_excel(self.dialog_file,
+                                               sheet_name="entities").iloc[:, 1:]
+        except Exception as error:
+            print(error)
+            return None
         entities = {"keywords":None, "regex":None, "ner":None, "ner_name_replace":None}
-        entities_table = pandas.read_excel(self.dialog_file, sheet_name="entities").iloc[:, 1:]
         if entities_table.shape[0] < 3:
             return entities
         for i in range(entities_table.shape[1]):
             name = entities_table.columns[i]
             name_replace = entities_table.iloc[0, i]
             entity_type = entities_table.iloc[1, i]
-            values = [str(x).strip() for x in entities_table.iloc[2:, i].dropna().tolist() if len(str(x).strip())>0]
+            values = [str(x).strip() for x in entities_table.iloc[2:, i].dropna().tolist()\
+                      if str(x).strip()]
             if entity_type is None or name is None:
                 continue
             name = name.strip()
             entity_type = entity_type.strip().lower()
             if name_replace is not None:
-                if entities["ner_name_replace"] is None: entities["ner_name_replace"] = {}
+                if entities["ner_name_replace"] is None:
+                    entities["ner_name_replace"] = {}
                 entities["ner_name_replace"][name] = name_replace
             if entity_type == "ner":
                 if entities["ner"] is None: entities["ner"] = []
@@ -60,17 +152,25 @@ class ReaderXLSX:
                 if len(values) < 1:
                     continue
                 if entity_type == "keywords":
-                    if entities["keywords"] is None: entities["keywords"] = {}
+                    if entities["keywords"] is None:
+                        entities["keywords"] = {}
                     entities["keywords"][name] = values
                 elif entity_type == "regex":
-                    if entities["regex"] is None: entities["regex"] = {}
+                    if entities["regex"] is None:
+                        entities["regex"] = {}
                     entities["regex"][name] = values[0]
         return entities
 
     def _parse_action(self):
-        action_table = pandas.read_excel(self.dialog_file, sheet_name="actions", header=None).dropna()
+        try:
+            action_table = pandas.read_excel(self.dialog_file,
+                                             sheet_name="actions",
+                                             header=None).dropna()
+        except Exception as error:
+            print(error)
+            return None
         if action_table.shape[0] < 1:
-            return {}
+            return None
         actions = {}
         for i in range(action_table.shape[0]):
             name = action_table.iloc[i, 0].strip()
@@ -80,33 +180,36 @@ class ReaderXLSX:
             exec(action)
             actions[name] = eval(name)
         return actions
-   
-    def __decode_childID(self, IDs):
-        '''
-            convert childID to list
-        '''
-        if isinstance(IDs, str):
-            IDs2 = []
-            for i in re.split('[,，]', IDs):
-                if i.isdigit():
-                    IDs2.append(int(i))
-                else:
-                    itmp = [int(x) for x in re.split('[~-]', i) if len(x.strip())>0]
-                    if len(itmp) > 1:
-                        IDs2 += range(itmp[0], itmp[1]+1)
-                    else:
-                        IDs2.append(int(itmp[0]))
-            return IDs2
-        elif isinstance(IDs, int):
-            return [IDs]
-        elif isinstance(IDs, list):
-            if isinstance(IDs[0], int):
-                return IDs
-            elif isinstance(IDs[0], str):
-                return [int(x) for x in IDs]
-        return None
+
+    def _build_entity_mask(self, data):
+        """
+            build entity mask of response template, converted from the template
+        """
+        max_id = data.index.max() + 1
+        needed_entity = flat_list(data.needed_entity.dropna().tolist())
+        unneeded_entity = flat_list(data.unneeded_entity.dropna().tolist())
+        entity_maskdict = sorted(list(set(needed_entity+unneeded_entity)))
+        entity_maskdict = dict(zip(entity_maskdict, range(len(entity_maskdict))))
+
+        masks = {'need': numpy.zeros((max_id, len(entity_maskdict)), 'bool_'),
+                      'unneed': numpy.zeros((max_id, len(entity_maskdict)), 'bool_')}
+
+        for i in range(data.shape[0]):
+            if data.needed_entity.iloc[i] is not None:
+                for e in data.needed_entity.iloc[i]:
+                    masks["need"][data.index[i], entity_maskdict[e]] = True
+            if data.unneeded_entity.iloc[i] is not None:
+                for e in data.unneeded_entity.iloc[i]:
+                    masks["unneed"][data.index[i], entity_maskdict[e]] = True
+        
+        return entity_maskdict, masks
 
 if __name__ == "__main__":
-    r = ReaderXLSX("../../data/babi/babi.xlsx")
-    print(r.actions)
-    print(r.actions["getrestinfo"]({}))
+    R = ReaderXLSX("../../data/babi/babi.xlsx", Tokenizer_Simple())
+    #print(R.dialogs)
+    #print(R.entities)
+    #print(R.actions)
+    #print(R.actions["getrestinfo"]({}))
+    #print(R.search("here it is", "response", n_top=1))
+    #print(R.get_action(8))
+    #print(R.get_response(1))

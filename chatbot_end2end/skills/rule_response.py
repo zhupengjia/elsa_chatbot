@@ -1,54 +1,117 @@
 #!/usr/bin/env python
-
-
 """
     Author: Pengjia Zhu (zhupengjia@gmail.com)
+    Response skill for rule-based chatbot
 """
+import numpy
+from .skill_base import SkillBase
+from ..model.similarity import BERTSim
+from ..module.dialog_status import format_sentence
+
 
 class RuleResponse(SkillBase):
     '''
         Rule based skill
     '''
-    def __init__(self, tokenizer, dialog_file, **args):
-        pass
-
-    def init_model(self, **args):
-        """
-            Initialize model
-            
-            Input:
-                - saved_model: str, default is "dialog_tracker.pt"
-                - device: string, model location, default is 'cpu'
-                - see ..model.generative_tracker.Generative_Tracker for more parameters if path of saved_model not existed
-        """
-        
-        pass
+    def __init__(self, dialogflow, tokenizer, vocab, max_seq_len, **args):
+        super(RuleResponse, self).__init__()
+        self.dialogflow =dialogflow
+        self.tokenizer = tokenizer
+        self.vocab = vocab
+        self.max_seq_len = max_seq_len
 
     def update_mask(self, current_status):
-        return 0
+        """
+            Update response masks after retrieving utterance and before getting response
+            
+            Input:
+                - current_status: dictionary of status, generated from Dialog_Status module
+        """
+        entity_mask = numpy.ones((len(self.dialogflow.entity_maskdict),1), 'bool_')
+        for e in current_status["entity"]:
+            if e in self.dialogflow.entity_maskdict:
+                entity_mask[self.dialogflow.entity_maskdict[e], 0] = False #mask for response choose
+        #calculate response mask
+        mask_need = numpy.matmul(self.dialogflow.entity_masks['need'], entity_mask).reshape(1,-1)[0]
+        mask_need = numpy.logical_not(mask_need)
+        mask_notneed = numpy.matmul(self.dialogflow.entity_masks['notneed'], numpy.logical_not(entity_mask)).reshape(1,-1)[0]
+        mask_notneed = numpy.logical_not(mask_notneed)
+        mask = mask_need * mask_notneed
+        return mask.astype("float32") 
+
+    def get_response_by_id(self, response_id, entity=None):
+        """
+            return response string by response id
+
+            Input:
+                - responseid: int
+                - entity: entity dictionary to format the output response
+
+            Output:
+                - response, string
+        """
+        response = self.dialogflow.get_response(response_id)
+        if entity is not None:
+            response = response.format(**entity)
+        return response
+
+    def update_response(self, skill_name, response_id, current_status):
+        """
+            update current response to the response status. 
+            
+            Input:
+                - skill_name: string, name of current skill
+                - response id: int
+                - current_status: dictionary of status, generated from Dialog_Status module
+        """
+        # function call
+        func_need = self.dialogflow.get_action(response_id)
+        if func_need is not None:
+            for funcname in func_need:
+                if not funcname in self.dialogflow.actions:
+                    continue
+                entities_get = self.dialogflow.actions[funcname](current_status["entity"])
+                for e in entities_get:
+                    current_status["entity"][e] = entities_get[e]
+
+        current_status['response_' + skill_name] = response_id
+        current_status["response_string"] = self.get_response_by_id(response_id, entity=current_status["entity"])
+        return current_status
+
+    def init_model(self, device='cpu', **args):
+        """
+            init similarity and predeal the dialog
+
+            Input:
+                - device: string, model location, default is 'cpu'
+                - see ..model.similarity for more parameters if path of saved_model not existed
+        """
+        self.similarity = BERTSim(**args)
+        self.similarity.to(device)
+        user_says_series = self.dialogflow.dialogs["user_says"]
+        sentence, sentence_masks, dialog_ids = [], [], []
+        for i, sl in enumerate(user_says_series.tolist()):
+            if sl is None:
+                continue
+            for s in sl:
+                _tmp = format_sentence(s,
+                                       vocab=self.vocab,
+                                       tokenizer=self.tokenizer,
+                                       max_seq_len=self.max_seq_len)
+                sentence.append(_tmp[0])
+                sentence_masks.append(_tmp[1])
+                dialog_ids.append(user_says_series.index[i])
+        sentence = numpy.concatenate(sentence)
+        sentence_masks = numpy.concatenate(sentence_masks)
+        sentence_ids = torch.LongTensor(sentence_ids).to(self.device)
+        attention_mask = torch.LongTensor(attention_mask).to(self.device)
+        print(sentence, sentence_masks)
+        sys.exit()
 
     def get_response(self, current_status):
         return 0
-
-    def update_response(self, response, current_status):
-        return 0
-
     
-    @classmethod
-    def build(cls, config, hook):
-        '''
-            construct model from config
-
-            Input:
-                - config: configure dictionary
-                - hook: hook instance, please check src/hook/babi_gensays.py for example
-        '''
-        logger = setLogger(**config.logger)
-        device = torch.device("cuda:0" if config.use_gpu and torch.cuda.is_available() else "cpu")
-
-        return cls(bert_model_name=config.bert_model_name, hook=hook, dialog_file=config.dialog_file, min_score = config.min_score, batch_size=config.batch_size, device=device, logger=logger)
-
-
+    
     def _predeal(self):
         '''
             predeal the dialogs

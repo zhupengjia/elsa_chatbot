@@ -87,7 +87,7 @@ class GenerativeResponse(SkillBase):
         mask_key = 'response_mask_' + skill_name
         
         current_status[response_key], self.current_status[mask_key] =\
-                format_sentence(self.vocab, response, self.max_seq_len)
+                format_sentence(response, vocab=vocab, max_seq_len=self.max_seq_len)
         
         return current_status
 

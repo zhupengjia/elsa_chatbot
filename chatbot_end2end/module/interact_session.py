@@ -7,7 +7,8 @@ from .nltk_sentiment import NLTKSentiment
 from .dialog_status import DialogStatus
 from .topic_manager import TopicManager
 from ..model.sentence_encoder import Sentence_Encoder
-from .. import skills as Skills, hooks as Hooks
+from .. import skills as Skills
+from ..reader import ReaderXLSX
 
 
 '''
@@ -58,7 +59,10 @@ class InteractSession:
         # logger, tokenizer and ner
         logger = setLogger(**config.logger)
         tokenizer = Tokenizer_BERT(**config.tokenizer)
-        ner = NER(**config.ner)
+        if "ner" in config:
+            ner_config = config.ner
+        else:
+            ner_config = None
         vocab = tokenizer.vocab
         sentiment_analyzer = NLTKSentiment()
 
@@ -74,24 +78,17 @@ class InteractSession:
                     "Error!! Skill {} not implemented!".format(
                         config.skills[skill_name].wrapper))
             skill_cls = getattr(Skills, config.skills[skill_name].wrapper)
-            if "hook" in config.skills[skill_name]:
-                if not hasattr(Hooks, config.skills[skill_name].hook.wrapper):
-                    raise RuntimeError(
-                        "Error!! Hook {} not implemented!".format(
-                            config.skills[skill_name].hook.wrapper))
-                hook_cls = getattr(
-                    Hooks,
-                    config.skills[skill_name].hook.wrapper)
-                if "parameters" not in config.skills[skill_name].hook:
-                    hook = hook_cls()
-                else:
-                    hook = hook_cls(
-                        **config.skills[skill_name].hook.parameters)
-                response_params.pop('hook')
+            if "dialogflow" in config.skills[skill_name]:
+                dialogflow = ReaderXLSX(config.skills[skill_name].dialogflow, tokenizer) 
+                entities = dialogflow.entities
+                response_params.pop('dialogflow')
             else:
-                hook = None
+                dialogflow = None
+                entities = None
+            response_params.pop('wrapper')
+            
             response = skill_cls(tokenizer=tokenizer, vocab=vocab,
-                                 hook=hook,
+                                 dialogflow=dialogflow,
                                  max_seq_len=config.model.max_seq_len,
                                  **response_params)
             response.init_model(
@@ -105,7 +102,24 @@ class InteractSession:
                 **config.skills[skill_name])
             response.eval() # set to eval mode
             topic_manager.register(skill_name, response)
-
+            
+            if ner_config is not None and entities is not None:
+                for k in ["keywords", "regex", "ner_name_replace"]:
+                    if entities[k] is not None:
+                        if not k in ner_config:
+                            ner_config[k] = {}
+                        ner_config[k].update(entities[k])
+                for k in ["ner"]:
+                    if entities[k] is not None:
+                        if not k in ner_config:
+                            ner_config[k] = []
+                        ner_config[k] += entities[k]
+        
+        if ner_config is not None:
+            ner = NER(**ner_config)
+        else:
+                ner = None
+        
         return cls(vocab=vocab, tokenizer=tokenizer, ner=ner,
                    topic_manager=topic_manager, logger=logger,
                    sentiment_analyzer=sentiment_analyzer, **config.model)

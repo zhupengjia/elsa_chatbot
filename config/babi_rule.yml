@@ -1,0 +1,34 @@
+%YAML 1.2
+---
+#app setting
+
+
+skill:
+    name: babi
+    wrapper: Goal_Response
+    template_file: data/babi/template.txt
+
+ner:
+    tokenizer: spacy
+
+tokenizer:
+    bert_model_name: bert-base-uncased
+    do_lower_case: 1
+    stopwords_path: config/en_stopwords.txt
+
+model:
+    device: "cuda:0"
+    max_seq_len: 50
+    max_entity_types: 1024
+
+skills:
+    babi:
+        wrapper: RuleResponse
+        dialogflow: data/babi/babi.xlsx
+
+logger:
+    appname: babi
+    loglevel_console:  20
+    loglevel_file: 0
+    logfile: data/babi/rule.log
+

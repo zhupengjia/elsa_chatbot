@@ -33,12 +33,6 @@ reader:
     train_data: /home/pzhu/data/dialog/babi/dialog-babi-task5-full-dialogs-trn.txt
     max_seq_len: 10
 
-skills:
-    babi:
-        wrapper: RuleResponse
-
-
-
 model:
     device: "cuda:0"
     max_entity_types: 1024

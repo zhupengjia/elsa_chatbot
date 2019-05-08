@@ -39,16 +39,21 @@ def dialog_collate(batch):
     return data
 
 
-def format_sentence(vocab, token_ids, max_seq_len):
+def format_sentence(sentence, vocab, tokenizer=None, max_seq_len=50):
     """
         Format token ids to sentence and masks
 
         Input:
+            - sentence: string or list of token ids, 
             - vocab:  instance of nlptools.text.vocab
-            - token_ids: list of token ids
-            - max_seq_len: int
+            - tokenizer:  instance of nlptools.text.tokenizer, default is None
+            - max_seq_len: int, default is 50
     """
-    token_ids = token_ids[:self.max_seq_len-2]
+    if tokenizer is None:
+        token_ids = sentence
+    else:
+        tokens = tokenizer(sentence)
+        token_ids = vocab.words2id(tokens)[:max_seq_len-2]
     seq_len = len(token_ids) + 2
     sentence = numpy.zeros(max_seq_len, 'int')
     sentence_mask = numpy.zeros(max_seq_len, 'int')
@@ -158,11 +163,11 @@ class DialogStatus:
                                    self.max_entity_types).astype("float32")
 
         # utterance to id
-        tokens = self.tokenizer(utterance_replaced)
-        utterance_ids = self.vocab.words2id(tokens)
-
         self.current_status["utterance"], self.current_status["utterance_mask"] =\
-                format_sentence(self.vocab, utterance_ids, self.max_seq_len)
+                format_sentence(utterance_replaced,
+                                vocab=self.vocab,
+                                tokenizer=self.tokenizer,
+                                max_seq_len=self.max_seq_len)
 
         # get topic
         self.current_status["topic"] = self.topic_manager.get_topic(
