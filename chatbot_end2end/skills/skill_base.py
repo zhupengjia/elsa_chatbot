@@ -9,6 +9,8 @@ class SkillBase:
     """
         Base skill class. Define some necessaryy methods for a skill
     """
+    def __init__(self, skill_name):
+        self.skill_name = skill_name
    
     def __getitem__(self, response):
         """
@@ -55,3 +57,11 @@ class SkillBase:
                 - current_status: dictionary of status, generated from Dialog_Status module
         """
         return current_status
+
+    def get_fallback(self, current_status):
+        """
+            return fallback response
+        """
+        current_status["entity"]["RESPONSE"] = None
+        return current_status
+

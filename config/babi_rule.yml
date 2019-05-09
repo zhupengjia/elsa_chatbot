@@ -25,6 +25,8 @@ skills:
     babi:
         wrapper: RuleResponse
         dialogflow: data/babi/babi.xlsx
+        prefilter: 200
+        tolerate: 0.01
 
 logger:
     appname: babi

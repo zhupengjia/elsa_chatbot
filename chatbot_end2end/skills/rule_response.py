@@ -3,18 +3,19 @@
     Author: Pengjia Zhu (zhupengjia@gmail.com)
     Response skill for rule-based chatbot
 """
-import numpy
+import numpy, pandas, random
+from nlptools.text.docsim import BERTSim
 from .skill_base import SkillBase
-from ..model.similarity import BERTSim
 from ..module.dialog_status import format_sentence
+from sklearn.metrics.pairwise import cosine_distances
 
 
 class RuleResponse(SkillBase):
     '''
         Rule based skill
     '''
-    def __init__(self, dialogflow, tokenizer, vocab, max_seq_len, **args):
-        super(RuleResponse, self).__init__()
+    def __init__(self, skill_name, dialogflow, tokenizer, vocab, max_seq_len, **args):
+        super(RuleResponse, self).__init__(skill_name)
         self.dialogflow =dialogflow
         self.tokenizer = tokenizer
         self.vocab = vocab
@@ -34,9 +35,14 @@ class RuleResponse(SkillBase):
         #calculate response mask
         mask_need = numpy.matmul(self.dialogflow.entity_masks['need'], entity_mask).reshape(1,-1)[0]
         mask_need = numpy.logical_not(mask_need)
-        mask_notneed = numpy.matmul(self.dialogflow.entity_masks['notneed'], numpy.logical_not(entity_mask)).reshape(1,-1)[0]
+        mask_notneed = numpy.matmul(self.dialogflow.entity_masks['unneed'], numpy.logical_not(entity_mask)).reshape(1,-1)[0]
         mask_notneed = numpy.logical_not(mask_notneed)
         mask = mask_need * mask_notneed
+        
+        if "childid_"+self.skill_name in current_status\
+           and current_status["childid_"+self.skill_name] is not None:
+            mask = mask * current_status["childid_"+self.skill_name]
+
         return mask.astype("float32") 
 
     def get_response_by_id(self, response_id, entity=None):
@@ -50,17 +56,19 @@ class RuleResponse(SkillBase):
             Output:
                 - response, string
         """
-        response = self.dialogflow.get_response(response_id)
+        if entity["RESPONSE"] is not None:
+            response = entity["RESPONSE"]
+        else:
+            response = self.dialogflow.get_response(response_id)
         if entity is not None:
             response = response.format(**entity)
         return response
 
-    def update_response(self, skill_name, response_id, current_status):
+    def update_response(self, response_id, current_status):
         """
             update current response to the response status. 
             
             Input:
-                - skill_name: string, name of current skill
                 - response id: int
                 - current_status: dictionary of status, generated from Dialog_Status module
         """
@@ -73,12 +81,12 @@ class RuleResponse(SkillBase):
                 entities_get = self.dialogflow.actions[funcname](current_status["entity"])
                 for e in entities_get:
                     current_status["entity"][e] = entities_get[e]
-
-        current_status['response_' + skill_name] = response_id
-        current_status["response_string"] = self.get_response_by_id(response_id, entity=current_status["entity"])
+        current_status['response_' + self.skill_name] = response_id
+        current_status["entity"]["RESPONSE"] = self.get_response_by_id(response_id, entity=current_status["entity"])
+        current_status['childid_' + self.skill_name] = self.dialogflow.dialogs.loc[response_id, 'child_id']
         return current_status
 
-    def init_model(self, device='cpu', **args):
+    def init_model(self, device='cpu', prefilter=500, tolerate=0.01, **args):
         """
             init similarity and predeal the dialog
 
@@ -86,133 +94,68 @@ class RuleResponse(SkillBase):
                 - device: string, model location, default is 'cpu'
                 - see ..model.similarity for more parameters if path of saved_model not existed
         """
+        self.prefilter = prefilter
+        self.tolerate = tolerate
+        
         self.similarity = BERTSim(**args)
         self.similarity.to(device)
         user_says_series = self.dialogflow.dialogs["user_says"]
+        fallback_says = user_says_series.isnull()
+        fallback_says = fallback_says[fallback_says].index.values
+        
         sentence, sentence_masks, dialog_ids = [], [], []
-        for i, sl in enumerate(user_says_series.tolist()):
-            if sl is None:
-                continue
+        for i, sl in enumerate(user_says_series.dropna().tolist()):
             for s in sl:
                 _tmp = format_sentence(s,
                                        vocab=self.vocab,
                                        tokenizer=self.tokenizer,
                                        max_seq_len=self.max_seq_len)
+                if _tmp is None: continue
                 sentence.append(_tmp[0])
                 sentence_masks.append(_tmp[1])
                 dialog_ids.append(user_says_series.index[i])
-        sentence = numpy.concatenate(sentence)
-        sentence_masks = numpy.concatenate(sentence_masks)
-        sentence_ids = torch.LongTensor(sentence_ids).to(self.device)
-        attention_mask = torch.LongTensor(attention_mask).to(self.device)
-        print(sentence, sentence_masks)
-        sys.exit()
+        self.usersays_index = {"user_emb":self.similarity(sentence, sentence_masks),
+                               "ids":numpy.array(dialog_ids),
+                               "fallback": fallback_says}
 
-    def get_response(self, current_status):
-        return 0
-    
-    
-    def _predeal(self):
-        '''
-            predeal the dialogs
-        '''
-        def utterance2id(utter):
-            if not isinstance(utter, str):
-                return None
-            utter = [self.vocab.words2id(self.tokenizer(u)) for u in re.split('\n', utter)]
-            utter = [u for u in utter if len(u) > 0]
-            if len(utter) < 1: return None
-            return utter
-        utterance_embeddings = numpy.concatenate(list(self.embedding(self.reader.data['userSays'].tolist())))
-        self.reader.data['utterance'] = list(utterance_embeddings)
-
-
-    def get_reply(self, utterance, clientid):
+    def get_response(self, status_data):
         '''
             get response from utterance
 
             Input:
-                - utterance: string
-                - entities: dictionary
+                - status_data: data converted from dialog status
         '''
-        #special command
-        utterance = utterance.strip()
-        if utterance in [':CLEAR', ':RESET', ':RESTART', ":EXIT", ":STOP", ":QUIT", ":Q"]:
-            self.reset(clientid)
-            return 'dialog status reset!'
-        
-        #create new session for user
-        if not clientid in self.session:
-            self.session[clientid] = {'CHILDID': None, 'RESPONSE': None}
+        utterance, utterance_mask = status_data["utterance"].data, status_data["utterance_mask"].data
 
-        self.session[clientid]['RESPONSE'] = None # clean response
-        self.logger.debug('utterance: ' + utterance)
-        if len(utterance) < 1:
-            for e, v in self._get_fallback(self.session[clientid]).items():
-                self.session[clientid][e] = v
+        if self.usersays_index["ids"].shape[0] > self.prefilter:
+            utterance_ids = utterance[0].cpu().detach().numpy()[utterance_mask[0].cpu().detach().numpy().astype("bool_")]
+            utterance_tokens = self.vocab.id2words(utterance_ids[1:-1])
+
+            ids = self.dialogflow.search(utterance_tokens, target="user_says", n_top=self.prefilter)
+            filter_idx = numpy.in1d(self.usersays_index["ids"], ids)
         else:
-            utterance_embedding = list(self.embedding(utterance))[0][0]
-            for e, v in self._find(utterance_embedding, self.session[clientid]).items():
-                self.session[clientid][e] = v
-        if isinstance(self.session[clientid]['RESPONSE'], str):
-            return self.session[clientid]['RESPONSE']
-        return '^_^'
-    
+            filter_idx = True
 
-    def reset(self, clientid):
+        utterance_embedding = self.similarity.get_embedding(utterance, utterance_mask)
+
+        response_mask = status_data["response_mask_"+self.skill_name].data[0].cpu().detach().numpy().astype("bool_")
+        response_mask = response_mask[self.usersays_index["ids"]]
+
+        filtered_data = {"user_emb":self.usersays_index["user_emb"][response_mask*filter_idx],
+                         "ids":self.usersays_index["ids"][response_mask*filter_idx]}
+
+        similarity =  1/(1+cosine_distances(utterance_embedding, filtered_data["user_emb"]))
+        max_similarity = similarity[0].max()
+        response_ids = filtered_data["ids"][similarity[0] >= max_similarity-self.tolerate]
+        return numpy.random.choice(response_ids)
+
+    def get_fallback(self, current_status):
         '''
-            reset session
+            Get fallback feedback
         '''
-        if clientid in self.session:
-            del self.session[clientid]
-
-
-    def _find(self, utterance_embedding, entities):
-        '''
-            find the most closed one
-            
-            Input:
-                - utterance_embedding : 1d array, embedding of utterance
-                - entities: dictionary, current entities
-        '''
-        def getscore(utter_cand):
-            if utter_cand is None: 
-                return 0
-            distance = cosine(utterance_embedding, utter_cand)
-            return 1/(1+distance)
-        data = self.reader.data
-        
-        if entities['CHILDID'] is not None:
-            data_filter = data.loc[entities['CHILDID']]
-            data_filter['score'] = data_filter['utterance'].apply(getscore)
-            self.logger.debug("score: \n" + str(data_filter[['userSays', 'score', 'utterance']]))
-            idx = data_filter['score'].idxmax()
-            if data_filter.loc[idx]['score'] < self.min_score:
-                #try to get score for out of rules
-                otherids = list(set(list(data.index)) - set(entities['CHILDID']))
-                data_others = data.loc[otherids]
-                data_others['score'] = data_others['utterance'].apply(getscore)
-                idx_others = data_others['score'].idxmax()
-                if data_others.loc[idx_others]['score'] > data_filter.loc[idx]['score']:
-                    idx = idx_others
-        else:
-            data['score'] = data['utterance'].apply(getscore)
-            idx = data['score'].idxmax()
-        return self._get_response(data.loc[[idx]], entities)
-
-
-    def _get_fallback(self, entities):
-        '''
-            get fallback, if there is NaN in userSays then pick one of them 
-
-            Input:
-                - entities: dictionary, current entities
-        '''
-        data = self.reader.data[pandas.isnull(self.reader.data.userSays)]
-        if len(data) < 1:
-            return {}
-        return self._get_response(data, entities)
-
+        if len(self.usersays_index["fallback"]) < 1:
+            return None
+        return numpy.random.choice(self.usersays_index["fallback"])
 
     def _get_response(self, data, entities):
         '''
@@ -233,30 +176,4 @@ class RuleResponse(SkillBase):
             entities['CHILDID'] = None
         return entities
 
-        
-    def _call_hook(self, hooks, entities):
-        hooks = [y for y in [x.strip() for x in re.split('\s,;', hooks)] if len(y) > 0]
-        for hook in hooks:
-            func = getattr(self.hook, hook)
-            if func is not None:
-                for e, v in func(entities).items():
-                    entities[e] = v
-        return entities
-        
 
-    def __decode_childID(self, IDs):
-        if isinstance(IDs, str):
-            IDs2 = []
-            for i in re.split('[,，]', IDs):
-                if i.isdigit():
-                    IDs2.append(int(i))
-                else:
-                    itmp = [int(x) for x in re.split('[~-]', i) if len(x.strip())>0]
-                    if len(itmp) > 1:
-                        IDs2 += range(itmp[0], itmp[1]+1)
-                    else:
-                        IDs2.append(int(itmp[0]))
-
-            return numpy.asarray(IDs2, 'int')
-        else:
-            return numpy.asarray(IDs, 'int')

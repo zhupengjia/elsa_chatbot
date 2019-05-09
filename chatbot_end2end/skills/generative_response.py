@@ -19,8 +19,8 @@ class GenerativeResponse(SkillBase):
             - max_seq_len: int, maximum sequence length
     """
 
-    def __init__(self, tokenizer, vocab,  max_seq_len=100, beam_size=1, **args):
-        super().__init__()
+    def __init__(self, skill_name, tokenizer, vocab,  max_seq_len=100, beam_size=1, **args):
+        super(GenerativeResponse, self).__init__(skill_name)
         self.tokenizer = tokenizer
         self.vocab = vocab
         self.max_seq_len = max_seq_len
@@ -72,19 +72,18 @@ class GenerativeResponse(SkillBase):
         else:
             return self.model(status_data)
 
-    def update_response(self, skill_name, response, current_status):
+    def update_response(self, response, current_status):
         """
             update current response to the response status.
             
             Input:
-                - skill_name: string, name of current skill
                 - response: value of response
                 - current_status: dictionary of status, generated from Dialog_Status module
         """
         
-        current_status['response_string'] = self.vocab.id2words(response) 
-        response_key = 'response_' + skill_name
-        mask_key = 'response_mask_' + skill_name
+        current_status["entity"]['RESPONSE'] = self.vocab.id2words(response) 
+        response_key = 'response_' + self.skill_name
+        mask_key = 'response_mask_' + self.skill_name
         
         current_status[response_key], self.current_status[mask_key] =\
                 format_sentence(response, vocab=vocab, max_seq_len=self.max_seq_len)

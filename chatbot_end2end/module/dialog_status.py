@@ -7,6 +7,7 @@ import numpy
 import torch
 from torch.nn import functional as F
 from torch.nn.utils.rnn import pack_padded_sequence
+from nlptools.text.docsim import format_sentence
 from .entity_dict import EntityDict
 from .dialog_data import DialogData
 
@@ -37,31 +38,6 @@ def dialog_collate(batch):
                                        batch_first=True)
 
     return data
-
-
-def format_sentence(sentence, vocab, tokenizer=None, max_seq_len=50):
-    """
-        Format token ids to sentence and masks
-
-        Input:
-            - sentence: string or list of token ids, 
-            - vocab:  instance of nlptools.text.vocab
-            - tokenizer:  instance of nlptools.text.tokenizer, default is None
-            - max_seq_len: int, default is 50
-    """
-    if tokenizer is None:
-        token_ids = sentence
-    else:
-        tokens = tokenizer(sentence)
-        token_ids = vocab.words2id(tokens)[:max_seq_len-2]
-    seq_len = len(token_ids) + 2
-    sentence = numpy.zeros(max_seq_len, 'int')
-    sentence_mask = numpy.zeros(max_seq_len, 'int')
-    sentence[0] = vocab.BOS_ID
-    sentence[1:seq_len-1] = token_ids
-    sentence[seq_len-1] = vocab.EOS_ID
-    sentence_mask[:seq_len] = 1
-    return sentence, sentence_mask
 
 
 class DialogStatus:
@@ -119,11 +95,10 @@ class DialogStatus:
         self.sentiment_analyzer = sentiment_analyzer
 
     def __init_status(self):
-        initstatus = {"entity": {},
+        initstatus = {"entity": {"RESPONSE":None},
                       "entity_emb": None,
                       "utterance": None,
                       "utterance_mask": None,
-                      "response_string": None,
                       "sentiment": 0,
                       "topic": None
                       }
@@ -153,21 +128,29 @@ class DialogStatus:
         """
         # get entities
         utterance = utterance.strip()
-        entities, utterance_replaced = self.ner.get(utterance,
-                                                    return_dict=True)
-        for e in entities:
-            # only keep first value
-            self.current_status["entity"][e] = entities[e][0]
-        self.current_status["entity_emb"] =\
-            EntityDict.name2onehot(self.current_status["entity"].keys(),
-                                   self.max_entity_types).astype("float32")
+
+        if self.ner is None:
+            utterance_replaced = utterance
+        else:
+            entities, utterance_replaced = self.ner.get(utterance,
+                                                        return_dict=True)
+            for e in entities:
+                # only keep first value
+                self.current_status["entity"][e] = entities[e][0]
+            
+            self.current_status["entity_emb"] =\
+                EntityDict.name2onehot(self.current_status["entity"].keys(),
+                                       self.max_entity_types).astype("float32")
 
         # utterance to id
-        self.current_status["utterance"], self.current_status["utterance_mask"] =\
-                format_sentence(utterance_replaced,
+        u_and_mask = format_sentence(utterance_replaced,
                                 vocab=self.vocab,
                                 tokenizer=self.tokenizer,
                                 max_seq_len=self.max_seq_len)
+        if u_and_mask is None:
+            return None
+
+        self.current_status["utterance"], self.current_status["utterance_mask"] = u_and_mask
 
         # get topic
         self.current_status["topic"] = self.topic_manager.get_topic(
@@ -179,6 +162,8 @@ class DialogStatus:
         # response mask
         self.current_status = self.topic_manager.update_response_masks(
             self.current_status)
+
+        return True
 
     def add_response(self, response):
         """
@@ -208,7 +193,11 @@ class DialogStatus:
             self.topic_manager.get_response(current_data,
                                             self.current_status)
         self.history_status.append(copy.deepcopy(self.current_status))
-        return self.current_status['response_string']
+        return self.current_status["entity"]['RESPONSE']
+
+    def get_fallback(self):
+        self.curent_status = self.topic_manager.get_fallback(self.current_status)
+        return self.current_status["entity"]['RESPONSE']
 
     def __str__(self):
         """
@@ -225,13 +214,13 @@ class DialogStatus:
         """
         return len(self.history_status)
 
-    def data(self, topic_names=None, status_list=None,
+    def data(self, skill_names=None, status_list=None,
              turn_start=0):
         """
             return pytorch data for all messages in this dialog
 
             Input:
-                - topic_names: list of topic name need to return,
+                - skill_names: list of topic name need to return,
                     default is None to return all available topics
                 - status_list: list status need to predeal,
                     default is None for history status
@@ -251,8 +240,8 @@ class DialogStatus:
                   "sentiment": numpy.zeros((n_status, 1), 'float32')
                   }
 
-        if topic_names is None:
-            topic_names = self.topic_manager.topics.keys()
+        if skill_names is None:
+            skill_names = self.topic_manager.skills.keys()
 
         if n_status+turn_start < self.rl_maxloop:
             reward_base = 1
@@ -266,7 +255,7 @@ class DialogStatus:
             status["sentiment"][i, 0] = s["sentiment"]
             status["reward"][i, 0] =\
                 reward_base * self.rl_discount**(i+turn_start)
-            for tk in topic_names:
+            for tk in skill_names:
                 for k in ["response", "response_mask"]:
                     rkey = k+'_'+tk
                     if rkey not in s:
@@ -285,19 +274,19 @@ class DialogStatus:
 
         return status
 
-    def status2data(self, topic_names=None, status=None):
+    def status2data(self, skill_names=None, status=None):
         """
             convert to pytorch data for one status
 
             Input:
-                - topic_names: list of topic name need to return,
+                - skill_names: list of topic name need to return,
                     default is None to return all available topics
                 - status: status dictionary generated from this class,
                     default is None for current status
         """
         if status is None:
             status = self.current_status
-        data = self.data(topic_names, [status], len(self.history_status))
+        data = self.data(skill_names, [status], len(self.history_status))
         for k in data:
             data[k] = torch.tensor(data[k])
         return dialog_collate([data])        

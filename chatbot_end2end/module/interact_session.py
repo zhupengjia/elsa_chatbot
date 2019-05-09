@@ -90,6 +90,7 @@ class InteractSession:
             response = skill_cls(tokenizer=tokenizer, vocab=vocab,
                                  dialogflow=dialogflow,
                                  max_seq_len=config.model.max_seq_len,
+                                 skill_name=skill_name,
                                  **response_params)
             response.init_model(
                 encoder=encoder,
@@ -98,7 +99,6 @@ class InteractSession:
                 bos_id=vocab.BOS_ID,
                 eos_id=vocab.EOS_ID,
                 unk_id=vocab.UNK_ID,
-                skill_name=skill_name,
                 **config.skills[skill_name])
             response.eval() # set to eval mode
             topic_manager.register(skill_name, response)
@@ -118,7 +118,7 @@ class InteractSession:
         if ner_config is not None:
             ner = NER(**ner_config)
         else:
-                ner = None
+            ner = None
         
         return cls(vocab=vocab, tokenizer=tokenizer, ner=ner,
                    topic_manager=topic_manager, logger=logger,
@@ -131,16 +131,18 @@ class InteractSession:
                                        self.max_seq_len, self.max_entity_types)
 
     def response(self, query, session_id="default"):
+        #create new session for user
         if session_id not in self.dialog_status:
             self.dialog_status[session_id] = self.new_dialog()
-
+        
+        #special commands
         if query in ["clear", "reset", "restart", "exit", "stop", "quit", "q"]:
             self.dialog_status[session_id] = self.new_dialog()
             return "reset"
 
-        if len(query) < 1:
-            return ''
+        if len(query) < 1 or self.dialog_status[session_id].add_utterance(query) is None:
+            return self.dialog_status[session_id].get_fallback()
 
-        self.dialog_status[session_id].add_utterance(query)
         return self.dialog_status[session_id].get_response(self.device)
 
+    

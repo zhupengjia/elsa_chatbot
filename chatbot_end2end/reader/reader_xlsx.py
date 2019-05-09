@@ -35,12 +35,12 @@ class ReaderXLSX:
         """
             return number of intents
         """
-        return self.dialogs.index.max()
+        return self.dialogs.index.max() + 1
 
     def get_action(self, idx):
         """
             return action list via intent id
-            
+
             Input:
                 - id: int, intent id
         """
@@ -49,14 +49,13 @@ class ReaderXLSX:
     def get_response(self, idx):
         """
             return response template via idx. If multiple response template available, will randomly return one
-            
+
             Input:
                 - id: int, intent id
         """
-        response = self.dialogs.loc[idx, "response"]
-        if response is None:
+        if not idx in self.dialogs["response"].index:
             return None
-        return random.choice(response) 
+        return random.choice(self.dialogs["response"].loc[idx])
 
     def _parse_dialog(self):
         try:
@@ -85,6 +84,19 @@ class ReaderXLSX:
         self.index = {}
         self.index["response"] = self._build_index(dialogs["response"])
         self.index["user_says"] = self._build_index(dialogs["user_says"])
+
+        dialog_len = dialogs.index.max() + 1
+        
+        def _build_child_mask(cid):
+            if cid is None:
+                return None
+            mask = numpy.zeros(dialog_len, 'bool_') 
+            for d in cid:
+                mask[d] = True
+            return mask
+
+        dialogs['child_id'] = dialogs['child_id'].apply(_build_child_mask)
+
         self.entity_maskdict, self.entity_masks = \
                 self._build_entity_mask(dialogs[["needed_entity", "unneeded_entity"]])
         return dialogs
@@ -110,16 +122,18 @@ class ReaderXLSX:
         """
             Search the most closed response or user_says from dialogflows and return related ids
             Input:
-                - sentence: string
+                - sentence: string or token list
                 - target: "response" or "user_says", default is "response"
                 - n_top, int, default is 10
         """
         if not target in self.index:
             raise("target must be 'response' or 'user_says'")
-        sentence = re.sub('[^^a-zA-Z ]', '', sentence)
-        token_ids = flat_list(self.index[target]["vocab"](self.tokenizer(sentence)).values())
+        if isinstance(sentence, str):
+            sentence = re.sub('[^^a-zA-Z ]', '', sentence)
+            sentence = self.tokenizer(sentence)
+        token_ids = flat_list(self.index[target]["vocab"](sentence).values())
         result = self.index[target]["index"].search_index(token_ids, topN=n_top)
-        return [self.index[target]["ids"][r[0]] for r in result]
+        return numpy.array([self.index[target]["ids"][r[0]] for r in result])
 
     def _parse_entity(self):
         try:

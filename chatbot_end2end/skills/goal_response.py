@@ -22,8 +22,8 @@ class GoalResponse(RuleResponse):
             - len(): return number of responses in template
             - __getitem__ : get most closed response id for response, input is response string
     """
-    def __init__(self, dialogflow, saved_model="dialog_tracker.pt", **args):
-        super(GoalResponse, self).__init__(dialogflow, **args)
+    def __init__(self, skill_name, dialogflow, saved_model="dialog_tracker.pt", **args):
+        super(GoalResponse, self).__init__(skill_name, dialogflow, **args)
         self.saved_model = saved_model
         self.model = None
 
@@ -52,17 +52,17 @@ class GoalResponse(RuleResponse):
         """
         self.model.eval()
 
-    def get_response(self, current_status):
+    def get_response(self, status_data):
         """
             predict response value from current status
 
             Input:
-                - current_status: dictionary of status, generated from Dialog_Status module
+                - status_data: data converted from dialog status
         """
         if self.model.training:
-            return self.model(current_status)
+            return self.model(status_data)
 
-        y_prob = self.model(current_status)
+        y_prob = self.model(status_data)
         _, y_pred = torch.max(y_prob.data, 1)
         y_pred = int(y_pred.cpu().numpy()[-1])
         return y_pred

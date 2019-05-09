@@ -11,8 +11,14 @@ if len(sys.argv) < 2:
     parser.exit()
 
 from chatbot_end2end.module.interact_session import InteractSession
+from chatbot_end2end.backend.shell import Shell
 from nlptools.utils import Config
 
 cfg = Config(args.config)
-s = InteractSession.build(cfg)
-s.response("hello")
+session = InteractSession.build(cfg)
+#print(session.response("hello"))
+
+backend = Shell(session)
+backend.run()
+
+
