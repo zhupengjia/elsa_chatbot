@@ -9,6 +9,7 @@ from nlptools.utils import decode_child_id, flat_list
 from nlptools.text.ngrams import Ngrams
 from nlptools.text import VecTFIDF
 from nlptools.text.tokenizer import Tokenizer_Simple
+from nlptools.text.ner import NER
 
 
 class ReaderXLSX:
@@ -17,18 +18,25 @@ class ReaderXLSX:
 
         Input:
             - dialog_file: xlsx file of rule definition
-            - tokenizer
+            - tokenizer: instance iof tokenizer
+            - ner_config: dictionary of ner config, used to replace the related words in sentence, default is None
     '''
 
-    def __init__(self, dialog_file, tokenizer=None):
+    def __init__(self, dialog_file, tokenizer=None, ner_config=None):
         self.dialog_file = dialog_file
         if not os.path.exists(self.dialog_file):
             raise('{} not exists!!!'.format(self.dialog_file))
-        self.tokenizer = Tokenizer_Simple() if tokenizer is None else tokenizer 
+        self.tokenizer = Tokenizer_Simple() if tokenizer is None else tokenizer
         self.index = None
 
-        self.dialogs = self._parse_dialog()
         self.entities = self._parse_entity()
+        
+        if ner_config is not None:
+            self.ner = NER(**ner_config, **self.entities) 
+        else:
+            self.ner = None
+
+        self.dialogs = self._parse_dialog()
         self.actions = self._parse_action()
 
     def __len__(self):
@@ -57,6 +65,12 @@ class ReaderXLSX:
             return None
         return random.choice(self.dialogs["response"].loc[idx])
 
+    def _mixed_tokenizer(self, d):
+        if self.ner is not None:
+            _, d = self.ner.get(d, return_dict=True)
+        d = re.sub('[^a-zA-Z_$ ]', '', d)
+        return self.tokenizer(d)
+
     def _parse_dialog(self):
         try:
             dialogs = pandas.read_excel(self.dialog_file, sheet_name="dialogs", index_col='id')
@@ -73,7 +87,7 @@ class ReaderXLSX:
             lambda x: [s.strip().upper() for s in re.split("[,| ]", x) if s.strip()]\
             if isinstance(x, str) else None)
         dialogs["user_says"] = dialogs["user_says"].apply(
-            lambda x: [s.strip() for s in re.split("\n", x) if s.strip()]\
+            lambda x: [self._mixed_tokenizer(s.strip()) for s in re.split("\n", x) if s.strip()]\
             if isinstance(x, str) else None)
         dialogs["response"] = dialogs["response"].apply(
             lambda x: [s.strip() for s in re.split("\n", x) if s.strip()]\
@@ -110,10 +124,11 @@ class ReaderXLSX:
             for r in rl:
                 data_flat.append(r)
                 ids_flat.append(ids[i])
-        data_flat = [re.sub('[^^a-zA-Z ]', '', d) for d in data_flat]
         vocab = Ngrams(ngrams=3)
         search_index = VecTFIDF(vocab)
-        data_ids = [flat_list(vocab(self.tokenizer(d)).values()) for d in data_flat]
+        if isinstance(data_flat[0], str):
+            data_flat = [self._mixed_tokenizer(d) for d in data_flat]
+        data_ids = [flat_list(vocab(d).values()) for d in data_flat]
         vocab.freeze()
         search_index.load_index(data_ids)
         return {"vocab":vocab, "index":search_index, "ids": ids_flat}
@@ -155,7 +170,7 @@ class ReaderXLSX:
                 continue
             name = name.strip()
             entity_type = entity_type.strip().lower()
-            if name_replace is not None:
+            if isinstance(name_replace, str) and name_replace:
                 if entities["ner_name_replace"] is None:
                     entities["ner_name_replace"] = {}
                 entities["ner_name_replace"][name] = name_replace

@@ -70,8 +70,12 @@ class TopicManager:
                 - current_status: dictionary of status, generated from dialog_status module
 
         """
-        response_value = self.skills[self.current_skill].get_response(current_data)
-        return self.update_response(response_value, current_status)
+        response_value, response_score = self.skills[self.current_skill].get_response(current_data)
+        current_status["response_score_"+self.current_skill] = response_score
+        if response_value is None:
+            return self.get_fallback(current_status)
+        status = self.update_response(response_value, current_status)
+        return status
 
     def add_response(self, response, current_status):
         """

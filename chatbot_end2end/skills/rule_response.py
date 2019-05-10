@@ -4,7 +4,8 @@
     Response skill for rule-based chatbot
 """
 import numpy, pandas, random
-from nlptools.text.docsim import BERTSim
+from nlptools.text.docsim import WMDSim
+from nlptools.text.embedding import Embedding
 from .skill_base import SkillBase
 from ..module.dialog_status import format_sentence
 from sklearn.metrics.pairwise import cosine_distances
@@ -38,12 +39,12 @@ class RuleResponse(SkillBase):
         mask_notneed = numpy.matmul(self.dialogflow.entity_masks['unneed'], numpy.logical_not(entity_mask)).reshape(1,-1)[0]
         mask_notneed = numpy.logical_not(mask_notneed)
         mask = mask_need * mask_notneed
-        
+
         if "childid_"+self.skill_name in current_status\
            and current_status["childid_"+self.skill_name] is not None:
             mask = mask * current_status["childid_"+self.skill_name]
 
-        return mask.astype("float32") 
+        return mask.astype("float32")
 
     def get_response_by_id(self, response_id, entity=None):
         """
@@ -96,8 +97,8 @@ class RuleResponse(SkillBase):
         """
         self.prefilter = prefilter
         self.tolerate = tolerate
-        
-        self.similarity = BERTSim(**args)
+        self.vocab.embedding = Embedding(**args)
+        self.similarity = WMDSim(vocab=self.vocab, **args)
         self.similarity.to(device)
         user_says_series = self.dialogflow.dialogs["user_says"]
         fallback_says = user_says_series.isnull()
@@ -136,6 +137,7 @@ class RuleResponse(SkillBase):
         else:
             filter_idx = True
 
+
         utterance_embedding = self.similarity.get_embedding(utterance, utterance_mask)
 
         response_mask = status_data["response_mask_"+self.skill_name].data[0].cpu().detach().numpy().astype("bool_")
@@ -143,11 +145,18 @@ class RuleResponse(SkillBase):
 
         filtered_data = {"user_emb":self.usersays_index["user_emb"][response_mask*filter_idx],
                          "ids":self.usersays_index["ids"][response_mask*filter_idx]}
+        
+        if len(filtered_data["ids"]) < 1:
+            return None, 0
 
-        similarity =  1/(1+cosine_distances(utterance_embedding, filtered_data["user_emb"]))
-        max_similarity = similarity[0].max()
-        response_ids = filtered_data["ids"][similarity[0] >= max_similarity-self.tolerate]
-        return numpy.random.choice(response_ids)
+        similarity = self.similarity.similarity(utterance_embedding, filtered_data["user_emb"])
+        
+        if len(similarity[0]) > 0:
+            max_similarity = similarity[0].max()
+            response_ids = filtered_data["ids"][similarity[0] >= max_similarity-self.tolerate]
+        else:
+            response_ids = filtered_data["ids"]
+        return numpy.random.choice(response_ids), max_similarity
 
     def get_fallback(self, current_status):
         '''
@@ -156,24 +165,4 @@ class RuleResponse(SkillBase):
         if len(self.usersays_index["fallback"]) < 1:
             return None
         return numpy.random.choice(self.usersays_index["fallback"])
-
-    def _get_response(self, data, entities):
-        '''
-            get response from data
-
-            Input:
-                - data: dataframe
-                - entities: dictionary, current entities
-        '''
-        data = data.loc[random.choice(data.index)] # random pickup one
-        if isinstance(data.hook, str):
-            entities = self._call_hook(data.hook, entities)
-        if not isinstance(entities['RESPONSE'], str) and isinstance(data.response, str):
-            entities['RESPONSE'] = data.response
-        if data.childID is not None:
-            entities['CHILDID'] = self.__decode_childID(data.childID)
-        else:
-            entities['CHILDID'] = None
-        return entities
-
 

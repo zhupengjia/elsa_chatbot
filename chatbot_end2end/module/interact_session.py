@@ -6,7 +6,6 @@ from nlptools.text.ner import NER
 from .nltk_sentiment import NLTKSentiment
 from .dialog_status import DialogStatus
 from .topic_manager import TopicManager
-from ..model.sentence_encoder import Sentence_Encoder
 from .. import skills as Skills
 from ..reader import ReaderXLSX
 
@@ -66,8 +65,7 @@ class InteractSession:
         vocab = tokenizer.vocab
         sentiment_analyzer = NLTKSentiment()
 
-        # encoder
-        encoder = Sentence_Encoder(config.tokenizer.bert_model_name)
+        shared_layers = {}
 
         # skills
         topic_manager = TopicManager()
@@ -79,7 +77,9 @@ class InteractSession:
                         config.skills[skill_name].wrapper))
             skill_cls = getattr(Skills, config.skills[skill_name].wrapper)
             if "dialogflow" in config.skills[skill_name]:
-                dialogflow = ReaderXLSX(config.skills[skill_name].dialogflow, tokenizer) 
+                dialogflow = ReaderXLSX(config.skills[skill_name].dialogflow,
+                                        tokenizer=tokenizer,
+                                       ner_config=ner_config) 
                 entities = dialogflow.entities
                 response_params.pop('dialogflow')
             else:
@@ -93,7 +93,7 @@ class InteractSession:
                                  skill_name=skill_name,
                                  **response_params)
             response.init_model(
-                encoder=encoder,
+                shared_layers=shared_layers,
                 device=config.model.device,
                 pad_id=vocab.PAD_ID,
                 bos_id=vocab.BOS_ID,
@@ -105,12 +105,12 @@ class InteractSession:
             
             if ner_config is not None and entities is not None:
                 for k in ["keywords", "regex", "ner_name_replace"]:
-                    if entities[k] is not None:
+                    if entities[k]:
                         if not k in ner_config:
                             ner_config[k] = {}
                         ner_config[k].update(entities[k])
                 for k in ["ner"]:
-                    if entities[k] is not None:
+                    if entities[k]:
                         if not k in ner_config:
                             ner_config[k] = []
                         ner_config[k] += entities[k]
@@ -140,9 +140,17 @@ class InteractSession:
             self.dialog_status[session_id] = self.new_dialog()
             return "reset"
 
+        if query in ["debug"]:
+            return str(self.dialog_status[session_id])
+
         if len(query) < 1 or self.dialog_status[session_id].add_utterance(query) is None:
             return self.dialog_status[session_id].get_fallback()
 
-        return self.dialog_status[session_id].get_response(self.device)
+        response = self.dialog_status[session_id].get_response(self.device)
+        
+        if "SESSION_RESET" in self.dialog_status[session_id].current_status["entity"]:
+            del self.dialog_status[session_id]
+
+        return response
 
     

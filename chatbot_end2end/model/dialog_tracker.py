@@ -2,6 +2,7 @@
 import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import PackedSequence
+from .sentence_encoder import Sentence_Encoder
 
 '''
     Author: Pengjia Zhu (zhupengjia@gmail.com)
@@ -24,10 +25,17 @@ class Dialog_Tracker(nn.Module):
             - dropout: float, default is 0.2
             
     '''
-    def __init__(self, skill_name, encoder, Nresponses, max_entity_types, entity_layers=2, entity_emb_dim=50, lstm_layers=1, hidden_dim=300, dropout=0, **args):
+    def __init__(self, skill_name, Nresponses, max_entity_types, shared_layers=None, bert_model_name="bert-base-uncased", entity_layers=2, entity_emb_dim=50, lstm_layers=1, hidden_dim=300, dropout=0, **args):
         super().__init__()
+        if shared_layers is None or not "encoder" in shared_layers:
+            self.encoder = Sentence_Encoder(bert_model_name)
+            if shared_layers is not None:
+                shared_layers["encoder"] = self.encoder
+        else:
+            self.encoder = shared_layers["encoder"]
+        
         self.config = {
-                    "bert_model_name": encoder.bert_model_name,
+                    "bert_model_name": self.encoder.bert_model_name,
                     "Nresponses": Nresponses,
                     "max_entity_types": max_entity_types,
                     "entity_layers": entity_layers,
@@ -36,11 +44,8 @@ class Dialog_Tracker(nn.Module):
                     "hidden_dim": hidden_dim
                 }
 
-
         self.response_key = 'response_' + skill_name
         self.mask_key = 'response_mask_' + skill_name
-        #self.encoder = Sentence_Encoder(bert_model_name)
-        self.encoder = encoder
 
         self.dropout = nn.Dropout(dropout)
         self.pool = nn.AvgPool1d(2)

@@ -65,4 +65,4 @@ class GoalResponse(RuleResponse):
         y_prob = self.model(status_data)
         _, y_pred = torch.max(y_prob.data, 1)
         y_pred = int(y_pred.cpu().numpy()[-1])
-        return y_pred
+        return y_pred, y_prob

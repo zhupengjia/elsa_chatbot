@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from sleekxmpp import ClientXMPP
 
-class XMPP(ClientXMPP):
+class XMPPClient(ClientXMPP):
     def __init__(self, jid, password):
         ClientXMPP.__init__(self, jid, password)
         self.add_event_handler("session_start", self.session_start)
@@ -18,4 +18,13 @@ class XMPP(ClientXMPP):
             reply = self.interact(question, from_client)
             msg.reply(reply).send()
 
+
+class XMPP:
+    def __init__(self, interact_session):
+        self.xmpp = XMPPClient(jid='elsa@chat.higgslab.com', password='siriusvoce')
+
+    def run(self):
+        import logging
+        logging.basicConfig(level=logging.DEBUG, format='%(levelname)-8s %(message)s')
+        self.xmpp.process(block=True)
 

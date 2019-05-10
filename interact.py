@@ -3,6 +3,7 @@ import argparse, sys
 
 parser = argparse.ArgumentParser(description='Interact session')
 parser.add_argument('-c', '--config', dest='config', help='yaml configuration file')
+parser.add_argument('-t', '--text', dest='text', default=None, help='query text')
 
 args = parser.parse_args()
 
@@ -16,9 +17,12 @@ from nlptools.utils import Config
 
 cfg = Config(args.config)
 session = InteractSession.build(cfg)
-#print(session.response("hello"))
 
 backend = Shell(session)
-backend.run()
+
+if args.text is not None:
+    backend.query(args.text)
+else:
+    backend.run()
 
 

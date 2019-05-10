@@ -141,7 +141,6 @@ class DialogStatus:
             self.current_status["entity_emb"] =\
                 EntityDict.name2onehot(self.current_status["entity"].keys(),
                                        self.max_entity_types).astype("float32")
-
         # utterance to id
         u_and_mask = format_sentence(utterance_replaced,
                                 vocab=self.vocab,
@@ -173,7 +172,7 @@ class DialogStatus:
                 - response: string
         """
         response = response.strip()
-        entities, response_replaced = self.ner.get(response, return_dict=True)
+        _, response_replaced = self.ner.get(response, return_dict=True)
 
         self.current_status = \
             self.topic_manager.add_response(response_replaced,

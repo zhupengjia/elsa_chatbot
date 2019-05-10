@@ -22,7 +22,7 @@ The following rows are intents, each row is a predefined intent, which include:
  - **id**: Unique intent id, int
  - **user_says**: The potential user says. The chatbot will calculate similarities between query and all user says in search range to search the intent. Please define all potential user says split by line break in one cell to improve the performance of search.  The empty user_says  will be used to generate fallback response, and will only be used in some special scenarios. 
  - **response**: Response template. If several responses defined with line break split, will randomly choose one. Note "{ENTITY_NAME}" in  response template will be replaced by correlated entity value for final response.
- - **action**: Action function names to call. The input is the entity dictionary, and the output is also a dictionary and will be merged to entity dictionary. The action function is defined in "actions" spreadsheet. If your returned dictionary contains "RESPONSE", the value of it will replace your predefined response and be used for final response. 
+ - **action**: Action function names to call. The input is the entity dictionary, and the output is also a dictionary and will be merged to entity dictionary. The action function is defined in "actions" spreadsheet. If your returned dictionary contains "RESPONSE", the value of it will replace your predefined response and be used for final response. If your returned directiory contains "SESSION_RESET", the global session will be reset
  
  The followings are used to limit the search scope of intent. Empty cell means no limitation.
  

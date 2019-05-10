@@ -9,4 +9,9 @@ class Shell:
             query = input(":: ")
             response = self.session.response(query)
             print(response)
-    
+
+    def query(self, text):
+        response = self.session.response(text)
+        print(response)
+        
+

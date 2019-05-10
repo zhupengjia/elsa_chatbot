@@ -2,6 +2,7 @@
 import torch, math, sys
 import torch.nn as nn
 from nlptools.zoo.encoders.transformer import TransformerDecoder
+from .sentence_encoder import Sentence_Encoder
 
 '''
     Author: Pengjia Zhu (zhupengjia@gmail.com)
@@ -13,7 +14,7 @@ class Generative_Tracker(nn.Module):
 
         Input:
             - skill_name (string): current skill name
-            - encoder: sentence encoder instance from .sentence_encoder
+            - shared_layers: dictionary, layers to share between networks
             - decoder_hidden_layers (int, optional): number of decoder layers, used for training only, default is 1
             - decoder_attention_heads (int, optional): number of decoder heads, used for training only, default is 2
             - decoder_hidden_size (int, optional): decoder hidden size, used for training only, default is 1024
@@ -26,10 +27,17 @@ class Generative_Tracker(nn.Module):
             - len_penalty (float, optional): length penalty, where < 1.0 favors shorter, >1.0 favors longer sentences. Used for prediction only, Default is 1.0
             - unk_penalty (float, optional): unknown word penalty, where < 1.0 favors more unks, >1.0 favors less. Used for prediction only. default is 1.0
     '''
-    def __init__(self, skill_name, encoder, decoder_hidden_layers=1, decoder_attention_heads=2, decoder_hidden_size=1024, dropout=0, pad_id=0, bos_id=1, eos_id=2, unk_id=3, beam_size=1, len_penalty=1., unk_penalty=1., **args):
+    def __init__(self, skill_name, shared_layers=None, bert_model_name="bert-base-uncased", decoder_hidden_layers=1, decoder_attention_heads=2, decoder_hidden_size=1024, dropout=0, pad_id=0, bos_id=1, eos_id=2, unk_id=3, beam_size=1, len_penalty=1., unk_penalty=1., **args):
         super().__init__()
+        if shared_layers is None or not "encoder" in shared_layers:
+            self.encoder = Sentence_Encoder(bert_model_name)
+            if shared_layers is not None:
+                shared_layers["encoder"] = self.encoder
+        else:
+            self.encoder = shared_layers["encoder"]
+
         self.config = {
-                    "bert_model_name": encoder.bert_model_name,
+                    "bert_model_name": self.encoder.bert_model_name,
                     "decoder_hidden_layers": decoder_hidden_layers,
                     "decoder_attention_heads": decoder_attention_heads,
                     "decoder_hidden_size": decoder_hidden_size
@@ -37,7 +45,7 @@ class Generative_Tracker(nn.Module):
 
         self.response_key = 'response_' + skill_name
         self.mask_key = 'response_mask_' + skill_name
-        self.encoder = encoder
+
         embedding_dim = self.encoder.embedding.word_embeddings.embedding_dim
         self.num_embeddings = self.encoder.embedding.word_embeddings.num_embeddings
         self.control_layer = nn.Linear(embedding_dim+1, embedding_dim)
@@ -164,5 +172,5 @@ class Generative_Tracker(nn.Module):
             loss = self.loss_function(output_probs_expand, target_output)
             return output_probs, loss
         else:
-            return self.beam_search(encoder_out, utterance_mask)
+            return self.beam_search(encoder_out, utterance_mask), 1
 

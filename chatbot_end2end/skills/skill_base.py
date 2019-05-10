@@ -46,7 +46,7 @@ class SkillBase:
             Input:
                 - current_status: dictionary of status, generated from Dialog_Status module
         """
-        return 0
+        return 0, 0
 
     def update_response(self, response, current_status):
         """
