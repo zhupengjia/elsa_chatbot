@@ -3,18 +3,6 @@
 
 #Config for elsa chatbot, interactive mode only
 
-ner:
-    tokenizer: spacy
-    ner_name_replace:
-    ner:
-    keywords:
-        PARTY_SIZE: data/babi/entities/party_size.txt
-        LOCATION: data/babi/entities/location.txt
-        CUISINE: data/babi/entities/cuisine.txt
-        REST_TYPE: data/babi/entities/rest_type.txt
-    regex:  
-        REST_INFO: 'resto_\w*'
-
 tokenizer:
     bert_model_name: bert-base-uncased
     do_lower_case: 1

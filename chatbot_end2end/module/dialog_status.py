@@ -7,7 +7,7 @@ import numpy
 import torch
 from torch.nn import functional as F
 from torch.nn.utils.rnn import pack_padded_sequence
-from nlptools.text.docsim import format_sentence
+from nlptools.text.tokenizer import format_sentence
 from .entity_dict import EntityDict
 from .dialog_data import DialogData
 

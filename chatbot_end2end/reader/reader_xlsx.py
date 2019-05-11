@@ -68,7 +68,7 @@ class ReaderXLSX:
     def _mixed_tokenizer(self, d):
         if self.ner is not None:
             _, d = self.ner.get(d, return_dict=True)
-        d = re.sub('[^a-zA-Z_$ ]', '', d)
+        d = re.sub('[^a-zA-Z_#$ ]', '', d)
         return self.tokenizer(d)
 
     def _parse_dialog(self):

@@ -36,6 +36,8 @@ class GoalResponse(RuleResponse):
                 - see ..model.dialog_tracker.Dialog_Tracker for more parameters if path of saved_model not existed
 
         """
+        additional_args = {"skill_name":self.skill_name}
+        args = {**args, **additional_args}
         if os.path.exists(self.saved_model):
             checkpoint = torch.load(self.saved_model,
                                     map_location=lambda storage, location: storage)

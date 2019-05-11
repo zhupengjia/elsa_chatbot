@@ -95,10 +95,6 @@ class InteractSession:
             response.init_model(
                 shared_layers=shared_layers,
                 device=config.model.device,
-                pad_id=vocab.PAD_ID,
-                bos_id=vocab.BOS_ID,
-                eos_id=vocab.EOS_ID,
-                unk_id=vocab.UNK_ID,
                 **config.skills[skill_name])
             response.eval() # set to eval mode
             topic_manager.register(skill_name, response)

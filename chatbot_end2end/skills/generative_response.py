@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 import os, numpy, torch
+from nlptools.text.tokenizer import format_sentence
 from .skill_base import SkillBase
 from ..model.generative_tracker import Generative_Tracker
-from ..module.dialog_status import format_sentence
 
 """
     Author: Pengjia Zhu (zhupengjia@gmail.com)
@@ -43,7 +43,13 @@ class GenerativeResponse(SkillBase):
                 - device: string, model location, default is 'cpu'
                 - see ..model.generative_tracker.Generative_Tracker for more parameters if path of saved_model not existed
         """
-        additional_args = {"beam_size": self.beam_size}
+        additional_args = {"beam_size": self.beam_size,
+                           "skill_name":self.skill_name,
+                           "pad_id": self.vocab.PAD_ID,
+                           "bos_id": self.vocab.BOS_ID,
+                           "eos_id": self.vocab.EOS_ID,
+                           "unk_id": self.vocab.UNK_ID,
+                           }
         args = {**args, **additional_args}
         if os.path.exists(saved_model):
             self.checkpoint = torch.load(saved_model, map_location=lambda storage, location: storage)
@@ -70,7 +76,9 @@ class GenerativeResponse(SkillBase):
         if self.model.training:
             return self.model(status_data)
         else:
-            return self.model(status_data)
+            result = self.model(status_data)
+            score = numpy.exp(result[1][0])
+            return result[0][0], score
 
     def update_response(self, response, current_status):
         """
@@ -80,13 +88,11 @@ class GenerativeResponse(SkillBase):
                 - response: value of response
                 - current_status: dictionary of status, generated from Dialog_Status module
         """
-        
+        response = response.cpu().detach().numpy()
         current_status["entity"]['RESPONSE'] = self.vocab.id2words(response) 
         response_key = 'response_' + self.skill_name
         mask_key = 'response_mask_' + self.skill_name
-        
-        current_status[response_key], self.current_status[mask_key] =\
-                format_sentence(response, vocab=vocab, max_seq_len=self.max_seq_len)
+        current_status[response_key] = response 
         
         return current_status
 

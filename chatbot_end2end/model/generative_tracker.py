@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import torch, math, sys
+import torch, math, numpy, sys
 import torch.nn as nn
 from nlptools.zoo.encoders.transformer import TransformerDecoder
 from .sentence_encoder import Sentence_Encoder
@@ -86,7 +86,7 @@ class Generative_Tracker(nn.Module):
         # expand encoder out and utterance mask
         encoder_out = encoder_out.repeat(self.beam_size, 1, 1)
         utterance_mask = utterance_mask.repeat(self.beam_size, 1)
-        
+
         incre_state = {}
 
         for i in range(max_len - 1):
@@ -94,24 +94,24 @@ class Generative_Tracker(nn.Module):
             # print("output_buf", output_buf[:, i:i+1].size())
             output = self.decoder(output_buf[:,i:i+1], encoder_out, utterance_mask, 
                                     time_step=i, incre_state=incre_state)
-            
+
             output_probs = self.logsoftmax(output)
             output_probs = output_probs.contiguous().view(-1, output_probs.size(2))
-            
+
             # print("output_probs", output_probs.size())
 
             # prob union with previous outputs, normalized with sentence length
             prev_scores = scores_buf[:, i:i+1].expand(-1, output_probs.size(1)) 
-            
+
             output_probs = (output_probs + prev_scores)/2 
-            
+
             # remove special characters
             output_probs[:, self.pad_id] = -1e9
             output_probs[:, self.bos_id] = -1e9
 
             # add unk penalty
             output_probs[:, self.unk_id] *= self.unk_penalty
-            
+
             # force set score of finalized sequence to previous sequence, with length penalty
             output_probs[finalized[:, i], :] = -1e9
             output_probs[finalized[:, i], 0] =\
@@ -146,11 +146,19 @@ class Generative_Tracker(nn.Module):
 
             if finalized[:, i+1].all():
                 break
-        
+
+        # get maximum prob from last_score
+        output = encoder_out.new_zeros(bsz, max_len).long()
+        scores = numpy.zeros(bsz)
+        for j in range(bsz):
+            maxid = torch.argmax(scores_buf[j*self.beam_size:(j+1)*self.beam_size, i+1]).item()
+            output[j, :] = output_buf[j*self.beam_size+maxid, :]
+            scores[j] = scores_buf[j*self.beam_size+maxid, i+1]
         
         #print("scores_buf", scores_buf)
         #print("output_buf", output_buf)
-        return output_buf
+
+        return output, scores
 
     def forward(self, dialogs):
         #encoder
@@ -172,5 +180,5 @@ class Generative_Tracker(nn.Module):
             loss = self.loss_function(output_probs_expand, target_output)
             return output_probs, loss
         else:
-            return self.beam_search(encoder_out, utterance_mask), 1
+            return self.beam_search(encoder_out, utterance_mask)
 

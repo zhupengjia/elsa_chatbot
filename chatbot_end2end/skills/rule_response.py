@@ -4,11 +4,11 @@
     Response skill for rule-based chatbot
 """
 import numpy, pandas, random
+from sklearn.metrics.pairwise import cosine_distances
 from nlptools.text.docsim import WMDSim
 from nlptools.text.embedding import Embedding
+from nlptools.text.tokenizer import format_sentence
 from .skill_base import SkillBase
-from ..module.dialog_status import format_sentence
-from sklearn.metrics.pairwise import cosine_distances
 
 
 class RuleResponse(SkillBase):
@@ -25,7 +25,7 @@ class RuleResponse(SkillBase):
     def update_mask(self, current_status):
         """
             Update response masks after retrieving utterance and before getting response
-            
+
             Input:
                 - current_status: dictionary of status, generated from Dialog_Status module
         """

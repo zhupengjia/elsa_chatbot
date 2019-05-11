@@ -7,7 +7,7 @@ from nlptools.text.tokenizer import Tokenizer_BERT
 from ..module.topic_manager import TopicManager
 from ..module.nltk_sentiment import NLTKSentiment
 from ..module.dialog_status import dialog_collate
-from .. import reader as Reader, skills as Skills, hooks as Hooks
+from .. import reader as Reader, skills as Skills
 from .sentence_encoder import Sentence_Encoder
 from torch.utils.data import DataLoader
 
@@ -37,7 +37,7 @@ class Supervised:
         self.reader = reader
         topic_manager = self.reader.topic_manager
         self.skill_name = topic_manager.get_topic()
-        self.skill = topic_manager.topics[self.skill_name]
+        self.skill = topic_manager.skills[self.skill_name]
         self.save_per_epoch = save_per_epoch
 
         self.saved_model = saved_model
@@ -60,9 +60,13 @@ class Supervised:
                 - config: configure dictionary
         """
         logger = setLogger(**config.logger)
-        ner = NER(**config.ner)
+        if "ner" in config:
+            ner = NER(**config.ner)
+        else:
+            ner = None
         tokenizer = Tokenizer_BERT(**config.tokenizer)
         vocab = tokenizer.vocab
+        sentiment_analyzer = NLTKSentiment()
 
         # reader and skill class
         if not hasattr(Reader, config.reader.wrapper):
@@ -72,29 +76,34 @@ class Supervised:
         skill_cls = getattr(Skills, config.skill.wrapper)
         reader_cls = getattr(Reader, config.reader.wrapper)
 
-        # hook
-        if "hook" in config:
-            if not hasattr(Hooks, config.hook.wrapper):
-                raise RuntimeError("Error!! Hook {} not implemented!".format(config.hook.wrapper))
-            hook_cls = getattr(Hooks, config.hook.wrapper)
-            if "parameters" not in config.hook:
-                hook = hook_cls()
-            else:
-                hook = hook_cls(**config.hook.parameters)
+        topic_manager = TopicManager()
+        response_params = config.skill
+        if "dialogflow" in config.skill:
+            dialogflow = ReaderXLSX(config.skill.dialogflow,
+                                    tokenizer=tokenizer,
+                                   ner_config=ner_config) 
+            entities = dialogflow.entities
+            response_params.pop('dialogflow')
         else:
-            hook = None
+            dialogflow = None
+            entities = None
+        response_params.pop('wrapper')
 
         # skill
-        response = skill_cls(tokenizer=tokenizer, vocab=vocab, hook=hook, max_seq_len=config.reader.max_seq_len,
-                             **config.skill)
-        topic_manager = TopicManager()
+        response = skill_cls(tokenizer=tokenizer, vocab=vocab,
+                             dialogflow=dialogflow,
+                             max_seq_len=config.reader.max_seq_len,
+                             skill_name=config.skill.name,
+                             **response_params)
 
         topic_manager.register(config.skill.name, response)
 
         # reader
         max_entity_types = config.model.max_entity_types if 'max_entity_types' in config.model else 1024
-        reader = reader_cls(vocab=vocab, tokenizer=tokenizer, ner=ner, topic_manager=topic_manager,
-                            sentiment_analyzer=NLTKSentiment(), max_seq_len=config.reader.max_seq_len,
+        reader = reader_cls(vocab=vocab, tokenizer=tokenizer,
+                            ner=ner, topic_manager=topic_manager,
+                            sentiment_analyzer=sentiment_analyzer,
+                            max_seq_len=config.reader.max_seq_len,
                             max_entity_types=max_entity_types, logger=logger)
         reader.read(config.reader.train_data)
 

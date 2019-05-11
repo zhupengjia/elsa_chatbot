@@ -6,13 +6,6 @@ skill:
     name: cornell
     wrapper: GenerativeResponse
 
-ner:
-    tokenizer: spacy
-    ner_name_replace:
-    ner:
-    keywords:
-    regex:  
-
 tokenizer:
     bert_model_name: bert-base-uncased
     do_lower_case: 1
@@ -21,15 +14,15 @@ tokenizer:
 reader:
     wrapper: ReaderCornell
     train_data: /home/pzhu/data/dialog/cornell_corpus
-    max_seq_len: 50
+    max_seq_len: 20
 
 model:
     device: "cuda:0"
     dropout: 0.1
-    decoder_hidden_layers: 4
+    decoder_hidden_layers: 3
     decoder_attention_heads: 8
     decoder_hidden_size: 3072
-    learning_rate: 0.0001
+    learning_rate: 0.001
     weight_decay: 0
     epochs: 10000
     batch_size: 50
