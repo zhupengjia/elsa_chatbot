@@ -10,7 +10,7 @@ tokenizer:
 
 model:
     device: "cuda:0"
-    max_seq_len: 50
+    max_seq_len: 20
     max_entity_types: 1024
 
 skills:

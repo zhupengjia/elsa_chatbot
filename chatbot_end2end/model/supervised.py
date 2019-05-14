@@ -121,28 +121,30 @@ class Supervised:
         """
         self.skill.init_model(saved_model=self.saved_model, device=str(self.device), **args)
 
-        if self.optimizer_name.lower() == "adam":
+        if self.optimizer_type.lower() == "adam":
             self.optimizer = optim.adam(self.skill.model.parameters(), lr=self.learning_rate,
                                         weight_decay=self.weight_decay)
-        elif self.optimizer_name.lower() == "sgd":
+        elif self.optimizer_type.lower() == "sgd":
             self.optimizer = optim.SGD(self.skill.model.parameters(), lr=self.learning_rate,
                                        momentum=self.momentum)
+        
+        self.logger.info('Optimizer: {} with learning_rate: {}'.format(self.optimizer_type, self.learning_rate))
 
         self.start_epoch = 0
 
         # checkpoint
         if os.path.exists(self.saved_model):
-            if "optimizer_type" in self.skill.checkpoint
-            and self.skill.checkpoint["optimizer_type"] == self.optimizer_type:
+            if "optimizer_type" in self.skill.checkpoint\
+               and self.skill.checkpoint["optimizer_type"] == self.optimizer_type:
                 self.optimizer.load_state_dict(self.skill.checkpoint["optimizer"])
             self.start_epoch = self.skill.checkpoint['epoch']
+            self.best_loss = self.skill.checkpoint["loss"] if "loss" in self.skill.checkpoint else 1e9
 
         self.generator = DataLoader(self.reader, batch_size=self.batch_size, collate_fn=dialog_collate,
                                     shuffle=True, num_workers=self.num_workers)
 
     def train(self):
         self.skill.model.train() # set train flag
-        best_loss = 1e9
         for epoch in range(self.start_epoch, self.epochs):
             for it, d in enumerate(self.generator):
 
@@ -158,15 +160,15 @@ class Supervised:
              
             # save
             if epoch > 0 and epoch%self.save_per_epoch == 0 and loss.item() < best_loss:
-                best_loss = loss
+                self.best_loss = loss
                 state = {
-                            'state_dict': self.skill.model.state_dict(),
-                            'config_model': self.skill.model.config,
-                            'epoch': epoch,
-                            'loss': loss.item(),
-                            'optimizer': self.optimizer.state_dict(),
-                            'optimizer_type': self.optimizer_type
-                        }
+                    'state_dict': self.skill.model.state_dict(),
+                    'config_model': self.skill.model.config,
+                    'epoch': epoch,
+                    'loss': loss.item(),
+                    'optimizer': self.optimizer.state_dict(),
+                    'optimizer_type': self.optimizer_type
+                }
                 torch.save(state, self.saved_model)
 
 

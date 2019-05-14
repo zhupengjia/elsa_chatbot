@@ -12,7 +12,7 @@ from ..model.generative_tracker import Generative_Tracker
 class GenerativeResponse(SkillBase):
     """
         Generative skill for chatbot
-        
+
         Input:
             - tokenizer: instance of nlptools.text.tokenizer
             - vocab:  instance of nlptools.text.vocab
@@ -37,7 +37,7 @@ class GenerativeResponse(SkillBase):
     def init_model(self, saved_model="generative_tracker.pt", device='cpu', **args):
         """
             Initialize model
-            
+
             Input:
                 - saved_model: str, default is "dialog_tracker.pt"
                 - device: string, model location, default is 'cpu'
@@ -83,7 +83,7 @@ class GenerativeResponse(SkillBase):
     def update_response(self, response, current_status):
         """
             update current response to the response status.
-            
+
             Input:
                 - response: value of response
                 - current_status: dictionary of status, generated from Dialog_Status module
@@ -93,6 +93,6 @@ class GenerativeResponse(SkillBase):
         response_key = 'response_' + self.skill_name
         mask_key = 'response_mask_' + self.skill_name
         current_status[response_key] = response 
-        
+
         return current_status
 
