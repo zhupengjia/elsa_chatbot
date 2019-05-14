@@ -17,8 +17,9 @@ from torch.utils.data import DataLoader
 
 
 class Supervised:
-    def __init__(self, reader,  batch_size=100, num_workers=1, epochs=1000, weight_decay=0, learning_rate=0.001,
-                 saved_model="model.pt", device='cpu', save_per_epoch=1, logger=None, **tracker_args):
+    def __init__(self, reader,  batch_size=100, num_workers=1, epochs=1000, optimizer="adam",
+                 weight_decay=0, learning_rate=0.001, momentum=0.9, saved_model="model.pt",
+                 device='cpu', save_per_epoch=1, logger=None, **tracker_args):
         """
             Supervised learning for chatbot
 
@@ -46,6 +47,8 @@ class Supervised:
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.epochs = epochs
+        self.optimizer_type = optimizer
+        self.momentum = momentum
         self.device = torch.device(device) if torch.cuda.is_available() else torch.device('cpu')
         self.logger = logger
 
@@ -118,13 +121,20 @@ class Supervised:
         """
         self.skill.init_model(saved_model=self.saved_model, device=str(self.device), **args)
 
-        self.optimizer = optim.Adam(self.skill.model.parameters(), lr=self.learning_rate,
-                                    weight_decay=self.weight_decay)
+        if self.optimizer_name.lower() == "adam":
+            self.optimizer = optim.adam(self.skill.model.parameters(), lr=self.learning_rate,
+                                        weight_decay=self.weight_decay)
+        elif self.optimizer_name.lower() == "sgd":
+            self.optimizer = optim.SGD(self.skill.model.parameters(), lr=self.learning_rate,
+                                       momentum=self.momentum)
+
         self.start_epoch = 0
 
         # checkpoint
         if os.path.exists(self.saved_model):
-            self.optimizer.load_state_dict(self.skill.checkpoint["optimizer"])
+            if "optimizer_type" in self.skill.checkpoint
+            and self.skill.checkpoint["optimizer_type"] == self.optimizer_type:
+                self.optimizer.load_state_dict(self.skill.checkpoint["optimizer"])
             self.start_epoch = self.skill.checkpoint['epoch']
 
         self.generator = DataLoader(self.reader, batch_size=self.batch_size, collate_fn=dialog_collate,
@@ -132,7 +142,7 @@ class Supervised:
 
     def train(self):
         self.skill.model.train() # set train flag
-
+        best_loss = 1e9
         for epoch in range(self.start_epoch, self.epochs):
             for it, d in enumerate(self.generator):
 
@@ -145,14 +155,17 @@ class Supervised:
 
                 loss.backward()
                 self.optimizer.step()
-
+             
             # save
-            if epoch > 0 and epoch%self.save_per_epoch == 0:
+            if epoch > 0 and epoch%self.save_per_epoch == 0 and loss.item() < best_loss:
+                best_loss = loss
                 state = {
                             'state_dict': self.skill.model.state_dict(),
                             'config_model': self.skill.model.config,
                             'epoch': epoch,
-                            'optimizer': self.optimizer.state_dict()
+                            'loss': loss.item(),
+                            'optimizer': self.optimizer.state_dict(),
+                            'optimizer_type': self.optimizer_type
                         }
                 torch.save(state, self.saved_model)
 
