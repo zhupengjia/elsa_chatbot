@@ -27,21 +27,34 @@ class Generative_Tracker(nn.Module):
             - len_penalty (float, optional): length penalty, where > 1.0 favors shorter, <1.0 favors longer sentences. Used for prediction only, Default is 1.0
             - unk_penalty (float, optional): unknown word penalty, where < 1.0 favors more unks, >1.0 favors less. Used for prediction only. default is 1.0
     '''
-    def __init__(self, skill_name, shared_layers=None, bert_model_name="bert-base-uncased", decoder_hidden_layers=1, decoder_attention_heads=2, decoder_hidden_size=1024, dropout=0, pad_id=0, bos_id=1, eos_id=2, unk_id=3, beam_size=1, len_penalty=1., unk_penalty=1., **args):
+    def __init__(self, skill_name, shared_layers=None,
+                 bert_model_name="bert-base-uncased", vocab_size=30522, encoder_hidden_layers=12,
+                 encoder_attention_heads=12, max_position_embeddings=512,
+                 encoder_intermediate_size=3072, encoder_hidden_size=768,
+                 decoder_hidden_layers=1, decoder_attention_heads=2, decoder_hidden_size=1024,
+                 dropout=0, pad_id=0, bos_id=1, eos_id=2, unk_id=3, beam_size=1,
+                 len_penalty=1., unk_penalty=1., **args):
         super().__init__()
         if shared_layers is None or not "encoder" in shared_layers:
-            self.encoder = Sentence_Encoder(bert_model_name)
+            self.encoder = Sentence_Encoder(bert_model_name=bert_model_name,
+                                            vocab_size=vocab_size,
+                                            encoder_hidden_layers= encoder_hidden_layers,
+                                            encoder_attention_heads=encoder_attention_heads,
+                                            max_position_embeddings=max_position_embeddings,
+                                            encoder_intermediate_size=encoder_intermediate_size,
+                                            encoder_hidden_size=encoder_hidden_size,
+                                            dropout=dropout)
             if shared_layers is not None:
                 shared_layers["encoder"] = self.encoder
         else:
             self.encoder = shared_layers["encoder"]
 
-        self.config = {
-                    "bert_model_name": self.encoder.bert_model_name,
+        decoder_config = {
                     "decoder_hidden_layers": decoder_hidden_layers,
                     "decoder_attention_heads": decoder_attention_heads,
                     "decoder_hidden_size": decoder_hidden_size
                 }
+        self.config = {**decoder_config, **self.encoder.config}
 
         self.response_key = 'response_' + skill_name
         self.mask_key = 'response_mask_' + skill_name
@@ -92,13 +105,17 @@ class Generative_Tracker(nn.Module):
         for i in range(max_len - 1):
             print("="*20)
             print("output_buf", output_buf[:, i:i+1].size())
-            output = self.decoder(output_buf[:,i:i+1], encoder_out, utterance_mask,
-                                    time_step=i, incre_state=incre_state)
+
+            output = self.decoder(output_buf[:, i:i+1], encoder_out, utterance_mask,
+                                    time_step=0, incre_state=incre_state)
+            #output = output[:, -1:, :]
 
             output_probs = self.logsoftmax(output)
+            print("output_probs1", output_probs, output_probs.size())
+            
             output_probs = output_probs.contiguous().view(-1, output_probs.size(2))
 
-            print("output_probs", output_probs, output_probs.size())
+            print("output_probs2", output_probs, output_probs.size())
 
             # prob union with previous outputs, normalized with sentence length
             prev_scores = scores_buf.unsqueeze(1).expand(-1, output_probs.size(1)) 
@@ -107,7 +124,7 @@ class Generative_Tracker(nn.Module):
 
             output_probs = (output_probs + prev_scores)/2 
 
-            print("output_probs", output_probs, output_probs.size())
+            print("output_probs3", output_probs, output_probs.size())
             
             # remove special characters
             output_probs[:, self.pad_id] = -1e9
@@ -126,7 +143,7 @@ class Generative_Tracker(nn.Module):
             if i==0:
                 # first step only use the first beam, since all hypotheses are equally likely
                 output_probs = output_probs[:, :self.num_embeddings]
-            print("output_probs", output_probs, output_probs.size())
+            print("output_probs4", output_probs, output_probs.size())
             
             output_max = output_probs.topk(self.beam_size)
 

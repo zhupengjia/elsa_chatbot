@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import torch, os
+import torch, numpy, os
 import torch.optim as optim
 from nlptools.utils import setLogger
 from nlptools.text.ner import NER
@@ -8,7 +8,6 @@ from ..module.topic_manager import TopicManager
 from ..module.nltk_sentiment import NLTKSentiment
 from ..module.dialog_status import dialog_collate
 from .. import reader as Reader, skills as Skills
-from .sentence_encoder import Sentence_Encoder
 from torch.utils.data import DataLoader
 
 '''
@@ -110,10 +109,7 @@ class Supervised:
                             max_entity_types=max_entity_types, logger=logger)
         reader.read(config.reader.train_data)
 
-        # sentence encoder
-        encoder = Sentence_Encoder(config.tokenizer.bert_model_name)
-
-        return cls(reader=reader, logger=logger, encoder=encoder, skill_name=config.skill.name, **config.model)
+        return cls(reader=reader, logger=logger, skill_name=config.skill.name, **config.model)
 
     def __init_tracker(self, **args):
         """
@@ -122,7 +118,7 @@ class Supervised:
         self.skill.init_model(saved_model=self.saved_model, device=str(self.device), **args)
 
         if self.optimizer_type.lower() == "adam":
-            self.optimizer = optim.adam(self.skill.model.parameters(), lr=self.learning_rate,
+            self.optimizer = optim.Adam(self.skill.model.parameters(), lr=self.learning_rate,
                                         weight_decay=self.weight_decay)
         elif self.optimizer_type.lower() == "sgd":
             self.optimizer = optim.SGD(self.skill.model.parameters(), lr=self.learning_rate,
@@ -146,6 +142,7 @@ class Supervised:
     def train(self):
         self.skill.model.train() # set train flag
         for epoch in range(self.start_epoch, self.epochs):
+            ave_loss = []
             for it, d in enumerate(self.generator):
 
                 d.to(self.device)
@@ -157,9 +154,10 @@ class Supervised:
 
                 loss.backward()
                 self.optimizer.step()
+                ave_loss.append(loss.item())
              
             # save
-            if epoch > 0 and epoch%self.save_per_epoch == 0 and loss.item() < best_loss:
+            if epoch > 0 and epoch%self.save_per_epoch == 0 and numpy.nanmean(ave_loss) < self.best_loss:
                 self.best_loss = loss
                 state = {
                     'state_dict': self.skill.model.state_dict(),
