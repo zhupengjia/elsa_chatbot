@@ -127,6 +127,7 @@ class Supervised:
         self.logger.info('Optimizer: {} with learning_rate: {}'.format(self.optimizer_type, self.learning_rate))
 
         self.start_epoch = 0
+        self.best_loss = 1e9
 
         # checkpoint
         if os.path.exists(self.saved_model):
