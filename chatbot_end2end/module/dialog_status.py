@@ -100,6 +100,7 @@ class DialogStatus:
                       "utterance": None,
                       "utterance_mask": None,
                       "sentiment": 0,
+                      "response_sentiment": 0,
                       "topic": None
                       }
         return initstatus
@@ -137,7 +138,7 @@ class DialogStatus:
             for e in entities:
                 # only keep first value
                 self.current_status["entity"][e] = entities[e][0]
-            
+
             self.current_status["entity_emb"] =\
                 EntityDict.name2onehot(self.current_status["entity"].keys(),
                                        self.max_entity_types).astype("float32")
@@ -172,20 +173,27 @@ class DialogStatus:
                 - response: string
         """
         response = response.strip()
-        _, response_replaced = self.ner.get(response, return_dict=True)
+        self.current_status["response_sentiment"] = self.sentiment_analyzer(response)
+        if self.ner is None:
+            response_replaced = response
+        else:
+            _, response_replaced = self.ner.get(response, return_dict=True)
 
-        self.current_status = \
-            self.topic_manager.add_response(response_replaced,
+        _tmp = self.topic_manager.add_response(response_replaced,
                                             self.current_status)
+        if _tmp is None: return
+        self.current_status = _tmp
         self.history_status.append(copy.deepcopy(self.current_status))
 
-    def get_response(self, device):
+    def get_response(self, response_sentiment=0, device="cpu"):
         """
             get response from current status
 
             Input:
-                - device: torch device
+                - response_sentiment: wanted sentiment of response, default is 0
+                - device: "cpu" or "cuda:x"
         """
+        self.current_status["response_sentiment"] = response_sentiment
         current_data = self.status2data()
         current_data.to(device)
         self.current_status = \
@@ -236,7 +244,7 @@ class DialogStatus:
                   "utterance_mask": numpy.zeros((n_status, self.max_seq_len),
                                                 'int'),
                   "reward": numpy.zeros((n_status, 1), 'float32'),
-                  "sentiment": numpy.zeros((n_status, 1), 'float32')
+                  "sentiment": numpy.zeros((n_status, 2), 'float32')
                   }
 
         if skill_names is None:
@@ -252,6 +260,7 @@ class DialogStatus:
             status["utterance"][i] = s["utterance"]
             status["utterance_mask"][i] = s["utterance_mask"]
             status["sentiment"][i, 0] = s["sentiment"]
+            status["sentiment"][i, 1] = s["response_sentiment"]
             status["reward"][i, 0] =\
                 reward_base * self.rl_discount**(i+turn_start)
             for tk in skill_names:
@@ -270,7 +279,6 @@ class DialogStatus:
                                                        type(s[rkey]))
                     status[rkey][i] = s[rkey]
         status["reward"] = status["reward"]/(n_status+turn_start)
-
         return status
 
     def status2data(self, skill_names=None, status=None):
@@ -288,5 +296,5 @@ class DialogStatus:
         data = self.data(skill_names, [status], len(self.history_status))
         for k in data:
             data[k] = torch.tensor(data[k])
-        return dialog_collate([data])        
-        
+        return dialog_collate([data])
+

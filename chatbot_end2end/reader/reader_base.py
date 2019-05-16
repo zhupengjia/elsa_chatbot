@@ -83,7 +83,8 @@ class ReaderBase(Dataset):
             dialog = DialogStatus.new_dialog(self.vocab, self.tokenizer, self.ner, self.topic_manager,
                                               self.sentiment_analyzer, self.max_seq_len, self.max_entity_types)
             for i_p, pair in enumerate(dialog_data):
-                dialog.add_utterance(pair[0])
+                if dialog.add_utterance(pair[0]) is None:
+                    continue
                 dialog.add_response(pair[1])
             # save to hdf5
             ddata = dialog.data()
@@ -100,7 +101,7 @@ class ReaderBase(Dataset):
                                                           chunks=tuple(chunkshape), compression='lzf',
                                                           maxshape=tuple(maxshape))
                 ReaderBase.add_trace(h5datasets[k], ddata[k])
-            ReaderBase.add_trace(h5datasets['point'], numpy.array([[N_tot, ddata['entity'].shape[0]]]))
+            ReaderBase.add_trace(h5datasets['point'], numpy.array([[n_tot, ddata['entity'].shape[0]]]))
             n_tot += ddata['entity'].shape[0]
         
         return h5file

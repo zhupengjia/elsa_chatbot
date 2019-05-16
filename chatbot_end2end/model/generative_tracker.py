@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 import torch, math, numpy, sys
 import torch.nn as nn
-from nlptools.zoo.encoders.transformer import TransformerDecoder
-from .sentence_encoder import Sentence_Encoder
+from .sentence_encoder import SentenceEncoder
 
 '''
     Author: Pengjia Zhu (zhupengjia@gmail.com)
 '''
 
-class Generative_Tracker(nn.Module):
+class GenerativeTracker(nn.Module):
     '''
         Generative based chatbot
 
@@ -27,7 +26,7 @@ class Generative_Tracker(nn.Module):
             - len_penalty (float, optional): length penalty, where > 1.0 favors shorter, <1.0 favors longer sentences. Used for prediction only, Default is 1.0
             - unk_penalty (float, optional): unknown word penalty, where < 1.0 favors more unks, >1.0 favors less. Used for prediction only. default is 1.0
     '''
-    def __init__(self, skill_name, shared_layers=None,
+    def __init__(self, skill_name, shared_layers=None, model_type="transformer",
                  bert_model_name="bert-base-uncased", vocab_size=30522, encoder_hidden_layers=12,
                  encoder_attention_heads=12, max_position_embeddings=512,
                  encoder_intermediate_size=3072, encoder_hidden_size=768,
@@ -36,7 +35,8 @@ class Generative_Tracker(nn.Module):
                  len_penalty=1., unk_penalty=1., **args):
         super().__init__()
         if shared_layers is None or not "encoder" in shared_layers:
-            self.encoder = Sentence_Encoder(bert_model_name=bert_model_name,
+            self.encoder = SentenceEncoder(bert_model_name=bert_model_name,
+                                            model_type=model_type,
                                             vocab_size=vocab_size,
                                             encoder_hidden_layers= encoder_hidden_layers,
                                             encoder_attention_heads=encoder_attention_heads,
@@ -49,20 +49,28 @@ class Generative_Tracker(nn.Module):
         else:
             self.encoder = shared_layers["encoder"]
 
-        decoder_config = {
-                    "decoder_hidden_layers": decoder_hidden_layers,
-                    "decoder_attention_heads": decoder_attention_heads,
-                    "decoder_hidden_size": decoder_hidden_size
-                }
-        self.config = {**decoder_config, **self.encoder.config}
-
         self.response_key = 'response_' + skill_name
         self.mask_key = 'response_mask_' + skill_name
 
-        embedding_dim = self.encoder.embedding.word_embeddings.embedding_dim
-        self.num_embeddings = self.encoder.embedding.word_embeddings.num_embeddings
+
+        embedding_dim = self.encoder.config["hidden_size"]
+        self.num_embeddings = self.encoder.config["vocab_size"]
         self.control_layer = nn.Linear(embedding_dim+1, embedding_dim)
-        self.decoder = TransformerDecoder(self.encoder.embedding, decoder_hidden_layers, decoder_attention_heads, decoder_hidden_size, dropout)
+
+        if model_type == "lstm":
+            from nlptools.zoo.encoders.lstm import LSTMDecoder
+            self.decoder = LSTMDecoder(self.encoder.embedding,
+                                       num_hidden_layers=decoder_hidden_layers,
+                                       intermediate_size=decoder_hidden_size, dropout=dropout)
+        else:
+            from nlptools.zoo.encoders.transformer import TransformerDecoder
+            self.decoder = TransformerDecoder(self.encoder.embedding,
+                                              num_layers=decoder_hidden_layers,
+                                              num_attention_heads=decoder_attention_heads,
+                                              intermediate_size=decoder_hidden_size,
+                                              dropout=dropout)
+        
+        self.config = {"encoder":self.encoder.config, "decoder":self.decoder.config}
         self.pad_id = pad_id
         self.bos_id = bos_id
         self.eos_id = eos_id

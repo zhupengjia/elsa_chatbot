@@ -9,7 +9,6 @@ skill:
 tokenizer:
     bert_model_name: bert-base-uncased
     do_lower_case: 1
-    stopwords_path: config/en_stopwords.txt
 
 reader:
     wrapper: ReaderCornell
@@ -18,6 +17,7 @@ reader:
 
 model:
     device: "cuda:0"
+    model_type: "lstm"
     bert_model_name:
     encoder_hidden_layers: 3
     encoder_attention_heads: 8

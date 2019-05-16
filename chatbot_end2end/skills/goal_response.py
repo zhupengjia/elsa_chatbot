@@ -6,7 +6,7 @@
 import os
 import torch
 from .rule_response import RuleResponse
-from ..model.dialog_tracker import Dialog_Tracker
+from ..model.dialog_tracker import DialogTracker
 
 class GoalResponse(RuleResponse):
     """
@@ -33,7 +33,7 @@ class GoalResponse(RuleResponse):
 
             Input:
                 - device: string, model location, default is 'cpu'
-                - see ..model.dialog_tracker.Dialog_Tracker for more parameters if path of saved_model not existed
+                - see ..model.dialog_tracker.DialogTracker for more parameters if path of saved_model not existed
 
         """
         additional_args = {"skill_name":self.skill_name}
@@ -41,11 +41,11 @@ class GoalResponse(RuleResponse):
         if os.path.exists(self.saved_model):
             checkpoint = torch.load(self.saved_model,
                                     map_location=lambda storage, location: storage)
-            self.model = Dialog_Tracker(**{**args, **checkpoint['config_model']})
+            self.model = DialogTracker(**{**args, **checkpoint['config_model']})
             self.model.to(device)
             self.model.load_state_dict(checkpoint['state_dict'])
         else:
-            self.model = Dialog_Tracker(Nresponses=len(self.dialogflow), **args)
+            self.model = DialogTracker(Nresponses=len(self.dialogflow), **args)
             self.model.to(device)
 
     def eval(self):

@@ -2,7 +2,7 @@
 import os, numpy, torch
 from nlptools.text.tokenizer import format_sentence
 from .skill_base import SkillBase
-from ..model.generative_tracker import Generative_Tracker
+from ..model.generative_tracker import GenerativeTracker
 
 """
     Author: Pengjia Zhu (zhupengjia@gmail.com)
@@ -30,9 +30,8 @@ class GenerativeResponse(SkillBase):
         """
             Predeal response string
         """
-        response_tokens = self.tokenizer(response)
-        response_ids = self.vocab.words2id(response_tokens)
-        return response_ids
+        return format_sentence(response, vocab=self.vocab,
+                                 tokenizer=self.tokenizer, max_seq_len=self.max_seq_len)
 
     def init_model(self, saved_model="generative_tracker.pt", device='cpu', **args):
         """
@@ -41,7 +40,7 @@ class GenerativeResponse(SkillBase):
             Input:
                 - saved_model: str, default is "dialog_tracker.pt"
                 - device: string, model location, default is 'cpu'
-                - see ..model.generative_tracker.Generative_Tracker for more parameters if path of saved_model not existed
+                - see ..model.generative_tracker.GenerativeTracker for more parameters if path of saved_model not existed
         """
         additional_args = {"beam_size": self.beam_size,
                            "skill_name":self.skill_name,
@@ -54,11 +53,11 @@ class GenerativeResponse(SkillBase):
         args = {**args, **additional_args}
         if os.path.exists(saved_model):
             self.checkpoint = torch.load(saved_model, map_location=lambda storage, location: storage)
-            self.model = Generative_Tracker(**{**args, **self.checkpoint['config_model']}) 
+            self.model = GenerativeTracker(**{**args, **self.checkpoint['config_model']}) 
             self.model.to(device)
             self.model.load_state_dict(self.checkpoint['state_dict'])
         else:
-            self.model = Generative_Tracker(**args)
+            self.model = GenerativeTracker(**args)
             self.model.to(device)
 
     def eval(self):
@@ -89,11 +88,11 @@ class GenerativeResponse(SkillBase):
                 - response: value of response
                 - current_status: dictionary of status, generated from Dialog_Status module
         """
-        response = response.cpu().detach().numpy()
-        current_status["entity"]['RESPONSE'] = self.vocab.id2words(response) 
+        current_status["entity"]['RESPONSE'] = self.vocab.id2words(response[0][response[1].astype("bool_")][1:-1])
         response_key = 'response_' + self.skill_name
-        mask_key = 'response_mask_' + self.skill_name
-        current_status[response_key] = response 
+        response_mask_key = 'response_mask_' + self.skill_name
+        current_status[response_key] = response[0]
+        current_status[response_mask_key] = response[1]
 
         return current_status
 

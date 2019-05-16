@@ -2,13 +2,13 @@
 import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import PackedSequence
-from .sentence_encoder import Sentence_Encoder
+from .sentence_encoder import SentenceEncoder
 
 '''
     Author: Pengjia Zhu (zhupengjia@gmail.com)
 '''
 
-class Dialog_Tracker(nn.Module):
+class DialogTracker(nn.Module):
     '''
         dialog tracker for end2end chatbot 
 
@@ -25,25 +25,34 @@ class Dialog_Tracker(nn.Module):
             - dropout: float, default is 0.2
             
     '''
-    def __init__(self, skill_name, Nresponses, max_entity_types, shared_layers=None, bert_model_name="bert-base-uncased", entity_layers=2, entity_emb_dim=50, lstm_layers=1, hidden_dim=300, dropout=0, **args):
+    def __init__(self, skill_name, Nresponses, max_entity_types, shared_layers=None,
+                 bert_model_name="bert-base-uncased", vocab_size=30522, encoder_hidden_layers=12,
+                 encoder_attention_heads=12, max_position_embeddings=512,
+                 encoder_intermediate_size=3072, encoder_hidden_size=768,
+                 entity_layers=2, entity_emb_dim=50, lstm_layers=1, hidden_dim=300,
+                 dropout=0, **args):
         super().__init__()
         if shared_layers is None or not "encoder" in shared_layers:
-            self.encoder = Sentence_Encoder(bert_model_name)
+            self.encoder = SentenceEncoder(bert_model_name=bert_model_name,
+                                            model_type=model_type,
+                                            vocab_size=vocab_size,
+                                            encoder_hidden_layers= encoder_hidden_layers,
+                                            encoder_attention_heads=encoder_attention_heads,
+                                            max_position_embeddings=max_position_embeddings,
+                                            encoder_intermediate_size=encoder_intermediate_size,
+                                            encoder_hidden_size=encoder_hidden_size,
+                                            dropout=dropout)
             if shared_layers is not None:
                 shared_layers["encoder"] = self.encoder
         else:
             self.encoder = shared_layers["encoder"]
         
-        self.config = {
-                    "bert_model_name": self.encoder.bert_model_name,
-                    "Nresponses": Nresponses,
-                    "max_entity_types": max_entity_types,
-                    "entity_layers": entity_layers,
-                    "entity_emb_dim": entity_emb_dim,
-                    "lstm_layers": lstm_layers,
-                    "hidden_dim": hidden_dim
-                }
-
+        self.config = {"encoder":self.encoder.config,
+                       "entity_layers": entity_layers,
+                       "entity_emb_dim": entity_emb_dim,
+                       "lstm_layers": lstm_layers,
+                       "hidden_dim": hidden_dim}
+        
         self.response_key = 'response_' + skill_name
         self.mask_key = 'response_mask_' + skill_name
 

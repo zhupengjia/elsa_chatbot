@@ -87,6 +87,8 @@ class TopicManager:
 
         """
         response_value = self.skills[self.current_skill][response]
+        if response_value is None:
+            return None
         return self.update_response(response_value, current_status)
 
     def get_fallback(self, current_status):

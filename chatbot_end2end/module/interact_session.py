@@ -86,7 +86,7 @@ class InteractSession:
                 dialogflow = None
                 entities = None
             response_params.pop('wrapper')
-            
+
             response = skill_cls(tokenizer=tokenizer, vocab=vocab,
                                  dialogflow=dialogflow,
                                  max_seq_len=config.model.max_seq_len,
@@ -98,7 +98,7 @@ class InteractSession:
                 **config.skills[skill_name])
             response.eval() # set to eval mode
             topic_manager.register(skill_name, response)
-            
+
             if ner_config is not None and entities is not None:
                 for k in ["keywords", "regex", "ner_name_replace"]:
                     if entities[k]:
@@ -110,12 +110,12 @@ class InteractSession:
                         if not k in ner_config:
                             ner_config[k] = []
                         ner_config[k] += entities[k]
-        
+
         if ner_config is not None:
             ner = NER(**ner_config)
         else:
             ner = None
-        
+
         return cls(vocab=vocab, tokenizer=tokenizer, ner=ner,
                    topic_manager=topic_manager, logger=logger,
                    sentiment_analyzer=sentiment_analyzer, **config.model)
@@ -126,11 +126,19 @@ class InteractSession:
                                        self.sentiment_analyzer,
                                        self.max_seq_len, self.max_entity_types)
 
-    def response(self, query, session_id="default"):
+    def response(self, query, response_sentiment=0, session_id="default"):
+        """
+            get response
+
+            Input:
+                - query: string
+                - response_sentiment: float between -1 and 1, wanted sentiment of response, default is 0
+                - session_id: string, session id, default is "default"
+        """
         #create new session for user
         if session_id not in self.dialog_status:
             self.dialog_status[session_id] = self.new_dialog()
-        
+
         #special commands
         if query in ["clear", "reset", "restart", "exit", "stop", "quit", "q"]:
             self.dialog_status[session_id] = self.new_dialog()
@@ -142,11 +150,11 @@ class InteractSession:
         if len(query) < 1 or self.dialog_status[session_id].add_utterance(query) is None:
             return self.dialog_status[session_id].get_fallback()
 
-        response = self.dialog_status[session_id].get_response(self.device)
-        
+        response = self.dialog_status[session_id].get_response(response_sentiment, self.device)
+
         if "SESSION_RESET" in self.dialog_status[session_id].current_status["entity"]:
             del self.dialog_status[session_id]
 
         return response
 
-    
+

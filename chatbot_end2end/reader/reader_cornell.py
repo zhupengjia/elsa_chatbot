@@ -77,8 +77,8 @@ class ReaderCornell(ReaderBase):
                     for i in range(len(conv_map)-1):
                         if not conv_map[i] in id2line or not conv_map[i+1] in id2line:
                             continue
-                        utterance = Reader_Cornell.clean_text(id2line[conv_map[i]])
-                        response = Reader_Cornell.clean_text(id2line[conv_map[i+1]])
+                        utterance = ReaderCornell.clean_text(id2line[conv_map[i]])
+                        response = ReaderCornell.clean_text(id2line[conv_map[i+1]])
                         conv.append([utterance, response])
                     if len(conv) > 0:
                         #use both side of dialogs
