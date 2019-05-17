@@ -55,7 +55,7 @@ class GenerativeTracker(nn.Module):
 
         embedding_dim = self.encoder.config["hidden_size"]
         self.num_embeddings = self.encoder.config["vocab_size"]
-        self.control_layer = nn.Linear(embedding_dim+1, embedding_dim)
+        self.control_layer = nn.Linear(embedding_dim+2, embedding_dim)
 
         if model_type == "lstm":
             from nlptools.zoo.encoders.lstm import LSTMDecoder
@@ -83,16 +83,16 @@ class GenerativeTracker(nn.Module):
 
     def dialog_embedding(self, utterance, utterance_mask, sentiment):
         #utterance embedding
-        sequence_output, pooled_output = self.encoder(utterance, attention_mask=utterance_mask, output_all_encoded_layers=False)
+        sequence_output, encoder_hidden = self.encoder(utterance, attention_mask=utterance_mask, output_all_encoded_layers=False)
 
         #sentiment
-        sentiment = sentiment.unsqueeze(1).expand(-1, sequence_output.size(1), 1)
+        sentiment = sentiment.unsqueeze(1).expand(-1, sequence_output.size(1), -1)
 
         #combine together
         sequence_out = torch.cat((sequence_output, sentiment), 2)
         sequence_out = self.control_layer(sequence_out)
 
-        return sequence_out
+        return sequence_out, encoder_hidden
 
     def beam_search(self, encoder_out, utterance_mask):
         bsz = encoder_out.size(0)
@@ -203,7 +203,7 @@ class GenerativeTracker(nn.Module):
     def forward(self, dialogs):
         #encoder
         utterance_mask = dialogs["utterance_mask"].data
-        encoder_out = self.dialog_embedding(dialogs['utterance'].data, utterance_mask, dialogs["sentiment"].data)
+        encoder_out, encoder_hidden = self.dialog_embedding(dialogs['utterance'].data, utterance_mask, dialogs["sentiment"].data)
 
         #decoder
         if self.training:
@@ -212,7 +212,10 @@ class GenerativeTracker(nn.Module):
            
             target_output = target_output.unsqueeze(-1).contiguous().view(-1)
             
-            output = self.decoder(prev_output, encoder_out, utterance_mask)
+            output = self.decoder(prev_output,
+                                  encoder_out=encoder_out,
+                                  encoder_padding_mask=utterance_mask,
+                                  encoder_hidden=encoder_hidden)
             output_probs = self.logsoftmax(output)
 
             output_probs_expand = output_probs.contiguous().view(-1, output_probs.size(2))
