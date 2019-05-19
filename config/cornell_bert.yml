@@ -17,12 +17,13 @@ reader:
 
 model:
     device: "cuda:0"
-    model_type: "lstm"
-    bert_model_name:
+    model_type: "transformer"
+    bert_model_name: "bert-base-uncased"
     encoder_hidden_layers: 3
+    encoder_hidden_size: 768
+    encoder_intermediate_size: 1024
     encoder_attention_heads: 8
-    encoder_intermediate_size: 2048
-    encoder_hidden_size: 512
+    encoder_freeze: True
     dropout: 0.1
     decoder_hidden_layers: 3
     decoder_attention_heads: 8
@@ -34,7 +35,7 @@ model:
     epochs: 10000
     batch_size: 50
     num_workers: 1
-    saved_model: 'data/cornell/model.pt'
+    saved_model: 'data/cornell/model_bert.pt'
     save_per_epoch: 1
 
 reinforcement:
