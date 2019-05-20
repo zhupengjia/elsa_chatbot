@@ -10,16 +10,18 @@ class SentenceEncoder(nn.Module):
             - bert_model_name: bert model file location or one of the supported model name
     '''
     def __init__(self, model_type="transformer", bert_model_name=None, vocab_size=30522,
-                 encoder_hidden_layers=12, encoder_hidden_size=768, 
+                 pretrained_embedding=None, encoder_hidden_layers=12, encoder_hidden_size=768,
                  encoder_intermediate_size=1024, encoder_attention_heads=12,
                  max_position_embeddings=512,  dropout=0.1, **args):
         super().__init__()
         if model_type == "gru":
             from nlptools.zoo.encoders.gru import GRUEncoder
             self.encoder = GRUEncoder(vocab_size=vocab_size,
-                                       hidden_size=encoder_hidden_size,
-                                       num_hidden_layers=encoder_hidden_layers,
-                                       dropout=dropout)
+                                      pretrained_embedding=pretrained_embedding,
+                                      intermediate_size=encoder_intermediate_size,
+                                      hidden_size=encoder_hidden_size,
+                                      num_hidden_layers=encoder_hidden_layers,
+                                      dropout=dropout)
             self.config = self.encoder.config
         elif bert_model_name is not None:
             from pytorch_pretrained_bert.modeling import BertModel
@@ -29,6 +31,7 @@ class SentenceEncoder(nn.Module):
         else:
             from nlptools.zoo.encoders.transformer import TransformerEncoder
             self.encoder = TransformerEncoder(vocab_size=vocab_size,
+                                              pretrained_embedding=pretrained_embedding,
                                               num_hidden_layers=encoder_hidden_layers,
                                               num_attention_heads=encoder_attention_heads,
                                               max_position_embeddings=max_position_embeddings,

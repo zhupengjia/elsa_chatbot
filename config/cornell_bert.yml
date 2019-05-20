@@ -19,10 +19,6 @@ model:
     device: "cuda:0"
     model_type: "transformer"
     bert_model_name: "bert-base-uncased"
-    encoder_hidden_layers: 3
-    encoder_hidden_size: 768
-    encoder_intermediate_size: 1024
-    encoder_attention_heads: 8
     encoder_freeze: True
     dropout: 0.1
     decoder_hidden_layers: 3

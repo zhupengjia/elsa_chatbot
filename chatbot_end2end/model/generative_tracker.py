@@ -27,7 +27,7 @@ class GenerativeTracker(nn.Module):
             - unk_penalty (float, optional): unknown word penalty, where < 1.0 favors more unks, >1.0 favors less. Used for prediction only. default is 1.0
     '''
     def __init__(self, skill_name, shared_layers=None, model_type="transformer",
-                 bert_model_name="bert-base-uncased", vocab_size=30522,
+                 bert_model_name="bert-base-uncased", vocab_size=30522, pretrained_embedding=None,
                  encoder_hidden_layers=12, encoder_attention_heads=12,
                  encoder_hidden_size=768, encoder_intermediate_size=2048,
                  encoder_freeze=False, max_position_embeddings=512, decoder_hidden_layers=1,
@@ -37,14 +37,15 @@ class GenerativeTracker(nn.Module):
         super().__init__()
         if shared_layers is None or not "encoder" in shared_layers:
             self.encoder = SentenceEncoder(bert_model_name=bert_model_name,
-                                            model_type=model_type,
-                                            vocab_size=vocab_size,
-                                            encoder_hidden_layers= encoder_hidden_layers,
-                                            encoder_attention_heads=encoder_attention_heads,
-                                            max_position_embeddings=max_position_embeddings,
-                                            encoder_hidden_size=encoder_hidden_size,
-                                            encoder_intermediate_size=encoder_intermediate_size,
-                                            dropout=dropout)
+                                           model_type=model_type,
+                                           vocab_size=vocab_size,
+                                           pretrained_embedding=pretrained_embedding,
+                                           encoder_hidden_layers= encoder_hidden_layers,
+                                           encoder_attention_heads=encoder_attention_heads,
+                                           max_position_embeddings=max_position_embeddings,
+                                           encoder_hidden_size=encoder_hidden_size,
+                                           encoder_intermediate_size=encoder_intermediate_size,
+                                           dropout=dropout)
             if shared_layers is not None:
                 shared_layers["encoder"] = self.encoder
         else:
@@ -62,8 +63,9 @@ class GenerativeTracker(nn.Module):
         if model_type == "gru":
             from nlptools.zoo.encoders.gru import GRUDecoder
             self.decoder = GRUDecoder(self.encoder.embedding,
-                                       num_hidden_layers=decoder_hidden_layers,
-                                       dropout=dropout)
+                                      intermediate_size=decoder_hidden_size,
+                                      num_hidden_layers=decoder_hidden_layers,
+                                      dropout=dropout)
         else:
             from nlptools.zoo.encoders.transformer import TransformerDecoder
             self.decoder = TransformerDecoder(self.encoder.embedding,
