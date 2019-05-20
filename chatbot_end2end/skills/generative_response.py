@@ -45,6 +45,7 @@ class GenerativeResponse(SkillBase):
         additional_args = {"beam_size": self.beam_size,
                            "skill_name":self.skill_name,
                            "vocab_size": self.vocab.vocab_size,
+                           "max_seq_len": self.max_seq_len,
                            "pad_id": self.vocab.PAD_ID,
                            "bos_id": self.vocab.BOS_ID,
                            "eos_id": self.vocab.EOS_ID,

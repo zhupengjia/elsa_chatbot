@@ -31,7 +31,7 @@ class GenerativeTracker(nn.Module):
                  encoder_hidden_layers=12, encoder_attention_heads=12,
                  encoder_hidden_size=768, encoder_intermediate_size=2048,
                  encoder_freeze=False, max_position_embeddings=512, decoder_hidden_layers=1,
-                 decoder_attention_heads=2, decoder_hidden_size=1024,
+                 decoder_attention_heads=2, decoder_hidden_size=1024, max_seq_len=50,
                  dropout=0, pad_id=0, bos_id=1, eos_id=2, unk_id=3, beam_size=1,
                  len_penalty=1., unk_penalty=1., **args):
         super().__init__()
@@ -59,9 +59,9 @@ class GenerativeTracker(nn.Module):
         self.num_embeddings = self.encoder.config["vocab_size"]
         self.control_layer = nn.Linear(embedding_dim+2, embedding_dim)
 
-        if model_type == "lstm":
-            from nlptools.zoo.encoders.lstm import LSTMDecoder
-            self.decoder = LSTMDecoder(self.encoder.embedding,
+        if model_type == "gru":
+            from nlptools.zoo.encoders.gru import GRUDecoder
+            self.decoder = GRUDecoder(self.encoder.embedding,
                                        num_hidden_layers=decoder_hidden_layers,
                                        dropout=dropout)
         else:

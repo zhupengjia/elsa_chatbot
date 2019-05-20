@@ -33,7 +33,7 @@ model:
     momentum: 0.9
     optimizer: "adam"
     epochs: 10000
-    batch_size: 50
+    batch_size: 35
     num_workers: 1
     saved_model: 'data/cornell/model_bert.pt'
     save_per_epoch: 1

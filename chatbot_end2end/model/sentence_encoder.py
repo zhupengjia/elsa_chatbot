@@ -14,9 +14,9 @@ class SentenceEncoder(nn.Module):
                  encoder_intermediate_size=1024, encoder_attention_heads=12,
                  max_position_embeddings=512,  dropout=0.1, **args):
         super().__init__()
-        if model_type == "lstm":
-            from nlptools.zoo.encoders.lstm import LSTMEncoder
-            self.encoder = LSTMEncoder(vocab_size=vocab_size,
+        if model_type == "gru":
+            from nlptools.zoo.encoders.gru import GRUEncoder
+            self.encoder = GRUEncoder(vocab_size=vocab_size,
                                        hidden_size=encoder_hidden_size,
                                        num_hidden_layers=encoder_hidden_layers,
                                        dropout=dropout)

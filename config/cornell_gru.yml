@@ -17,7 +17,7 @@ reader:
 
 model:
     device: "cuda:0"
-    model_type: "lstm"
+    model_type: "gru"
     bert_model_name:
     encoder_hidden_layers: 3
     encoder_hidden_size: 768
