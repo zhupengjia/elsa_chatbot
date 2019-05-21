@@ -106,7 +106,7 @@ class GenerativeResponse(SkillBase):
                 - response: value of response
                 - current_status: dictionary of status, generated from Dialog_Status module
         """
-        current_status["entity"]['RESPONSE'] = " ".join(self.vocab.id2words(response[0][response[1].astype("bool_")][1:-1]))
+        current_status["entity"]['RESPONSE'] = self.tokenizer.tokens2sentence(self.vocab.id2words(response[0][response[1].astype("bool_")][1:-1]))
         response_key = 'response_' + self.skill_name
         response_mask_key = 'response_mask_' + self.skill_name
         current_status[response_key] = response[0]
