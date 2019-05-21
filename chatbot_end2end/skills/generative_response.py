@@ -58,6 +58,7 @@ class GenerativeResponse(SkillBase):
             def copy_args(target_key, source_layer, source_key):
                 if source_key in model_cfg[source_layer]:
                     args[target_key] = model_cfg[source_layer][source_key]
+
             copy_args("vocab_size", "encoder", "vocab_size")
             copy_args("encoder_hidden_layers", "encoder", "num_hidden_layers")
             copy_args("encoder_hidden_size", "encoder", "hidden_size")
