@@ -16,9 +16,9 @@ model:
 skills:
     cornell: 
         wrapper: GenerativeResponse
-        model_type: transformer
+        model_type: gru
         beam_size: 5
-        saved_model: 'data/cornell/model_transformer.pt'
+        saved_model: 'data/cornell/model_gru.pt'
 
         #    babi: 
         #        wrapper: GoalResponse

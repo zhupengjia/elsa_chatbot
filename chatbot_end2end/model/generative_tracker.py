@@ -55,7 +55,6 @@ class GenerativeTracker(nn.Module):
         self.response_key = 'response_' + skill_name
         self.mask_key = 'response_mask_' + skill_name
 
-
         embedding_dim = self.encoder.config["hidden_size"]
         self.num_embeddings = self.encoder.config["vocab_size"]
         self.control_layer = nn.Linear(embedding_dim+2, embedding_dim)
@@ -73,9 +72,11 @@ class GenerativeTracker(nn.Module):
                                               num_attention_heads=decoder_attention_heads,
                                               intermediate_size=decoder_hidden_size,
                                               dropout=dropout)
-        
+
         self.config = {"encoder":self.encoder.config, "decoder":self.decoder.config}
-        print(self.config)
+        
+        print("model config", self.config)
+
         self.pad_id = pad_id
         self.bos_id = bos_id
         self.eos_id = eos_id
@@ -89,7 +90,7 @@ class GenerativeTracker(nn.Module):
     def dialog_embedding(self, utterance, utterance_mask, sentiment):
         #utterance embedding
         sequence_output, encoder_hidden = self.encoder(utterance, attention_mask=utterance_mask, output_all_encoded_layers=False)
-
+        
         #sentiment
         sentiment = sentiment.unsqueeze(1).expand(-1, sequence_output.size(1), -1)
 
@@ -116,28 +117,28 @@ class GenerativeTracker(nn.Module):
         incre_state = {}
 
         for i in range(max_len - 1):
-            print("="*20)
-            print("output_buf", output_buf[:, i:i+1].size())
+            #print("="*20)
+            #print("output_buf", output_buf[:, i:i+1].size())
 
             output = self.decoder(output_buf[:, i:i+1], encoder_out, utterance_mask,
-                                    time_step=0, incre_state=incre_state)
+                                    time_step=i, incre_state=incre_state)
             #output = output[:, -1:, :]
 
             output_probs = self.logsoftmax(output)
-            print("output_probs1", output_probs, output_probs.size())
+            #print("output_probs1", output_probs, output_probs.size())
             
             output_probs = output_probs.contiguous().view(-1, output_probs.size(2))
 
-            print("output_probs2", output_probs, output_probs.size())
+            #print("output_probs2", output_probs, output_probs.size())
 
             # prob union with previous outputs, normalized with sentence length
             prev_scores = scores_buf.unsqueeze(1).expand(-1, output_probs.size(1)) 
 
-            print("prev_scores", scores_buf, scores_buf.shape, prev_scores.shape)
+            #print("prev_scores", scores_buf, scores_buf.shape, prev_scores.shape)
 
             output_probs = (output_probs + prev_scores)/2 
 
-            print("output_probs3", output_probs, output_probs.size())
+            #print("output_probs3", output_probs, output_probs.size())
             
             # remove special characters
             output_probs[:, self.pad_id] = -1e9
@@ -156,11 +157,11 @@ class GenerativeTracker(nn.Module):
             if i==0:
                 # first step only use the first beam, since all hypotheses are equally likely
                 output_probs = output_probs[:, :self.num_embeddings]
-            print("output_probs4", output_probs, output_probs.size())
+            #print("output_probs4", output_probs, output_probs.size())
             
             output_max = output_probs.topk(self.beam_size)
 
-            print("output_max", output_max)
+            #print("output_max", output_max)
            
             output_max_current = output_max[1].fmod(self.num_embeddings)
             output_max_prev = output_max[1].div(self.num_embeddings).long()
@@ -168,8 +169,8 @@ class GenerativeTracker(nn.Module):
             output_max_current = output_max_current.view(-1)
             output_max_prev = output_max_prev.view(-1)
             
-            print("output_max_current", output_max_current)
-            print("output_max_prev", output_max_prev)
+            #print("output_max_current", output_max_current)
+            #print("output_max_prev", output_max_prev)
 
             #reorder previous outputs
             for j in range(bsz):
@@ -184,9 +185,8 @@ class GenerativeTracker(nn.Module):
 
             output_buf[:, i+1] = output_max_current
             scores_buf = output_max[0].view(-1)
-            print("output_buf", output_buf)   
-            print("scores_buf", scores_buf)
-        
+            #print("output_buf", output_buf)   
+            #print("scores_buf", scores_buf)
 
             finalized = finalized | output_max_current.eq(self.eos_id)
 
@@ -200,8 +200,8 @@ class GenerativeTracker(nn.Module):
             output[j, :] = output_buf[j*self.beam_size, :]
             scores[j] = scores_buf[j*self.beam_size]
         
-        print("scores_buf", scores_buf.shape)
-        print("output_buf", output_buf.shape)
+        #print("scores_buf", scores_buf.shape)
+        #print("output_buf", output_buf.shape)
 
         return output, scores
 

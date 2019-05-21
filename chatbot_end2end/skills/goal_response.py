@@ -41,7 +41,22 @@ class GoalResponse(RuleResponse):
         if os.path.exists(self.saved_model):
             checkpoint = torch.load(self.saved_model,
                                     map_location=lambda storage, location: storage)
-            self.model = DialogTracker(**{**args, **checkpoint['config_model']})
+
+            model_cfg = self.checkpoint['config_model']
+            def copy_args(target_key, source_layer, source_key):
+                if source_key in model_cfg[source_layer]:
+                    args[target_key] = model_cfg[source_layer][source_key]
+            copy_args("vocab_size", "encoder", "vocab_size")
+            copy_args("encoder_hidden_layers", "encoder", "num_hidden_layers")
+            copy_args("encoder_hidden_size", "encoder", "hidden_size")
+            copy_args("encoder_intermediate_size", "encoder", "intermediate_size")
+            copy_args("encoder_attention_heads", "encoder", "num_attention_heads")
+            copy_args("max_position_embeddings", "encoder", "max_position_embeddings")
+            copy_args("decoder_hidden_layers", "decoder", "num_hidden_layers")
+            copy_args("decoder_attention_heads", "decoder", "num_attention_heads")
+            copy_args("decoder_hidden_size", "decoder", "intermediate_size")
+            self.model = DialogTracker(**args)
+            
             self.model.to(device)
             self.model.load_state_dict(checkpoint['state_dict'])
         else:

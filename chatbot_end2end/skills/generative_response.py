@@ -54,11 +54,27 @@ class GenerativeResponse(SkillBase):
         args = {**args, **additional_args}
         if os.path.exists(saved_model):
             self.checkpoint = torch.load(saved_model, map_location=lambda storage, location: storage)
-            self.model = GenerativeTracker(**{**args, **self.checkpoint['config_model']}) 
+            model_cfg = self.checkpoint['config_model']
+            def copy_args(target_key, source_layer, source_key):
+                if source_key in model_cfg[source_layer]:
+                    args[target_key] = model_cfg[source_layer][source_key]
+            copy_args("vocab_size", "encoder", "vocab_size")
+            copy_args("encoder_hidden_layers", "encoder", "num_hidden_layers")
+            copy_args("encoder_hidden_size", "encoder", "hidden_size")
+            copy_args("encoder_intermediate_size", "encoder", "intermediate_size")
+            copy_args("encoder_attention_heads", "encoder", "num_attention_heads")
+            copy_args("max_position_embeddings", "encoder", "max_position_embeddings")
+            copy_args("decoder_hidden_layers", "decoder", "num_hidden_layers")
+            copy_args("decoder_attention_heads", "decoder", "num_attention_heads")
+            copy_args("decoder_hidden_size", "decoder", "intermediate_size")
+            copy_args("shared_embed", "decoder", "shared_embed")
+            self.model = GenerativeTracker(**args) 
             self.model.to(device)
+            print("load model from file {}".format(saved_model))
             self.model.load_state_dict(self.checkpoint['state_dict'])
         else:
             self.model = GenerativeTracker(**args)
+            print("Create new model")
             self.model.to(device)
 
     def eval(self):
@@ -89,7 +105,7 @@ class GenerativeResponse(SkillBase):
                 - response: value of response
                 - current_status: dictionary of status, generated from Dialog_Status module
         """
-        current_status["entity"]['RESPONSE'] = self.vocab.id2words(response[0][response[1].astype("bool_")][1:-1])
+        current_status["entity"]['RESPONSE'] = " ".join(self.vocab.id2words(response[0][response[1].astype("bool_")][1:-1]))
         response_key = 'response_' + self.skill_name
         response_mask_key = 'response_mask_' + self.skill_name
         current_status[response_key] = response[0]
