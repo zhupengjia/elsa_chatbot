@@ -96,7 +96,8 @@ class GenerativeResponse(SkillBase):
         else:
             result = self.model(status_data)
             score = numpy.exp(result[1][0])
-            return result[0][0], score
+            response_value = result[0][0].cpu().detach().numpy()
+            return response_value, score
 
     def update_response(self, response, current_status):
         """
@@ -106,11 +107,14 @@ class GenerativeResponse(SkillBase):
                 - response: value of response
                 - current_status: dictionary of status, generated from Dialog_Status module
         """
-        current_status["entity"]['RESPONSE'] = self.tokenizer.tokens2sentence(self.vocab.id2words(response[0][response[1].astype("bool_")][1:-1]))
+
+        response_mask = response > 0
+        current_status["entity"]['RESPONSE'] = self.tokenizer.tokens2sentence(self.vocab.id2words(response[response_mask.astype("bool_")][1:-1]))
+
         response_key = 'response_' + self.skill_name
         response_mask_key = 'response_mask_' + self.skill_name
-        current_status[response_key] = response[0]
-        current_status[response_mask_key] = response[1]
+        current_status[response_key] = response
+        current_status[response_mask_key] = response_mask
 
         return current_status
 

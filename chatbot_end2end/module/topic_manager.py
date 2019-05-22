@@ -74,8 +74,6 @@ class TopicManager:
         current_status["response_score_"+self.current_skill] = response_score
         if response_value is None:
             return self.get_fallback(current_status)
-        response_value = response_value.cpu().detach().numpy()
-        response_value = (response_value, response_value>0)
         status = self.update_response(response_value, current_status)
         return status
 
