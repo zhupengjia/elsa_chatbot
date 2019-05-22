@@ -9,7 +9,7 @@ tokenizer:
     stopwords_path: config/en_stopwords.txt
 
 model:
-    device: "cuda:0"
+    device: "cpu"
     max_seq_len: 20
     max_entity_types: 1024
 
