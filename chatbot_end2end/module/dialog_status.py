@@ -19,8 +19,10 @@ def dialog_collate(batch):
     if not batch:
         return []
     data = DialogData({})
+    batch = [b for b in batch if b["utterance"].shape[0]>0]
     dialog_lengths = numpy.array([b["utterance"].shape[0]
                                   for b in batch], "int")
+    
     perm_idx = dialog_lengths.argsort()[::-1].astype("int")
     dialog_lengths = dialog_lengths[perm_idx]
     max_dialog_len = int(dialog_lengths[0])
