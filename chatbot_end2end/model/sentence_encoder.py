@@ -39,7 +39,6 @@ class SentenceEncoder(nn.Module):
                                               intermediate_size=encoder_intermediate_size,
                                               dropout=dropout)
             self.config = self.encoder.config
-        self.embedding = self.encoder.embeddings
 
     def freeze(self):
         """

@@ -57,7 +57,6 @@ class DialogTracker(nn.Module):
                       }
 
         encoder_hidden_size = self.config["encoder"]["hidden_size"]
-        
         self.response_key = 'response_' + skill_name
         self.mask_key = 'response_mask_' + skill_name
 
@@ -75,7 +74,7 @@ class DialogTracker(nn.Module):
         self.loss_function = nn.NLLLoss()
         self.softmax = nn.LogSoftmax(dim=1) if self.training else nn.Softmax(dim=1)
 
-    def entityencoder(self, x):
+    def entity_encoder(self, x):
         '''
             entity encoder, model framwork:
                 - linear + linear 
@@ -87,7 +86,6 @@ class DialogTracker(nn.Module):
         x = self.dropout(x)
         return x
 
-    
     def dialog_embedding(self, utterance, utterance_mask, entity):
         '''
             Model framework:
@@ -105,7 +103,7 @@ class DialogTracker(nn.Module):
         sequence_output, pooled_output = self.encoder(utterance, attention_mask=utterance_mask, output_all_encoded_layers=False)
 
         #entity name embedding
-        entity = self.entityencoder(entity) 
+        entity = self.entity_encoder(entity) 
        
         #concat together and apply linear
         utter = torch.cat((pooled_output, entity), 1)

@@ -67,7 +67,7 @@ class GenerativeTracker(nn.Module):
                                       dropout=dropout)
         else:
             from nlptools.zoo.encoders.transformer import TransformerDecoder
-            self.decoder = TransformerDecoder(self.encoder.embedding,
+            self.decoder = TransformerDecoder(self.encoder.encoder.embeddings,
                                               num_hidden_layers=decoder_hidden_layers,
                                               num_attention_heads=decoder_attention_heads,
                                               intermediate_size=decoder_hidden_size,

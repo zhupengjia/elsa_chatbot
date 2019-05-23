@@ -133,6 +133,7 @@ class Supervised:
         tracker
         """
         self.skill.init_model(saved_model=self.saved_model, device=str(self.device), **args)
+        print(self.skill.model)
 
         if self.optimizer_type.lower() == "adam":
             self.optimizer = optim.Adam(self.skill.model.parameters(), lr=self.learning_rate,

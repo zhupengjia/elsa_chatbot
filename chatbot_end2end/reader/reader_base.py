@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import os, numpy, h5py, torch
+import os, numpy, h5py, torch, re
 from torch.utils.data import Dataset
 from ..module.dialog_status import DialogStatus
 
@@ -37,6 +37,38 @@ class ReaderBase(Dataset):
         self.max_seq_len = max_seq_len
         self.max_entity_types = max_entity_types
         self.data = []
+
+    @staticmethod
+    def clean_text(text):
+        '''Clean text by removing unnecessary characters and altering the format of words.'''
+        text = text.lower()
+        text = re.sub(r"i' ?m", "i am", text)
+        text = re.sub(r"he' ?s", "he is", text)
+        text = re.sub(r"she' ?s", "she is", text)
+        text = re.sub(r"it' ?s", "it is", text)
+        text = re.sub(r"that' ?s", "that is", text)
+        text = re.sub(r"there' ?s", "that is", text)
+        text = re.sub(r"what' ?s", "that is", text)
+        text = re.sub(r"where' ?s", "where is", text)
+        text = re.sub(r"how' ?s", "how is", text)
+        text = re.sub(r"let' ?s", "let us", text)
+        text = re.sub(r"\' ?ll", " will", text)
+        text = re.sub(r"\' ?ve", " have", text)
+        text = re.sub(r"\' ?re", " are", text)
+        text = re.sub(r"\' ?d", " would", text)
+        text = re.sub(r"\' ?re", " are", text)
+        text = re.sub(r"\' ?il", " will", text)
+        text = re.sub(r"won' ?t", "will not", text)
+        text = re.sub(r"can' ?t", "cannot", text)
+        text = re.sub(r"n' ?t", " not", text)
+        text = re.sub(r"n'", "ng", text)
+        text = re.sub(r"' ?bout", "about", text)
+        text = re.sub(r"' ?til", "until", text)
+        text = re.sub("\[[\s\w]+\]", "", text)
+        text = re.sub(r'(<!--.*?-->|<[^>]*>|\. ?\. ?\.)', "", text)
+        text = re.sub(r"[-()\"#/@;:<>{}`+=~|]", "", text)
+        text = " ".join([s.strip() for s in re.split("\s", text) if s.strip()])
+        return text
 
     @staticmethod
     def add_trace(dset, arr):

@@ -4,7 +4,14 @@ from .reader_yaml import ReaderYAML
 from .reader_dialog import ReaderDialog
 from .reader_babi import ReaderBabi
 from .reader_cornell import ReaderCornell
+from .reader_ubuntu import ReaderUbuntu
+from .reader_subtitles import ReaderSubtitles
 
-__all__ = ['ReaderXLSX', "ReaderYAML", 'ReaderDialog', 'ReaderBabi', 'ReaderCornell']
-
+__all__ = ['ReaderXLSX',
+           "ReaderYAML",
+           'ReaderDialog',
+           'ReaderBabi',
+           'ReaderCornell',
+           'ReaderUbuntu',
+           'ReaderSubtitles']
 

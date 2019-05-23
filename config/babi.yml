@@ -26,16 +26,15 @@ reader:
 model:
     device: "cuda:0"
     model_type: "transformer"
-    pretrained_embedding: data/word2vec/en/bert-base-uncased.h5py
     encoder_hidden_layers: 3
     encoder_hidden_size: 768
     encoder_intermediate_size: 1024
     encoder_attention_heads: 3
     encoder_freeze: False
 
-    max_entity_types: 1024
+    max_entity_types: 512
     dropout: 0.8
-    hidden_dim: 300
+    hidden_size: 1024
     entity_layers: 3
     entity_emb_dim: 50
     lstm_layers: 2
