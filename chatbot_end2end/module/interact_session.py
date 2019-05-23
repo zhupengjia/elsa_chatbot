@@ -71,13 +71,13 @@ class InteractSession:
         topic_manager = TopicManager()
         for skill_name in config.skills:
             response_params = config.skills[skill_name]
-            if not hasattr(Skills, config.skills[skill_name].wrapper):
+            if not hasattr(Skills, response_params.wrapper):
                 raise RuntimeError(
                     "Error!! Skill {} not implemented!".format(
                         config.skills[skill_name].wrapper))
-            skill_cls = getattr(Skills, config.skills[skill_name].wrapper)
+            skill_cls = getattr(Skills, response_params.wrapper)
             if "dialogflow" in config.skills[skill_name]:
-                dialogflow = ReaderXLSX(config.skills[skill_name].dialogflow,
+                dialogflow = ReaderXLSX(response_params.dialogflow,
                                         tokenizer=tokenizer,
                                        ner_config=ner_config) 
                 entities = dialogflow.entities
@@ -95,7 +95,7 @@ class InteractSession:
             response.init_model(
                 shared_layers=shared_layers,
                 device=config.model.device,
-                **config.skills[skill_name])
+                **response_params)
             response.eval() # set to eval mode
             topic_manager.register(skill_name, response)
 

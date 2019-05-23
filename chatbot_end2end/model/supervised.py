@@ -8,6 +8,7 @@ from ..module.topic_manager import TopicManager
 from ..module.nltk_sentiment import NLTKSentiment
 from ..module.dialog_status import dialog_collate
 from .. import reader as Reader, skills as Skills
+from ..reader import ReaderXLSX
 from torch.utils.data import DataLoader
 
 '''
@@ -63,9 +64,9 @@ class Supervised:
         """
         logger = setLogger(**config.logger)
         if "ner" in config:
-            ner = NER(**config.ner)
+            ner_config = config.ner
         else:
-            ner = None
+            ner_config = None
         tokenizer = Tokenizer_BERT(**config.tokenizer)
         vocab = tokenizer.vocab
         sentiment_analyzer = NLTKSentiment()
@@ -83,7 +84,7 @@ class Supervised:
         if "dialogflow" in config.skill:
             dialogflow = ReaderXLSX(config.skill.dialogflow,
                                     tokenizer=tokenizer,
-                                   ner_config=ner_config) 
+                                    ner_config=ner_config) 
             entities = dialogflow.entities
             response_params.pop('dialogflow')
         else:
@@ -100,6 +101,22 @@ class Supervised:
 
         topic_manager.register(config.skill.name, response)
 
+        if ner_config is not None and entities is not None:
+            for k in ["keywords", "regex", "ner_name_replace"]:
+                if entities[k]:
+                    if not k in ner_config:
+                        ner_config[k] = {}
+                    ner_config[k].update(entities[k])
+            for k in ["ner"]:
+                if entities[k]:
+                    if not k in ner_config:
+                        ner_config[k] = []
+                    ner_config[k] += entities[k]
+        if ner_config is not None:
+            ner = NER(**ner_config)
+        else:
+            ner = None
+        
         # reader
         max_entity_types = config.model.max_entity_types if 'max_entity_types' in config.model else 1024
         reader = reader_cls(vocab=vocab, tokenizer=tokenizer,

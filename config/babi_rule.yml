@@ -1,12 +1,5 @@
 %YAML 1.2
 ---
-#app setting
-
-
-skill:
-    name: babi
-    wrapper: Goal_Response
-    template_file: data/babi/template.txt
 
 ner:
     tokenizer: spacy

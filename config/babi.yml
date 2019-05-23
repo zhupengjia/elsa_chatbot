@@ -5,46 +5,46 @@
 
 skill:
     name: babi
-    wrapper: Goal_Response
-    template_file: data/babi/template.txt
+    wrapper: GoalResponse
+    dialogflow: data/babi/babi.xlsx
 
 hook:
     wrapper: Behaviors
 
 ner:
     tokenizer: spacy
-    ner_name_replace:
-    ner:
-    keywords:
-        PARTY_SIZE: data/babi/entities/party_size.txt
-        LOCATION: data/babi/entities/location.txt
-        CUISINE: data/babi/entities/cuisine.txt
-        REST_TYPE: data/babi/entities/rest_type.txt
-    regex:  
-        REST_INFO: 'resto_\w*'
 
 tokenizer:
     bert_model_name: bert-base-uncased
     do_lower_case: 1
-    stopwords_path: config/en_stopwords.txt
 
 reader:
-    wrapper: Reader_Babi
+    wrapper: ReaderBabi
     train_data: /home/pzhu/data/dialog/babi/dialog-babi-task5-full-dialogs-trn.txt
-    max_seq_len: 10
+    max_seq_len: 20
 
 model:
     device: "cuda:0"
+    model_type: "transformer"
+    pretrained_embedding: data/word2vec/en/bert-base-uncased.h5py
+    encoder_hidden_layers: 3
+    encoder_hidden_size: 768
+    encoder_intermediate_size: 1024
+    encoder_attention_heads: 3
+    encoder_freeze: False
+
     max_entity_types: 1024
     dropout: 0.8
     hidden_dim: 300
     entity_layers: 3
     entity_emb_dim: 50
-    lstm_layers: 1
+    lstm_layers: 2
     learning_rate: 0.001
     weight_decay: 0
+    momentum: 0.9
+    optimizer: "adam"
     epochs: 10000
-    batch_size: 2
+    batch_size: 50
     num_workers: 1
     saved_model: 'data/babi/model.pt'
     save_per_epoch: 1

@@ -22,6 +22,16 @@ class RuleResponse(SkillBase):
         self.vocab = vocab
         self.max_seq_len = max_seq_len
 
+    def __getitem__(self, response):
+        """
+            get response id from string
+
+            Input:
+                - response: string
+        """
+        response_id = self.dialogflow.search(response, target="response", n_top=1)[0]
+        return response_id
+
     def update_mask(self, current_status):
         """
             Update response masks after retrieving utterance and before getting response

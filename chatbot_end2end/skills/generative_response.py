@@ -38,7 +38,7 @@ class GenerativeResponse(SkillBase):
             Initialize model
 
             Input:
-                - saved_model: str, default is "dialog_tracker.pt"
+                - saved_model: str, default is "generative_tracker.pt"
                 - device: string, model location, default is 'cpu'
                 - see ..model.generative_tracker.GenerativeTracker for more parameters if path of saved_model not existed
         """

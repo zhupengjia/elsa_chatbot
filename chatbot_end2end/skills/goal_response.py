@@ -22,24 +22,24 @@ class GoalResponse(RuleResponse):
             - len(): return number of responses in template
             - __getitem__ : get most closed response id for response, input is response string
     """
-    def __init__(self, skill_name, dialogflow, saved_model="dialog_tracker.pt", **args):
+    def __init__(self, skill_name, dialogflow, **args):
         super(GoalResponse, self).__init__(skill_name, dialogflow, **args)
-        self.saved_model = saved_model
         self.model = None
 
-    def init_model(self, device='cpu', **args):
+    def init_model(self, saved_model="dialog_tracker.pt", device='cpu', **args):
         """
             init dialog tracker
 
             Input:
+                - saved_model: str, default is "dialog_tracker.pt"
                 - device: string, model location, default is 'cpu'
                 - see ..model.dialog_tracker.DialogTracker for more parameters if path of saved_model not existed
 
         """
         additional_args = {"skill_name":self.skill_name}
         args = {**args, **additional_args}
-        if os.path.exists(self.saved_model):
-            checkpoint = torch.load(self.saved_model,
+        if os.path.exists(saved_model):
+            self.checkpoint = torch.load(saved_model,
                                     map_location=lambda storage, location: storage)
 
             model_cfg = self.checkpoint['config_model']
@@ -51,16 +51,17 @@ class GoalResponse(RuleResponse):
             copy_args("encoder_hidden_size", "encoder", "hidden_size")
             copy_args("encoder_intermediate_size", "encoder", "intermediate_size")
             copy_args("encoder_attention_heads", "encoder", "num_attention_heads")
-            copy_args("max_position_embeddings", "encoder", "max_position_embeddings")
-            copy_args("decoder_hidden_layers", "decoder", "num_hidden_layers")
-            copy_args("decoder_attention_heads", "decoder", "num_attention_heads")
-            copy_args("decoder_hidden_size", "decoder", "intermediate_size")
+            copy_args("entity_layers", "encoder", "entity_layers")
+            copy_args("entity_emb_dim", "decoder", "entity_emb_dim")
+            copy_args("num_hidden_layers", "decoder", "num_hidden_layers")
+            copy_args("hidden_size", "decoder", "hidden_size")
+            copy_args("num_responses", "decoder", "num_responses")
             self.model = DialogTracker(**args)
             
             self.model.to(device)
-            self.model.load_state_dict(checkpoint['state_dict'])
+            self.model.load_state_dict(self.checkpoint['state_dict'])
         else:
-            self.model = DialogTracker(Nresponses=len(self.dialogflow), **args)
+            self.model = DialogTracker(num_responses=len(self.dialogflow), **args)
             self.model.to(device)
 
     def eval(self):
