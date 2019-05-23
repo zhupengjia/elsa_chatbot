@@ -61,7 +61,7 @@ class GenerativeTracker(nn.Module):
 
         if model_type == "gru":
             from nlptools.zoo.encoders.gru import GRUDecoder
-            self.decoder = GRUDecoder(self.encoder.embedding,
+            self.decoder = GRUDecoder(self.encoder.encoder.embeddings,
                                       intermediate_size=decoder_hidden_size,
                                       num_hidden_layers=decoder_hidden_layers,
                                       dropout=dropout)
