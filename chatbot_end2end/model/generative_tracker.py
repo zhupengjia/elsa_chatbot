@@ -198,7 +198,7 @@ class GenerativeTracker(nn.Module):
 
         return output, scores
 
-    def forward(self, dialogs):
+    def forward(self, dialogs, incre_state=None):
         #encoder
         utterance_mask = dialogs["utterance_mask"].data
         encoder_out, encoder_hidden = self.dialog_embedding(dialogs['utterance'].data, utterance_mask, dialogs["sentiment"].data)

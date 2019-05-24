@@ -103,6 +103,7 @@ class DialogStatus:
                       "utterance_mask": None,
                       "sentiment": 0,
                       "response_sentiment": 0,
+                      "incre_state": {},
                       "topic": None
                       }
         return initstatus

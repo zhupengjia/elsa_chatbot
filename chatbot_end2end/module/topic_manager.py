@@ -68,9 +68,10 @@ class TopicManager:
             Input:
                 - current_data: data converted from current status
                 - current_status: dictionary of status, generated from dialog_status module
+                - incre_state: incremental state, default is None
 
         """
-        response_value, response_score = self.skills[self.current_skill].get_response(current_data)
+        response_value, response_score = self.skills[self.current_skill].get_response(current_data, current_status["incre_state"])
         current_status["response_score_"+self.current_skill] = response_score
         if response_value is None:
             return self.get_fallback(current_status)

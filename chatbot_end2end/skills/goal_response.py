@@ -70,17 +70,18 @@ class GoalResponse(RuleResponse):
         """
         self.model.eval()
 
-    def get_response(self, status_data):
+    def get_response(self, status_data, incre_state=None):
         """
             predict response value from current status
 
             Input:
                 - status_data: data converted from dialog status
+                - incre_state: incremental state, default is None
         """
         if self.model.training:
             return self.model(status_data)
 
-        y_prob = self.model(status_data)
+        y_prob = self.model(status_data, incre_state)
         _, y_pred = torch.max(y_prob.data, 1)
         y_pred = int(y_pred.cpu().numpy()[-1])
         return y_pred, y_prob

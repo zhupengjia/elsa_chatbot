@@ -84,17 +84,18 @@ class GenerativeResponse(SkillBase):
         """
         self.model.eval()
 
-    def get_response(self, status_data):
+    def get_response(self, status_data, incre_state=None):
         """
             predict response value from status
 
             Input:
                 - status_data: data converted from dialog status
+                - incre_state: incremental state, default is None
         """
         if self.model.training:
             return self.model(status_data)
         else:
-            result = self.model(status_data)
+            result = self.model(status_data, incre_state)
             score = numpy.exp(result[1][0])
             response_value = result[0][0].cpu().detach().numpy()
             return response_value, score

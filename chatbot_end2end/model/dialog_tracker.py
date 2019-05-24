@@ -58,6 +58,8 @@ class DialogTracker(nn.Module):
                       }
 
         encoder_hidden_size = self.config["encoder"]["hidden_size"]
+        self.num_hidden_layers = num_hidden_layers
+        self.hidden_size = hidden_size
         self.response_key = 'response_' + skill_name
         self.mask_key = 'response_mask_' + skill_name
 
@@ -70,7 +72,7 @@ class DialogTracker(nn.Module):
 
         self.fc_dialog = nn.Linear(encoder_hidden_size+ entity_emb_dim, hidden_size)
         
-        self.lstm = nn.LSTM(hidden_size, hidden_size, num_layers=num_hidden_layers, batch_first=True)
+        self.gru = nn.GRU(hidden_size, hidden_size, num_layers=num_hidden_layers, batch_first=True)
         self.fc_out = nn.Linear(hidden_size, num_responses)
         self.loss_function = nn.NLLLoss()
         self.softmax = nn.LogSoftmax(dim=1) if self.training else nn.Softmax(dim=1)
@@ -114,10 +116,10 @@ class DialogTracker(nn.Module):
         return emb
 
 
-    def forward(self, dialogs):
+    def forward(self, dialogs, incre_state=None):
         '''
             Model framework:
-                - dialogs -> dialog_embedding -> lstm -> softmax*mask -> logsoftmax
+                - dialogs -> dialog_embedding -> gru -> softmax*mask -> logsoftmax
             
             Input:
                 - dialogs: output from dialog_status.torch
@@ -132,25 +134,33 @@ class DialogTracker(nn.Module):
 
         dialog_emb = PackedSequence(dialog_emb, pack_batch) #feed batch_size and pack to packedsequence
         
-        #dialog embedding to lstm as dialog tracker
+        #dialog embedding to gru as dialog tracker
+        obj_id = id(self)
+        if incre_state is not None and obj_id in incre_state and not self.training:
+            hidden = incre_state[obj_id]
+        else:
+            bsz = pack_batch[0]
+            hidden = dialog_emb.new_zeros(self.num_hidden_layers, bsz, self.hidden_size)
 
-        lstm_out, (ht, ct) = self.lstm(dialog_emb)
+        gru_out, hidden = self.gru(dialog_emb, hidden)
+
+        if incre_state is not None and not self.training:
+            incre_state[obj_id] = hidden
         
-        lstm_out = self.dropout(lstm_out.data)
-
-        hidden = self.fc_out(lstm_out)
+        out = self.dropout(gru_out.data)
+        out = self.fc_out(out)
 
         if self.training and self.response_key in dialogs:
-            y_prob = self.softmax(hidden)
+            y_prob = self.softmax(out)
             y_true = dialogs[self.response_key].data
             loss = self.loss_function(y_prob, y_true.squeeze(1))
             return y_prob, loss
 
         #output to softmax
-        lstm_softmax = self.softmax(hidden)
+        gru_softmax = self.softmax(out)
 
         #apply mask 
-        response = lstm_softmax * dialogs[self.mask_key].data + 1e-15
+        response = gru_softmax * dialogs[self.mask_key].data + 1e-15
         y_prob = torch.log(response)
 
         return y_prob

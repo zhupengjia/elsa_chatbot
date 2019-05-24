@@ -129,12 +129,13 @@ class RuleResponse(SkillBase):
                                "ids":numpy.array(dialog_ids),
                                "fallback": fallback_says}
 
-    def get_response(self, status_data):
+    def get_response(self, status_data, incre_state=None):
         '''
             get response from utterance
 
             Input:
                 - status_data: data converted from dialog status
+                - incre_state: incremental state, default is None
         '''
         utterance, utterance_mask = status_data["utterance"].data, status_data["utterance_mask"].data
 

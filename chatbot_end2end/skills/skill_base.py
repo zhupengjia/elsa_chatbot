@@ -39,12 +39,13 @@ class SkillBase:
         """
         return 0
 
-    def get_response(self, current_status):
+    def get_response(self, status_data, incre_state=None):
         """
             predict response value from current status
 
             Input:
-                - current_status: dictionary of status, generated from Dialog_Status module
+                - status_data: data converted from dialog status
+                - incre_state: incremental state, default is None
         """
         return 0, 0
 
