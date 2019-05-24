@@ -2,7 +2,7 @@
 import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import PackedSequence
-from .sentence_encoder import SentenceEncoder
+from nlptools.zoo.encoders.transformer import TransformerEncoder
 
 '''
     Author: Pengjia Zhu (zhupengjia@gmail.com)
@@ -26,26 +26,27 @@ class DialogTracker(nn.Module):
             
     '''
     def __init__(self, skill_name, num_responses, max_entity_types, shared_layers=None,
-                 model_type="transformer", bert_model_name=None, vocab_size=30522,
+                 bert_model_name=None, vocab_size=30522, encoder_freeze=False,
                  encoder_hidden_layers=12, encoder_attention_heads=12, max_position_embeddings=512,
                  encoder_intermediate_size=1024, encoder_hidden_size=768,
                  entity_layers=2, entity_emb_dim=50, num_hidden_layers=1, hidden_size=300,
                  dropout=0, **args):
         super().__init__()
         if shared_layers is None or not "encoder" in shared_layers:
-            self.encoder = SentenceEncoder(bert_model_name=bert_model_name,
-                                           model_type=model_type,
-                                           vocab_size=vocab_size,
-                                           encoder_hidden_layers= encoder_hidden_layers,
-                                           encoder_attention_heads=encoder_attention_heads,
-                                           max_position_embeddings=max_position_embeddings,
-                                           encoder_intermediate_size=encoder_intermediate_size,
-                                           encoder_hidden_size=encoder_hidden_size,
-                                           dropout=dropout)
+            self.encoder = TransformerEncoder(vocab_size=vocab_size,
+                                              bert_model_name=bert_model_name,
+                                              num_hidden_layers=encoder_hidden_layers,
+                                              num_attention_heads=encoder_attention_heads,
+                                              max_position_embeddings=max_position_embeddings,
+                                              hidden_size=encoder_hidden_size,
+                                              intermediate_size=encoder_intermediate_size,
+                                              dropout=dropout)
+
             if shared_layers is not None:
                 shared_layers["encoder"] = self.encoder
         else:
             self.encoder = shared_layers["encoder"]
+        if encoder_freeze: self.encoder.freeze()
         
         self.config = {"encoder":self.encoder.config,
                        "decoder":{

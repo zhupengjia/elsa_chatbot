@@ -25,10 +25,9 @@ reader:
 
 model:
     device: "cuda:0"
-    model_type: "transformer"
     encoder_hidden_layers: 3
     encoder_hidden_size: 768
-    encoder_intermediate_size: 1024
+    encoder_intermediate_size: 3072
     encoder_attention_heads: 3
     encoder_freeze: False
 

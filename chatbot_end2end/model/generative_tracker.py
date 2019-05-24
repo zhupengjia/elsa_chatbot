@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import torch, math, numpy, sys
 import torch.nn as nn
-from .sentence_encoder import SentenceEncoder
+from nlptools.zoo.encoders.transformer import TransformerDecoder, TransformerEncoder
 
 '''
     Author: Pengjia Zhu (zhupengjia@gmail.com)
@@ -26,26 +26,24 @@ class GenerativeTracker(nn.Module):
             - len_penalty (float, optional): length penalty, where > 1.0 favors shorter, <1.0 favors longer sentences. Used for prediction only, Default is 1.0
             - unk_penalty (float, optional): unknown word penalty, where < 1.0 favors more unks, >1.0 favors less. Used for prediction only. default is 1.0
     '''
-    def __init__(self, skill_name, shared_layers=None, model_type="transformer",
-                 bert_model_name=None, vocab_size=30522, pretrained_embedding=None,
-                 encoder_hidden_layers=12, encoder_attention_heads=12,
-                 encoder_hidden_size=768, encoder_intermediate_size=2048,
-                 encoder_freeze=False, max_position_embeddings=512, decoder_hidden_layers=1,
-                 decoder_attention_heads=2, decoder_hidden_size=1024, max_seq_len=50,
+    def __init__(self, skill_name, shared_layers=None, bert_model_name=None,
+                 vocab_size=30522, encoder_hidden_layers=5, encoder_attention_heads=8,
+                 encoder_hidden_size=768, encoder_intermediate_size=3072,
+                 encoder_freeze=False, max_position_embeddings=512, decoder_hidden_layers=5,
+                 decoder_attention_heads=8, decoder_hidden_size=2048, max_seq_len=50,
                  dropout=0, pad_id=0, bos_id=1, eos_id=2, unk_id=3, beam_size=1,
                  len_penalty=1., unk_penalty=1., **args):
         super().__init__()
         if shared_layers is None or not "encoder" in shared_layers:
-            self.encoder = SentenceEncoder(bert_model_name=bert_model_name,
-                                           model_type=model_type,
-                                           vocab_size=vocab_size,
-                                           pretrained_embedding=pretrained_embedding,
-                                           encoder_hidden_layers= encoder_hidden_layers,
-                                           encoder_attention_heads=encoder_attention_heads,
-                                           max_position_embeddings=max_position_embeddings,
-                                           encoder_hidden_size=encoder_hidden_size,
-                                           encoder_intermediate_size=encoder_intermediate_size,
-                                           dropout=dropout)
+            self.encoder = TransformerEncoder(vocab_size=vocab_size,
+                                              bert_model_name=bert_model_name,
+                                              num_hidden_layers=encoder_hidden_layers,
+                                              num_attention_heads=encoder_attention_heads,
+                                              max_position_embeddings=max_position_embeddings,
+                                              hidden_size=encoder_hidden_size,
+                                              intermediate_size=encoder_intermediate_size,
+                                              dropout=dropout)
+
             if shared_layers is not None:
                 shared_layers["encoder"] = self.encoder
         else:
@@ -59,19 +57,11 @@ class GenerativeTracker(nn.Module):
         self.num_embeddings = self.encoder.config["vocab_size"]
         self.control_layer = nn.Linear(embedding_dim+2, embedding_dim)
 
-        if model_type == "gru":
-            from nlptools.zoo.encoders.gru import GRUDecoder
-            self.decoder = GRUDecoder(self.encoder.encoder.embeddings,
-                                      intermediate_size=decoder_hidden_size,
-                                      num_hidden_layers=decoder_hidden_layers,
-                                      dropout=dropout)
-        else:
-            from nlptools.zoo.encoders.transformer import TransformerDecoder
-            self.decoder = TransformerDecoder(self.encoder.encoder.embeddings,
-                                              num_hidden_layers=decoder_hidden_layers,
-                                              num_attention_heads=decoder_attention_heads,
-                                              intermediate_size=decoder_hidden_size,
-                                              dropout=dropout)
+        self.decoder = TransformerDecoder(self.encoder.embeddings,
+                                          num_hidden_layers=decoder_hidden_layers,
+                                          num_attention_heads=decoder_attention_heads,
+                                          intermediate_size=decoder_hidden_size,
+                                          dropout=dropout)
 
         self.config = {"encoder":self.encoder.config, "decoder":self.decoder.config}
         
