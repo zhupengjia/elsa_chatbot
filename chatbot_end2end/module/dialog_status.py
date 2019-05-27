@@ -103,7 +103,7 @@ class DialogStatus:
                       "utterance_mask": None,
                       "sentiment": 0,
                       "response_sentiment": 0,
-                      "incre_state": {},
+                      "incre_state": None,
                       "topic": None
                       }
         return initstatus
@@ -141,10 +141,10 @@ class DialogStatus:
             for e in entities:
                 # only keep first value
                 self.current_status["entity"][e] = entities[e][0]
-
             self.current_status["entity_emb"] =\
                 EntityDict.name2onehot(self.current_status["entity"].keys(),
                                        self.max_entity_types).astype("float32")
+
         # utterance to id
         u_and_mask = format_sentence(utterance_replaced,
                                 vocab=self.vocab,

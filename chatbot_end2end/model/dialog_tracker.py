@@ -54,6 +54,7 @@ class DialogTracker(nn.Module):
                            "entity_layers": entity_layers,
                            "entity_emb_dim": entity_emb_dim,
                            "num_hidden_layers": num_hidden_layers,
+                           "max_entity_types": max_entity_types,
                            "hidden_size": hidden_size}
                       }
 
@@ -75,7 +76,8 @@ class DialogTracker(nn.Module):
         self.gru = nn.GRU(hidden_size, hidden_size, num_layers=num_hidden_layers, batch_first=True)
         self.fc_out = nn.Linear(hidden_size, num_responses)
         self.loss_function = nn.NLLLoss()
-        self.softmax = nn.LogSoftmax(dim=1) if self.training else nn.Softmax(dim=1)
+        self.logsoftmax = nn.LogSoftmax(dim=1)
+        self.softmax = nn.Softmax(dim=1)
 
     def entity_encoder(self, x):
         '''
@@ -140,7 +142,7 @@ class DialogTracker(nn.Module):
             hidden = incre_state[obj_id]
         else:
             bsz = pack_batch[0]
-            hidden = dialog_emb.new_zeros(self.num_hidden_layers, bsz, self.hidden_size)
+            hidden = dialog_emb.data.new_zeros(self.num_hidden_layers, bsz, self.hidden_size)
 
         gru_out, hidden = self.gru(dialog_emb, hidden)
 
@@ -151,7 +153,7 @@ class DialogTracker(nn.Module):
         out = self.fc_out(out)
 
         if self.training and self.response_key in dialogs:
-            y_prob = self.softmax(out)
+            y_prob = self.logsoftmax(out)
             y_true = dialogs[self.response_key].data
             loss = self.loss_function(y_prob, y_true.squeeze(1))
             return y_prob, loss

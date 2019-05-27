@@ -8,25 +8,25 @@ tokenizer:
     do_lower_case: 1
     stopwords_path: config/en_stopwords.txt
 
+ner:
+    tokenizer: spacy
+
 model:
     device: "cpu"
     max_seq_len: 20
-    max_entity_types: 1024
+    max_entity_types: 512
 
 skills:
-    cornell: 
-        wrapper: GenerativeResponse
-        model_type: transformer
-        beam_size: 5
-        saved_model: 'data/cornell/model_transformer.pt'
+    #cornell: 
+    #    wrapper: GenerativeResponse
+    #    model_type: transformer
+    #    beam_size: 5
+    #    saved_model: 'data/cornell/model_transformer.pt'
 
-        #    babi: 
-        #        wrapper: GoalResponse
-        #        saved_model: 'data/babi/model.pt'
-        #        template_file: data/babi/template.txt
-        #        hook: 
-        #            wrapper: Behaviors
-
+    babi:
+        wrapper: GoalResponse
+        saved_model: 'data/babi/model.pt'
+        dialogflow: data/babi/babi.xlsx
 
 logger:
     appname: elsa

@@ -3,8 +3,7 @@
     Author: Pengjia Zhu (zhupengjia@gmail.com)
     Response skill for end2end goal oriented chatbot
 """
-import os
-import torch
+import os, torch, numpy
 from .rule_response import RuleResponse
 from ..model.dialog_tracker import DialogTracker
 
@@ -51,11 +50,12 @@ class GoalResponse(RuleResponse):
             copy_args("encoder_hidden_size", "encoder", "hidden_size")
             copy_args("encoder_intermediate_size", "encoder", "intermediate_size")
             copy_args("encoder_attention_heads", "encoder", "num_attention_heads")
-            copy_args("entity_layers", "encoder", "entity_layers")
+            copy_args("entity_layers", "decoder", "entity_layers")
             copy_args("entity_emb_dim", "decoder", "entity_emb_dim")
             copy_args("num_hidden_layers", "decoder", "num_hidden_layers")
             copy_args("hidden_size", "decoder", "hidden_size")
             copy_args("num_responses", "decoder", "num_responses")
+            copy_args("max_entity_types", "decoder", "max_entity_types")
             self.model = DialogTracker(**args)
             
             self.model.to(device)
@@ -84,4 +84,6 @@ class GoalResponse(RuleResponse):
         y_prob = self.model(status_data, incre_state)
         _, y_pred = torch.max(y_prob.data, 1)
         y_pred = int(y_pred.cpu().numpy()[-1])
-        return y_pred, y_prob
+        score = y_prob[0, y_pred].cpu().detach().numpy()
+        score = numpy.exp(score)
+        return y_pred, score

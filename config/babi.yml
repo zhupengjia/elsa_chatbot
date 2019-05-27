@@ -45,7 +45,7 @@ model:
     batch_size: 50
     num_workers: 1
     saved_model: 'data/babi/model.pt'
-    save_per_epoch: 1
+    save_per_epoch: 100
 
 reinforcement:
     learning_rate: 0.0001

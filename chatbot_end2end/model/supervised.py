@@ -161,6 +161,7 @@ class Supervised:
     def train(self):
         self.skill.model.train() # set train flag
         ave_loss = []
+        tot_it = -1
         for epoch in range(self.start_epoch, self.epochs):
             for it, d in enumerate(self.generator):
                 d.to(self.device)
@@ -175,7 +176,7 @@ class Supervised:
                 ave_loss.append(loss.item())
              
                 # save
-                if it%self.save_per_epoch == 0 and numpy.nanmean(ave_loss) < self.best_loss:
+                if tot_it%self.save_per_epoch == 0 and numpy.nanmean(ave_loss) < self.best_loss:
                     self.best_loss = loss
                     state = {
                         'state_dict': self.skill.model.state_dict(),
@@ -187,4 +188,4 @@ class Supervised:
                     }
                     torch.save(state, self.saved_model)
                     ave_loss = []
-
+                tot_it += 1
