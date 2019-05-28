@@ -167,7 +167,7 @@ class Supervised:
                 d.to(self.device)
                 self.skill.model.zero_grad()
 
-                y_prob, loss = self.skill.get_response(d)
+                _, loss = self.skill.get_response(d)
 
                 self.logger.info('{} {} {}'.format(it, epoch, loss.item()))
 

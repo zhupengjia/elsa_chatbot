@@ -90,7 +90,7 @@ class GenerativeTracker(nn.Module):
 
         return sequence_out, encoder_hidden
 
-    def beam_search(self, encoder_out, encoder_hidden, utterance_mask):
+    def beam_search(self, encoder_out, encoder_hidden, utterance_mask, incre_state=None):
         bsz = encoder_out.size(0)
         max_len = encoder_out.size(1)
 
@@ -104,8 +104,6 @@ class GenerativeTracker(nn.Module):
         encoder_out = encoder_out.repeat(bsz*self.beam_size, 1, 1)
         encoder_hidden = encoder_hidden.repeat(1, bsz*self.beam_size, 1)
         utterance_mask = utterance_mask.repeat(self.beam_size, 1)
-
-        incre_state = {}
 
         for i in range(max_len - 1):
             #print("="*20)
@@ -221,5 +219,5 @@ class GenerativeTracker(nn.Module):
             loss = self.loss_function(output_probs_expand, target_output)
             return output_probs, loss
         else:
-            return self.beam_search(encoder_out, encoder_hidden, utterance_mask)
+            return self.beam_search(encoder_out, encoder_hidden, utterance_mask, incre_state)
 

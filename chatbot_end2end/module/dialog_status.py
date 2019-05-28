@@ -92,7 +92,7 @@ class DialogStatus:
         self.rl_discount = rl_discount
 
         self.current_status = self.__init_status()
-
+        self.incre_state = {}
         self.history_status = []
         self.sentiment_analyzer = sentiment_analyzer
 
@@ -103,7 +103,6 @@ class DialogStatus:
                       "utterance_mask": None,
                       "sentiment": 0,
                       "response_sentiment": 0,
-                      "incre_state": None,
                       "topic": None
                       }
         return initstatus
@@ -201,7 +200,8 @@ class DialogStatus:
         current_data.to(device)
         self.current_status = \
             self.topic_manager.get_response(current_data,
-                                            self.current_status)
+                                            self.current_status,
+                                            incre_state=self.incre_state)
         self.history_status.append(copy.deepcopy(self.current_status))
         return self.current_status["entity"]['RESPONSE']
 

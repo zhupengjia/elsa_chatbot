@@ -61,35 +61,37 @@ class DialogTracker(nn.Module):
         encoder_hidden_size = self.config["encoder"]["hidden_size"]
         self.num_hidden_layers = num_hidden_layers
         self.hidden_size = hidden_size
+        self.num_responses = num_responses
         self.response_key = 'response_' + skill_name
         self.mask_key = 'response_mask_' + skill_name
 
-        self.dropout = nn.Dropout(dropout)
-        self.pool = nn.AvgPool1d(2)
-
-        fc_entity_layers = [nn.Linear(max_entity_types, max_entity_types) for i in range(entity_layers-1)]
+        fc_entity_layers = []
+        for i in range(entity_layers-1, ):
+            fc_entity_layers.append(nn.Linear(max_entity_types, max_entity_types))
+            fc_entity_layers.append(nn.ReLU())
+            fc_entity_layers.append(nn.Dropout(dropout))
         fc_entity_layers.append(nn.Linear(max_entity_types, entity_emb_dim))
+        fc_entity_layers.append(nn.ReLU())
+        fc_entity_layers.append(nn.Dropout(dropout))
         self.fc_entity = nn.Sequential(*fc_entity_layers)
 
-        self.fc_dialog = nn.Linear(encoder_hidden_size+ entity_emb_dim, hidden_size)
+        self.fc_dialog = nn.Sequential(nn.Linear(encoder_hidden_size+ entity_emb_dim, hidden_size),
+                                       nn.ReLU(),
+                                       nn.Dropout(dropout))
         
         self.gru = nn.GRU(hidden_size, hidden_size, num_layers=num_hidden_layers, batch_first=True)
-        self.fc_out = nn.Linear(hidden_size, num_responses)
+        self.fc_out = nn.Sequential(nn.ReLU(),
+                                    nn.Dropout(dropout),
+                                    nn.Linear(hidden_size, hidden_size),
+                                    nn.ReLU(),
+                                    nn.Dropout(dropout),
+                                    nn.Linear(hidden_size, num_responses)
+                                   )
         self.loss_function = nn.NLLLoss()
         self.logsoftmax = nn.LogSoftmax(dim=1)
         self.softmax = nn.Softmax(dim=1)
-
-    def entity_encoder(self, x):
-        '''
-            entity encoder, model framwork:
-                - linear + linear 
-
-            Input:
-                - onehot present of entity names
-        '''
-        x = self.fc_entity(x)
-        x = self.dropout(x)
-        return x
+        #self.loss_function = nn.BCEWithLogitsLoss()
+        #self.sigmoid = nn.Sigmoid()
 
     def dialog_embedding(self, utterance, utterance_mask, entity):
         '''
@@ -108,7 +110,7 @@ class DialogTracker(nn.Module):
         sequence_output, pooled_output = self.encoder(utterance, attention_mask=utterance_mask, output_all_encoded_layers=False)
 
         #entity name embedding
-        entity = self.entity_encoder(entity) 
+        entity = self.fc_entity(entity)
        
         #concat together and apply linear
         utter = torch.cat((pooled_output, entity), 1)
@@ -149,22 +151,23 @@ class DialogTracker(nn.Module):
         if incre_state is not None and not self.training:
             incre_state[obj_id] = hidden
         
-        out = self.dropout(gru_out.data)
-        out = self.fc_out(out)
+        out = self.fc_out(gru_out.data)
 
         if self.training and self.response_key in dialogs:
-            y_prob = self.logsoftmax(out)
+            out = self.logsoftmax(out)
             y_true = dialogs[self.response_key].data
-            loss = self.loss_function(y_prob, y_true.squeeze(1))
-            return y_prob, loss
+            loss = self.loss_function(out, y_true.squeeze(1))
+            #y_true_onehot = torch.zeros_like(out)
+            #y_true_onehot.scatter_(1, y_true, 1)
+            #loss = self.loss_function(out, y_true_onehot.squeeze(1))
+            return out, loss
 
-        #output to softmax
-        gru_softmax = self.softmax(out)
+        probs = self.softmax(out)
+        #probs = self.sigmoid(out)
+        #print(probs)
 
-        #apply mask 
-        response = gru_softmax * dialogs[self.mask_key].data + 1e-15
-        y_prob = torch.log(response)
-
-        return y_prob
+        #apply mask
+        response = probs * dialogs[self.mask_key].data
+        return response
 
 

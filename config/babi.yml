@@ -34,9 +34,9 @@ model:
     max_entity_types: 512
     dropout: 0.8
     hidden_size: 1024
-    entity_layers: 3
-    entity_emb_dim: 50
-    lstm_layers: 2
+    entity_layers: 2
+    entity_emb_dim: 64
+    num_hidden_layers: 2
     learning_rate: 0.0001
     weight_decay: 0
     momentum: 0.9

@@ -63,6 +63,11 @@ class GoalResponse(RuleResponse):
         else:
             self.model = DialogTracker(num_responses=len(self.dialogflow), **args)
             self.model.to(device)
+        
+        user_says_series = self.dialogflow.dialogs["user_says"]
+        fallback_says = user_says_series.isnull()
+        fallback_says = fallback_says[fallback_says].index.values
+        self.usersays_index = {"fallback": fallback_says}
 
     def eval(self):
         """
@@ -85,5 +90,5 @@ class GoalResponse(RuleResponse):
         _, y_pred = torch.max(y_prob.data, 1)
         y_pred = int(y_pred.cpu().numpy()[-1])
         score = y_prob[0, y_pred].cpu().detach().numpy()
-        score = numpy.exp(score)
         return y_pred, score
+
