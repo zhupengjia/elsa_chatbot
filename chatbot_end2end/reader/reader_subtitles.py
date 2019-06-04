@@ -37,17 +37,24 @@ class ReaderSubtitles(ReaderBase):
                         try:
                             start_time = datetime.datetime.strptime(elem_val, '%H:%M:%S')
                         except:
+                            strbuf = []
                             continue
                     else:
                         try:
                             end_time = datetime.datetime.strptime(elem_val, '%H:%M:%S')
                         except:
+                            strbuf = []
                             continue
                         sentence = " ".join(strbuf).strip()
                         if sentence[:4] == "****":
+                            strbuf = []
                             continue
                         sentence = ReaderBase.clean_text(sentence)
                         if len(sentence) < 1:
+                            strbuf = []
+                            continue
+                        if self.get_lang(sentence) != "en":
+                            strbuf = []
                             continue
                         sent_list.append((sentence, start_time, end_time))
                         strbuf = []
@@ -58,7 +65,7 @@ class ReaderSubtitles(ReaderBase):
                         pass
 
         conv = []
-        max_conv_len = 20
+        max_conv_len = 6
         for idx in range(0, len(sent_list) - 1):
             cur = sent_list[idx]
             nxt = sent_list[idx + 1]
@@ -105,4 +112,10 @@ class ReaderSubtitles(ReaderBase):
             for f in files:
                 for conv in self._read_xml(f):
                     yield conv
+
+        #for c in convs_iter(all_files):
+        #    print(c)
+        #    pass
+        #sys.exit()
+
         self.data = self.predeal(convs_iter(all_files), cached_data)

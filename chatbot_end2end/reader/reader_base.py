@@ -2,6 +2,7 @@
 import os, numpy, h5py, torch, re
 from string import punctuation
 from torch.utils.data import Dataset
+from whatlangid import WhatLangId
 from ..module.dialog_status import DialogStatus
 
 '''
@@ -38,6 +39,18 @@ class ReaderBase(Dataset):
         self.max_seq_len = max_seq_len
         self.max_entity_types = max_entity_types
         self.data = []
+        self.wtl = WhatLangId()
+
+    def get_lang(self, text, default="en"):
+        """
+            Get language for text
+        """
+        if text is None:
+            return default
+        try:
+            return self.wrl.predict_lang(text)
+        except Exception as err:
+            return default
 
     @staticmethod
     def clean_text(text):

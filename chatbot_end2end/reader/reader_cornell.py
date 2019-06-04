@@ -35,7 +35,7 @@ class ReaderCornell(ReaderBase):
                 if len(_line) == 5:
                     id2line[_line[0]] = _line[4]
 
-        max_conv_len = 20
+        max_conv_len = 10
         def convs_iter(id2line):
             with open(conv_path, encoding='utf-8', errors='ignore') as f:
                 for line in f:
@@ -50,11 +50,11 @@ class ReaderCornell(ReaderBase):
                             continue
                         utterance = ReaderBase.clean_text(id2line[conv_map[i]])
                         response = ReaderBase.clean_text(id2line[conv_map[i+1]])
-                        conv.append([utterance, response])
                         if len(conv) > max_conv_len:
                             yield conv[::2]
                             yield conv[1::2]
                             conv = []
+                        conv.append([utterance, response])
 
                     if len(conv) > 0:
                         #use both side of dialogs
