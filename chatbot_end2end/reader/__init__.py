@@ -6,6 +6,7 @@ from .reader_babi import ReaderBabi
 from .reader_cornell import ReaderCornell
 from .reader_ubuntu import ReaderUbuntu
 from .reader_subtitles import ReaderSubtitles
+from .reader_twitter import ReaderTwitter
 
 __all__ = ['ReaderXLSX',
            "ReaderYAML",
@@ -13,5 +14,6 @@ __all__ = ['ReaderXLSX',
            'ReaderBabi',
            'ReaderCornell',
            'ReaderUbuntu',
-           'ReaderSubtitles']
+           'ReaderSubtitles',
+           'ReaderTwitter']
 

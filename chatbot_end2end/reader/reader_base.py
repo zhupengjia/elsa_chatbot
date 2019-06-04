@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import os, numpy, h5py, torch, re
+from string import punctuation
 from torch.utils.data import Dataset
 from ..module.dialog_status import DialogStatus
 
@@ -41,7 +42,7 @@ class ReaderBase(Dataset):
     @staticmethod
     def clean_text(text):
         '''Clean text by removing unnecessary characters and altering the format of words.'''
-        text = text.lower()
+        text = re.sub(r"([%s])+" % punctuation, r"\1", text.lower())
         text = re.sub(r"i' ?m", "i am", text)
         text = re.sub(r"he' ?s", "he is", text)
         text = re.sub(r"she' ?s", "she is", text)
@@ -64,9 +65,12 @@ class ReaderBase(Dataset):
         text = re.sub(r"n'", "ng", text)
         text = re.sub(r"' ?bout", "about", text)
         text = re.sub(r"' ?til", "until", text)
-        text = re.sub("\[[\s\w]+\]", "", text)
+        text = re.sub("(@\S*|\S*&\S*|#\S*|http\S*|\S*[\(\)\[\]\*\_]\S*)", "", text)
+        text = re.sub("\S{20,}", "", text)
         text = re.sub(r'(<!--.*?-->|<[^>]*>|\. ?\. ?\.)', "", text)
         text = re.sub(r"[-()\"#/@;:<>{}`+=~|]", "", text)
+        text = re.sub("[^a-zA-Z0-9%s ]"%punctuation, "", text)
+        text = re.sub("^[%s]*"%punctuation, "", text)
         text = " ".join([s.strip() for s in re.split("\s", text) if s.strip()])
         return text
 

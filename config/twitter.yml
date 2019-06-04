@@ -11,8 +11,8 @@ tokenizer:
     do_lower_case: 1
 
 reader:
-    wrapper: ReaderSubtitles
-    train_data: /home/pzhu/data/dialog/OpenSubtitles/xml/en
+    wrapper: ReaderTwitter
+    train_data: /home/pzhu/data/dialog/TweetIDs
     max_seq_len: 50
 
 model:
@@ -34,7 +34,7 @@ model:
     epochs: 10000
     batch_size: 30
     num_workers: 1
-    saved_model: 'data/cornell/model_subtitles.pt'
+    saved_model: 'data/cornell/model_twitter.pt'
     save_per_epoch: 100
 
 reinforcement:
@@ -43,7 +43,7 @@ reinforcement:
     discount: 0.95
 
 logger:
-    appname: subtitles
+    appname: twitter
     loglevel_console:  20
     loglevel_file: 0
     logfile: data/cornell/train.log

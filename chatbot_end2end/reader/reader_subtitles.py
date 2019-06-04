@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python
 import os, h5py, re, datetime, sys
 from .reader_base import ReaderBase
@@ -82,6 +81,10 @@ class ReaderSubtitles(ReaderBase):
                 yield conv[1::2]
 
     def read(self, filepath):
+        """
+            Input:
+                - filepath: path of dictionary
+        """
         cached_data = filepath + '.h5'
         if os.path.exists(cached_data) and os.path.getsize(cached_data) > 102400:
             self.data = h5py.File(cached_data, 'r')
@@ -102,5 +105,4 @@ class ReaderSubtitles(ReaderBase):
             for f in files:
                 for conv in self._read_xml(f):
                     yield conv
-
         self.data = self.predeal(convs_iter(all_files), cached_data)

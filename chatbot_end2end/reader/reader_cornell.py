@@ -62,5 +62,8 @@ class ReaderCornell(ReaderBase):
                         if len(conv) > 1:
                             yield conv[1::2]
 
+        #for c in convs_iter(id2line):
+        #    print(c)
+        #sys.exit()
         self.data = self.predeal(convs_iter(id2line), cached_data)
 
