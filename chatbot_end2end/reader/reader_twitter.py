@@ -23,7 +23,7 @@ class ReaderTwitter(ReaderBase):
 
         id2text = zload(os.path.join(filepath, "id2text.pkl"))
 
-        max_conv_len = 10
+        max_conv_len = 5
         def convs_iter():
             with open(os.path.join(filepath, "twitter_ids.txt")) as f:
                 for line in f:

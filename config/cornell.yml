@@ -12,7 +12,7 @@ tokenizer:
 
 reader:
     wrapper: ReaderCornell
-    train_data: /home/pzhu/data/dialog/cornell_corpus
+    train_data: /home/pzhu/data/dialog/cornell
     max_seq_len: 50
 
 model:
