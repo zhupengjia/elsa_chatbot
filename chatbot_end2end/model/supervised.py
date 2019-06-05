@@ -19,7 +19,7 @@ from torch.utils.data import DataLoader
 class Supervised:
     def __init__(self, reader,  batch_size=100, num_workers=1, epochs=1000, optimizer="adam",
                  weight_decay=0, learning_rate=0.001, momentum=0.9, saved_model="model.pt",
-                 device='cpu', save_per_epoch=1, logger=None, **tracker_args):
+                 device='cpu', gpu_ids=None, save_per_epoch=1, logger=None, **tracker_args):
         """
             Supervised learning for chatbot
 
@@ -32,6 +32,7 @@ class Supervised:
                 - learning_rate: float, default is 0.001
                 - saved_model: str, default is "model.pt"
                 - device: string of torch device, default is "cpu"
+                - gpu_ids: list of gpu ids, for multiple gpu training
                 - logger: logger instance ,default is None
                 - see Tracker class for other more args
         """
@@ -50,6 +51,7 @@ class Supervised:
         self.optimizer_type = optimizer
         self.momentum = momentum
         self.device = torch.device(device) if torch.cuda.is_available() else torch.device('cpu')
+        self.gpu_ids = gpu_ids
         self.logger = logger
 
         self.__init_tracker(**tracker_args)
@@ -132,7 +134,7 @@ class Supervised:
         """
         tracker
         """
-        self.skill.init_model(saved_model=self.saved_model, device=str(self.device), **args)
+        self.skill.init_model(saved_model=self.saved_model, device=str(self.device), gpu_ids=self.gpu_ids, **args)
         print(self.skill.model)
 
         if self.optimizer_type.lower() == "adam":

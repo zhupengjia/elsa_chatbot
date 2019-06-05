@@ -1,0 +1,51 @@
+%YAML 1.2
+---
+#app setting
+
+skill:
+    name: cornell
+    wrapper: GenerativeResponse
+
+tokenizer:
+    bert_model_name: bert-base-uncased
+    do_lower_case: 1
+
+reader:
+    wrapper: ReaderCornell
+    train_data: /home/pzhu/data/dialog/cornell
+    max_seq_len: 50
+
+model:
+    device: "cuda:1"
+    gpu_ids: [2,3]
+    bert_model_name: "bert-base-uncased"
+    encoder_hidden_layers: 6
+    encoder_hidden_size: 768
+    encoder_intermediate_size: 3072
+    encoder_attention_heads: 8
+    encoder_freeze: False
+    dropout: 0.1
+    decoder_hidden_layers: 6
+    decoder_attention_heads: 8
+    decoder_hidden_size: 3072
+    learning_rate: 0.0001
+    weight_decay: 0
+    momentum: 0.9
+    optimizer: "adam"
+    epochs: 10000
+    batch_size: 30
+    num_workers: 1
+    saved_model: 'data/cornell/model_transformer.pt'
+    save_per_epoch: 100
+
+reinforcement:
+    learning_rate: 0.0001
+    maxloop: 20
+    discount: 0.95
+
+logger:
+    appname: cornell
+    loglevel_console:  20
+    loglevel_file: 0
+    logfile: data/cornell/train.log
+

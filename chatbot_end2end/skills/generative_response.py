@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os, numpy, torch
 from nlptools.text.tokenizer import format_sentence
+import torch.nn as nn
 from .skill_base import SkillBase
 from ..model.generative_tracker import GenerativeTracker
 
@@ -33,13 +34,14 @@ class GenerativeResponse(SkillBase):
         return format_sentence(response, vocab=self.vocab,
                                  tokenizer=self.tokenizer, max_seq_len=self.max_seq_len)
 
-    def init_model(self, saved_model="generative_tracker.pt", device='cpu', **args):
+    def init_model(self, saved_model="generative_tracker.pt", device='cpu', gpu_ids=None, **args):
         """
             Initialize model
 
             Input:
                 - saved_model: str, default is "generative_tracker.pt"
                 - device: string, model location, default is 'cpu'
+                - gpu_ids: list of gpu ids, for multiple gpu training
                 - see ..model.generative_tracker.GenerativeTracker for more parameters if path of saved_model not existed
         """
         additional_args = {"beam_size": self.beam_size,
@@ -77,6 +79,10 @@ class GenerativeResponse(SkillBase):
             self.model = GenerativeTracker(**args)
             print("Create new model")
             self.model.to(device)
+        
+        if gpu_ids is not None:
+            self.model = nn.DataParallel(self.model, device_ids=gpu_ids)
+        
 
     def eval(self):
         """
