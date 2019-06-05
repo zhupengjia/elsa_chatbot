@@ -18,13 +18,13 @@ reader:
 model:
     device: "cuda:0"
     bert_model_name: "bert-base-uncased"
-    encoder_hidden_layers: 4
+    encoder_hidden_layers: 3
     encoder_hidden_size: 768
     encoder_intermediate_size: 2048
     encoder_attention_heads: 8
     encoder_freeze: False
     dropout: 0.1
-    decoder_hidden_layers: 4
+    decoder_hidden_layers: 3
     decoder_attention_heads: 8
     decoder_hidden_size: 2048
     learning_rate: 0.0001
@@ -32,10 +32,10 @@ model:
     momentum: 0.9
     optimizer: "adam"
     epochs: 10000
-    batch_size: 30
+    batch_size: 20
     num_workers: 1
-    saved_model: 'data/cornell/model_transformer.pt'
-    save_per_epoch: 100
+    saved_model: '/data/omnia-002_1/data/chatbot/generative_3.pt'
+    save_per_epoch: 1000
 
 reinforcement:
     learning_rate: 0.0001
