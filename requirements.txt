@@ -1,0 +1,12 @@
+numpy
+scipy
+h5py
+pandas
+torch
+sklearn
+pyyaml
+bidict
+fasttext>=0.8.22
+whatlangid
+spacy
+nltk
