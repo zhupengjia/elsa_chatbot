@@ -1,0 +1,50 @@
+%YAML 1.2
+---
+#app setting
+
+skill:
+    name: cngen
+    wrapper: GenerativeResponse
+
+tokenizer:
+    bert_model_name: bert-base-chinese
+    do_lower_case: 1
+
+reader:
+    wrapper: ReaderCNGen
+    train_data: data/dialog/cn_gen_corpus.gz
+    max_seq_len: 50
+
+model:
+    device: "cuda:0"
+    bert_model_name: "bert-base-chinese"
+    encoder_hidden_layers: 4
+    encoder_hidden_size: 768
+    encoder_intermediate_size: 2048
+    encoder_attention_heads: 8
+    encoder_freeze: False
+    dropout: 0.1
+    decoder_hidden_layers: 4
+    decoder_attention_heads: 8
+    decoder_hidden_size: 2048
+    learning_rate: 0.0001
+    weight_decay: 0
+    momentum: 0.9
+    optimizer: "adam"
+    epochs: 10000
+    batch_size: 30
+    num_workers: 1
+    saved_model: 'data/cngen/model.pt'
+    save_per_epoch: 100
+
+reinforcement:
+    learning_rate: 0.0001
+    maxloop: 20
+    discount: 0.95
+
+logger:
+    appname: cngen
+    loglevel_console:  20
+    loglevel_file: 0
+    logfile: data/cngen/train.log
+

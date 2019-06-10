@@ -7,6 +7,7 @@ from .reader_cornell import ReaderCornell
 from .reader_ubuntu import ReaderUbuntu
 from .reader_subtitles import ReaderSubtitles
 from .reader_twitter import ReaderTwitter
+from .reader_cngen import ReaderCNGen
 
 __all__ = ['ReaderXLSX',
            "ReaderYAML",
@@ -15,5 +16,6 @@ __all__ = ['ReaderXLSX',
            'ReaderCornell',
            'ReaderUbuntu',
            'ReaderSubtitles',
-           'ReaderTwitter']
+           'ReaderTwitter',
+           'ReaderCNGen']
 

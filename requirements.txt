@@ -6,7 +6,7 @@ torch
 sklearn
 pyyaml
 bidict
-fasttext>=0.8.22
-whatlangid
+git+https://github.com/facebookresearch/fastText.git
+git+https://github.com/bung87/whatlangid.git
 spacy
 nltk
