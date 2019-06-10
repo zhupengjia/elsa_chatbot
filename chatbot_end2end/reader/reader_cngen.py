@@ -31,7 +31,7 @@ class ReaderCNGen(ReaderBase):
         h5file = os.path.splitext(filepath)
         cached_data = filepath + '.h5'
         if os.path.exists(cached_data) and os.path.getsize(cached_data) > 102400:
-            self.data = h5py.File(cached_data, 'r')
+            self.data = h5py.File(cached_data, 'r', libver='latest', swmr=True)
             return
 
         def convs_iter():

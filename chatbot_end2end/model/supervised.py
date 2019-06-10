@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 import torch, numpy, os
 import torch.optim as optim
-from nlptools.utils import setLogger
+from torch.utils.data import DataLoader
+from tqdm import tqdm
 from nlptools.text.ner import NER
 from nlptools.text.tokenizer import Tokenizer_BERT
 from ..module.topic_manager import TopicManager
@@ -9,7 +10,6 @@ from ..module.nltk_sentiment import NLTKSentiment
 from ..module.dialog_status import dialog_collate
 from .. import reader as Reader, skills as Skills
 from ..reader import ReaderXLSX
-from torch.utils.data import DataLoader
 
 '''
     Author: Pengjia Zhu (zhupengjia@gmail.com)
@@ -19,7 +19,7 @@ from torch.utils.data import DataLoader
 class Supervised:
     def __init__(self, reader,  batch_size=100, num_workers=1, epochs=1000, optimizer="adam",
                  weight_decay=0, learning_rate=0.001, momentum=0.9, saved_model="model.pt",
-                 device='cpu', gpu_ids=None, save_per_epoch=1, logger=None, **tracker_args):
+                 device='cpu', gpu_ids=None, save_per_epoch=1, **tracker_args):
         """
             Supervised learning for chatbot
 
@@ -33,7 +33,6 @@ class Supervised:
                 - saved_model: str, default is "model.pt"
                 - device: string of torch device, default is "cpu"
                 - gpu_ids: list of gpu ids, for multiple gpu training
-                - logger: logger instance ,default is None
                 - see Tracker class for other more args
         """
         self.reader = reader
@@ -52,7 +51,6 @@ class Supervised:
         self.momentum = momentum
         self.device = torch.device(device) if torch.cuda.is_available() else torch.device('cpu')
         self.gpu_ids = gpu_ids
-        self.logger = logger
 
         self.__init_tracker(**tracker_args)
 
@@ -64,7 +62,6 @@ class Supervised:
             Input:
                 - config: configure dictionary
         """
-        logger = setLogger(**config.logger)
         if "ner" in config:
             ner_config = config.ner
         else:
@@ -125,10 +122,10 @@ class Supervised:
                             ner=ner, topic_manager=topic_manager,
                             sentiment_analyzer=sentiment_analyzer,
                             max_seq_len=config.reader.max_seq_len,
-                            max_entity_types=max_entity_types, logger=logger)
+                            max_entity_types=max_entity_types)
         reader.read(config.reader.train_data)
 
-        return cls(reader=reader, logger=logger, skill_name=config.skill.name, **config.model)
+        return cls(reader=reader, skill_name=config.skill.name, **config.model)
 
     def __init_tracker(self, **args):
         """
@@ -144,7 +141,7 @@ class Supervised:
             self.optimizer = optim.SGD(self.skill.model.parameters(), lr=self.learning_rate,
                                        momentum=self.momentum)
         
-        self.logger.info('Optimizer: {} with learning_rate: {}'.format(self.optimizer_type, self.learning_rate))
+        print('Optimizer: {} with learning_rate: {}'.format(self.optimizer_type, self.learning_rate))
 
         self.start_epoch = 0
         self.best_loss = 1e9
@@ -165,13 +162,15 @@ class Supervised:
         ave_loss = []
         tot_it = -1
         for epoch in range(self.start_epoch, self.epochs):
-            for it, d in enumerate(self.generator):
+            print("epoch: {}".format(epoch))
+            pbar = tqdm(self.generator)
+            for d in tqdm(self.generator):
                 d.to(self.device)
                 self.skill.model.zero_grad()
 
                 _, loss = self.skill.get_response(d)
 
-                self.logger.info('{} {} {}'.format(it, epoch, loss.item()))
+                pbar.set_description('loss:{}'.format(loss.item()))
 
                 loss.backward()
                 self.optimizer.step()

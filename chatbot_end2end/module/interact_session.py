@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import torch
 from nlptools.text.tokenizer import Tokenizer_BERT
-from nlptools.utils import setLogger
 from nlptools.text.ner import NER
 from .nltk_sentiment import NLTKSentiment
 from .dialog_status import DialogStatus
@@ -18,7 +17,7 @@ from ..reader import ReaderXLSX
 class InteractSession:
     def __init__(self, vocab, tokenizer, ner, topic_manager,
                  sentiment_analyzer, max_seq_len=100,
-                 max_entity_types=1024, device='cpu', logger=None, **args):
+                 max_entity_types=1024, device='cpu', **args):
         """
             General interact session
 
@@ -32,11 +31,9 @@ class InteractSession:
                 - max_seq_len: int, maximum sequence length
                 - max_entity_types: int, maximum entity types
                 - device: string of torch device, default is "cpu"
-                - logger: logger instance ,default is None
         """
 
         super().__init__()
-        self.logger = logger
         self.device = torch.device(device)
         self.tokenizer = tokenizer
         self.vocab = vocab
@@ -55,8 +52,7 @@ class InteractSession:
             Input:
                 - config: configure dictionary
         """
-        # logger, tokenizer and ner
-        logger = setLogger(**config.logger)
+        # tokenizer and ner
         tokenizer = Tokenizer_BERT(**config.tokenizer)
         if "ner" in config:
             ner_config = config.ner
@@ -117,7 +113,7 @@ class InteractSession:
             ner = None
 
         return cls(vocab=vocab, tokenizer=tokenizer, ner=ner,
-                   topic_manager=topic_manager, logger=logger,
+                   topic_manager=topic_manager,
                    sentiment_analyzer=sentiment_analyzer, **config.model)
 
     def new_dialog(self):

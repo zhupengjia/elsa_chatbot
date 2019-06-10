@@ -18,7 +18,7 @@ class ReaderTwitter(ReaderBase):
     def read(self, filepath):
         cached_data = filepath + '.h5'
         if os.path.exists(cached_data) and os.path.getsize(cached_data) > 102400:
-            self.data = h5py.File(cached_data, 'r')
+            self.data = h5py.File(cached_data, 'r', libver='latest', swmr=True)
             return
 
         id2text = zload(os.path.join(filepath, "id2text.pkl"))

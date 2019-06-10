@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os, numpy, h5py, torch, re
 from string import punctuation
+from tqdm import tqdm
 from torch.utils.data import Dataset
 from whatlangid import WhatLangId
 from ..module.dialog_status import DialogStatus
@@ -21,16 +22,14 @@ class ReaderBase(Dataset):
             - topic_manager: topic manager instance, see src/module/topic_manager
             - sentiment_analyzer: sentiment analyzer instance
             - max_seq_len: int, maximum sequence length
-            - logger: logger instance
-            
+
         Special method supported:
             - len(): return total number of responses in template
             - iterator: return data in pytorch Variable used in tracker
     """
 
     def __init__(self, vocab, tokenizer, ner, topic_manager, sentiment_analyzer, max_seq_len=10,
-                 max_entity_types=1024, logger=None):
-        self.logger = logger
+                 max_entity_types=1024, **args):
         self.tokenizer = tokenizer
         self.ner = ner
         self.vocab = vocab
@@ -125,9 +124,7 @@ class ReaderBase(Dataset):
                                                      compression='lzf', maxshape=(None, 2))
                       }
         n_tot = 0
-        for i_d, dialog_data in enumerate(data):
-            if self.logger is not None:
-                self.logger.info('predeal dialog {}'.format(i_d))
+        for dialog_data in tqdm(data):
             # dialog simulator
             dialog = DialogStatus.new_dialog(self.vocab, self.tokenizer, self.ner, self.topic_manager,
                                               self.sentiment_analyzer, self.max_seq_len, self.max_entity_types)
