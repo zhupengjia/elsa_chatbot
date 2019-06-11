@@ -33,7 +33,7 @@ model:
     momentum: 0.9
     optimizer: "adam"
     epochs: 10000
-    batch_size: 100
+    batch_size: 60
     num_workers: 1
     saved_model: '/data/omnia-010_1/data/generative_6.pt'
     save_per_epoch: 100
