@@ -122,7 +122,8 @@ class Supervised:
                             ner=ner, topic_manager=topic_manager,
                             sentiment_analyzer=sentiment_analyzer,
                             max_seq_len=config.reader.max_seq_len,
-                            max_entity_types=max_entity_types)
+                            max_entity_types=max_entity_types,
+                            flat_mode=config.reader.flat_mode)
         reader.read(config.reader.train_data)
 
         return cls(reader=reader, skill_name=config.skill.name, **config.model)

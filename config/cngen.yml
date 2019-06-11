@@ -14,6 +14,7 @@ reader:
     wrapper: ReaderCNGen
     train_data: data/dialog/cn_gen_corpus.gz
     max_seq_len: 50
+    flat_mode: True
 
 model:
     device: "cuda:0"

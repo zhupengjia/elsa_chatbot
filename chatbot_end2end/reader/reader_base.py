@@ -28,8 +28,8 @@ class ReaderBase(Dataset):
             - iterator: return data in pytorch Variable used in tracker
     """
 
-    def __init__(self, vocab, tokenizer, ner, topic_manager, sentiment_analyzer, max_seq_len=10,
-                 max_entity_types=1024, **args):
+    def __init__(self, vocab, tokenizer, ner, topic_manager, sentiment_analyzer,
+                 max_seq_len=10, max_entity_types=1024, flat_mode=False, **args):
         self.tokenizer = tokenizer
         self.ner = ner
         self.vocab = vocab
@@ -37,6 +37,7 @@ class ReaderBase(Dataset):
         self.sentiment_analyzer = sentiment_analyzer
         self.max_seq_len = max_seq_len
         self.max_entity_types = max_entity_types
+        self.flat_mode = flat_mode
         self.data = []
         self.wtl = WhatLangId()
 
@@ -153,16 +154,26 @@ class ReaderBase(Dataset):
         return h5file
 
     def __len__(self):
-        return len(self.data['point'])
+        if self.flat_mode:
+            return self.data['point'][-1][0] + self.data['point'][-1][1]
+        else:
+            return len(self.data['point'])
 
     def __getitem__(self, index):
         data = {}
-        start_point = self.data['point'][index][0]
-        end_point = start_point + self.data['point'][index][1]
-        for k in self.data:
-            if k == 'point':
-                continue
-            data[k] = torch.tensor(self.data[k][start_point:end_point])
+        if self.flat_mode:
+            for k in self.data:
+                if k == 'point':
+                    continue
+                data[k] = torch.tensor(self.data[k][index:index+1])
+        else:
+            start_point = self.data['point'][index][0]
+            end_point = start_point + self.data['point'][index][1]
+            for k in self.data:
+                if k == 'point':
+                    continue
+                data[k] = torch.tensor(self.data[k][start_point:end_point])
+
         return data
 
 
