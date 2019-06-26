@@ -10,7 +10,6 @@ from ..module.dialog_status import DialogStatus
     Author: Pengjia Zhu (zhupengjia@gmail.com)
 '''
 
-
 class ReaderBase(Dataset):
     """
        Reader base class for goal oriented chatbot to predeal the dialogs 

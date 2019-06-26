@@ -31,7 +31,7 @@ class ReaderXLSX:
 
         self.entities = self._parse_entity()
         
-        if ner_config is not None:
+        if ner_config and self.entities:
             self.ner = NER(**ner_config, **self.entities) 
         else:
             self.ner = None
@@ -90,7 +90,7 @@ class ReaderXLSX:
             lambda x: [self._mixed_tokenizer(s.strip()) for s in re.split("\n", x) if s.strip()]\
             if isinstance(x, str) else None)
         dialogs["response"] = dialogs["response"].apply(
-            lambda x: [s.strip() for s in re.split("\n", x) if s.strip()]\
+            lambda x: [s.strip() for s in re.split("\n\n", x) if s.strip()]\
             if isinstance(x, str) else None)
         dialogs["action"] = dialogs["action"].apply(
             lambda x: [s.strip() for s in re.split("[\s,|]", x) if s.strip()]

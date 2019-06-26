@@ -2,7 +2,8 @@
 import torch, numpy, os
 import torch.optim as optim
 from torch.utils.data import DataLoader
-from tqdm import tqdm
+from tqdm import tqdm, trange
+from pytorch_pretrained_bert.optimization import BertAdam, WarmupLinearSchedule
 from nlptools.text.ner import NER
 from nlptools.text.tokenizer import Tokenizer_BERT
 from ..module.topic_manager import TopicManager
@@ -18,7 +19,8 @@ from ..reader import ReaderXLSX
 
 class Supervised:
     def __init__(self, reader,  batch_size=100, num_workers=1, epochs=1000, optimizer="adam",
-                 weight_decay=0, learning_rate=0.001, momentum=0.9, saved_model="model.pt",
+                 weight_decay=0, learning_rate=0.001, momentum=0.9, warmup_proportion=0.1,
+                 loss_scale=0, saved_model="model.pt",
                  device='cpu', gpu_ids=None, save_per_epoch=1, **tracker_args):
         """
             Supervised learning for chatbot
@@ -49,6 +51,8 @@ class Supervised:
         self.epochs = epochs
         self.optimizer_type = optimizer
         self.momentum = momentum
+        self.warmup_proportion = warmup_proportion
+        self.loss_scale = loss_scale
         self.device = torch.device(device) if torch.cuda.is_available() else torch.device('cpu')
         self.gpu_ids = gpu_ids
 
@@ -133,14 +137,38 @@ class Supervised:
         tracker
         """
         self.skill.init_model(saved_model=self.saved_model, device=str(self.device), gpu_ids=self.gpu_ids, **args)
-        print(self.skill.model)
 
+        self.fp16 = False
+        parameter_groups = [p for p in self.skill.model.parameters() if p.requires_grad]
         if self.optimizer_type.lower() == "adam":
-            self.optimizer = optim.Adam(self.skill.model.parameters(), lr=self.learning_rate,
+            self.optimizer = optim.Adam(parameter_groups, lr=self.learning_rate,
                                         weight_decay=self.weight_decay)
         elif self.optimizer_type.lower() == "sgd":
-            self.optimizer = optim.SGD(self.skill.model.parameters(), lr=self.learning_rate,
+            self.optimizer = optim.SGD(parameter_groups, lr=self.learning_rate,
                                        momentum=self.momentum)
+        elif self.optimizer_type.lower() in ["fp16", "bertadam"]:
+            from apex.optimizers import FP16_Optimizer
+            from apex.optimizers import FusedAdam
+            num_train_optimization_steps = int(len(self.reader) / self.batch_size) * self.epochs
+            if self.optimizer_type.lower() == "fp16":
+                self.fp16 = True
+                self.skill.model.half()
+                self.optimizer = FusedAdam(parameter_groups,
+                                      lr=self.learning_rate,
+                                      bias_correction=False,
+                                      max_grad_norm=1.0)
+                if self.loss_scale == 0:
+                    self.optimizer = FP16_Optimizer(self.optimizer, dynamic_loss_scale=True)
+                else:
+                    self.optimizer = FP16_Optimizer(self.optimizer, static_loss_scale=self.loss_scale)
+                self.warmup_linear = WarmupLinearSchedule(warmup=self.warmup_proportion,
+                                                 t_total=num_train_optimization_steps)
+            else:
+                self.optimizer = BertAdam(parameter_groups,
+                                 lr=self.learning_rate,
+                                 warmup=self.warmup_proportion,
+                                 t_total=num_train_optimization_steps)
+
         
         print('Optimizer: {} with learning_rate: {}'.format(self.optimizer_type, self.learning_rate))
 
@@ -162,23 +190,36 @@ class Supervised:
         self.skill.model.train() # set train flag
         ave_loss = []
         tot_it = -1
-        for epoch in range(self.start_epoch, self.epochs):
-            print("epoch: {}".format(epoch))
-            pbar = tqdm(self.generator)
-            for d in tqdm(self.generator):
+        for epoch in trange(self.start_epoch, self.epochs, desc="Epoch"):
+            pbar = tqdm(self.generator, desc="Iteration")
+            for step, d in enumerate(pbar):
+                if self.fp16:
+                    d.half()
                 d.to(self.device)
-                self.skill.model.zero_grad()
 
                 _, loss = self.skill.get_response(d)
 
                 pbar.set_description('loss:{}'.format(loss.item()))
+                
+                if self.fp16:
+                    self.optimizer.backward(loss)
+                else:
+                    loss.backward()
 
-                loss.backward()
+                #for p in self.skill.model.parameters():
+                #    print(p.grad)
+                
                 self.optimizer.step()
+                self.optimizer.zero_grad()
                 ave_loss.append(loss.item())
+                if self.fp16:
+                    lr_this_step = self.learning_rate * self.warmup_linear.get_lr(tot_it, self.warmup_proportion)
+                    for param_group in self.optimizer.param_groups:
+                        param_group['lr'] = lr_this_step
+
              
                 # save
-                if tot_it%self.save_per_epoch == 0 and numpy.nanmean(ave_loss) < self.best_loss:
+                if (tot_it+1)%self.save_per_epoch == 0 and numpy.nanmean(ave_loss) < self.best_loss:
                     self.best_loss = loss
                     state = {
                         'state_dict': self.skill.model.state_dict(),

@@ -16,22 +16,20 @@ model:
     max_seq_len: 20
     max_entity_types: 512
 
+backend:
+    type: shell
+    port: 5000
+
 skills:
-    #cornell: 
-    #    wrapper: GenerativeResponse
-    #    model_type: transformer
-    #    beam_size: 5
-    #    saved_model: 'data/cornell/model_transformer.pt'
+    cornell: 
+        wrapper: GenerativeResponse
+        model_type: transformer
+        beam_size: 5
+        saved_model: 'data/cornell/generative_cornell.pt'
 
-    babi:
-        wrapper: GoalResponse
-        saved_model: 'data/babi/model.pt'
-        dialogflow: data/babi/babi.xlsx
-
-logger:
-    appname: elsa
-    loglevel_console:  20
-    loglevel_file: 0
-    logfile: /tmp/elsa.log
+        #babi:
+        #wrapper: GoalResponse
+        #saved_model: 'data/babi/model.pt'
+        #dialogflow: data/babi/babi.xlsx
 
 

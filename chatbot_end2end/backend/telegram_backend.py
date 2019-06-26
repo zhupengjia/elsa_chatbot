@@ -2,9 +2,9 @@
 import telegram
 
 class TelegramBackend:
-    def __init__(self, interact_session):
+    def __init__(self, interact_session, cfg):
         self.session = interact_session
-        self.bot = telegram.Bot(token='661472039:AAHcCQ8S57L31hMR5CaW5OANYoR5k8zhk4U')
+        self.bot = telegram.Bot(token=cfg.token)
     
     def run(self):
         while True:

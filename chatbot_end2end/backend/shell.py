@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 class Shell:
-    def __init__(self, interact_session):
+    def __init__(self, interact_session, **args):
         self.session = interact_session
     
     def run(self):

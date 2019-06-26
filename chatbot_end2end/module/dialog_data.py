@@ -44,6 +44,17 @@ class DialogData(dict):
             elif isinstance(dic[k], dict):
                 dic[k] = DialogData.dict_to_device(dic[k], device)
         return dic
+    
+    @staticmethod
+    def dict_to_half(dic):
+        for k in dic.keys():
+            if isinstance(dic[k], dict):
+                dic[k] = DialogData.dict_to_half(dic[k])
+            elif isinstance(dic[k], torch.Tensor) and dic[k].dtype==torch.float32:
+                dic[k] = dic[k].half()
+            elif isinstance(dic[k], PackedSequence) and dic[k].data.dtype==torch.float32:
+                dic[k] = dic[k].half()
+        return dic
 
     def to(self, device):
         """
@@ -53,4 +64,12 @@ class DialogData(dict):
                 - device: torch device
         """
         self = DialogData.dict_to_device(self, device)
+
+    def half(self):
+        """
+            float32 to float16
+        """
+        self = DialogData.dict_to_half(self)
+
+
 

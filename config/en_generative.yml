@@ -12,7 +12,7 @@ tokenizer:
 
 reader:
     wrapper: ReaderCornell
-    train_data: data/cornell/cornell
+    train_data: /data/omnia-010_1/data/cornell
     max_seq_len: 50
     flat_mode: True
 
@@ -34,8 +34,9 @@ model:
     optimizer: "adam"
     epochs: 10000
     batch_size: 110
-    num_workers: 8
-    saved_model: 'data/cornell/model_transformer.pt'
+    num_workers: 1
+    saved_model: '/data/omnia-010_1/data/generative_5.pt'
+    #saved_model: 'data/cornell/model_transformer.pt'
     save_per_epoch: 100
 
 reinforcement:
@@ -47,5 +48,5 @@ logger:
     appname: cornell
     loglevel_console:  20
     loglevel_file: 0
-    logfile: data/cornell/train.log
+    logfile: /tmp/cornell_train.log
 

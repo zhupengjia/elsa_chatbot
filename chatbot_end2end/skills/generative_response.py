@@ -114,7 +114,6 @@ class GenerativeResponse(SkillBase):
                 - response: value of response
                 - current_status: dictionary of status, generated from Dialog_Status module
         """
-
         if isinstance(response, tuple):
             response, response_mask = response
         else:

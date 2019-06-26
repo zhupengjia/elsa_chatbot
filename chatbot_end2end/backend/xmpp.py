@@ -20,11 +20,11 @@ class XMPPClient(ClientXMPP):
 
 
 class XMPP:
-    def __init__(self, interact_session):
-        self.xmpp = XMPPClient(jid='elsa@chat.higgslab.com', password='siriusvoce')
+    def __init__(self, interact_session, cfg):
+        self.xmpp = XMPPClient(jid=cfg.jid, password=cfg.password)
 
     def run(self):
-        import logging
-        logging.basicConfig(level=logging.DEBUG, format='%(levelname)-8s %(message)s')
+        #import logging
+        #logging.basicConfig(level=logging.DEBUG, format='%(levelname)-8s %(message)s')
         self.xmpp.process(block=True)
 

@@ -53,8 +53,8 @@ class GenerativeTracker(nn.Module):
         self.response_key = 'response_' + skill_name
         self.mask_key = 'response_mask_' + skill_name
 
-        embedding_dim = self.encoder.config["hidden_size"]
-        self.num_embeddings = self.encoder.config["vocab_size"]
+        embedding_dim = self.encoder.config.hidden_size
+        self.num_embeddings = self.encoder.config.vocab_size
         self.control_layer = nn.Linear(embedding_dim+2, embedding_dim)
 
         self.decoder = TransformerDecoder(self.encoder.embeddings,
@@ -63,7 +63,7 @@ class GenerativeTracker(nn.Module):
                                           intermediate_size=decoder_hidden_size,
                                           dropout=dropout)
 
-        self.config = {"encoder":self.encoder.config, "decoder":self.decoder.config}
+        self.config = {"encoder":self.encoder.config.to_dict(), "decoder":self.decoder.config}
         
         print("model config", self.config)
 

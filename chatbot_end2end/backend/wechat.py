@@ -2,8 +2,8 @@
 import werobot
 
 class Wechat(werobot.WeRoBot):
-    def __init__(self, token, app_id, app_secret, host='127.0.0.1', port=8888, **args):
-        super().__init__(token=token, APP_ID=app_id, APP_SECRET=app_secret, HOST=host, PORT=port, enable_session=True, **args)
+    def __init__(self, session, cfg):
+        super().__init__(token=cfg.token, APP_ID=cfg.app_id, APP_SECRET=cfg.app_secret, HOST=cfg.host, PORT=cfg.port, enable_session=True)
 
 
     def reset(self):
