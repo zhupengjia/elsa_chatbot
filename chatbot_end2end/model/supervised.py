@@ -3,7 +3,6 @@ import torch, numpy, os
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm, trange
-from pytorch_pretrained_bert.optimization import BertAdam, WarmupLinearSchedule
 from nlptools.text.ner import NER
 from nlptools.text.tokenizer import Tokenizer_BERT
 from ..module.topic_manager import TopicManager
@@ -149,6 +148,7 @@ class Supervised:
         elif self.optimizer_type.lower() in ["fp16", "bertadam"]:
             from apex.optimizers import FP16_Optimizer
             from apex.optimizers import FusedAdam
+            from pytorch_pretrained_bert.optimization import BertAdam, WarmupLinearSchedule
             num_train_optimization_steps = int(len(self.reader) / self.batch_size) * self.epochs
             if self.optimizer_type.lower() == "fp16":
                 self.fp16 = True
@@ -169,7 +169,6 @@ class Supervised:
                                  warmup=self.warmup_proportion,
                                  t_total=num_train_optimization_steps)
 
-        
         print('Optimizer: {} with learning_rate: {}'.format(self.optimizer_type, self.learning_rate))
 
         self.start_epoch = 0
@@ -206,9 +205,6 @@ class Supervised:
                 else:
                     loss.backward()
 
-                #for p in self.skill.model.parameters():
-                #    print(p.grad)
-                
                 self.optimizer.step()
                 self.optimizer.zero_grad()
                 ave_loss.append(loss.item())

@@ -1,0 +1,15 @@
+version: '2'
+
+services:
+
+  elsa_bot:
+    image: elsa_chatbot:latest
+    restart: always
+    ports:
+      - 8080:80
+    environment:
+      YOURLS_DB_PASS: siriusvoce
+      YOURLS_SITE: https://nlp-lab.com
+      YOURLS_USER: higgslab
+      YOURLS_PASS: legalhigh
+
