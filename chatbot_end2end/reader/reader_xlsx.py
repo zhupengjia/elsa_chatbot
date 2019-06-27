@@ -54,6 +54,33 @@ class ReaderXLSX:
         """
         return self.dialogs.loc[idx, "action"]
 
+    def add_usersay(self, idx, usersay):
+        """
+            Add a usersay for the current dialog
+            
+            Input:
+                - id: int, intent id
+                - usersay: string
+        """
+        if self.dialogs["user_says"].loc[idx] is None:
+            self.dialogs["user_says"].loc[idx] = [usersay]
+            self.dialogs["user_say_tokens"].loc[idx] = [self._mixed_tokenizer(usersay)]
+        else:
+            self.dialogs["user_says"].loc[idx].append(usersay)
+            self.dialogs["user_say_tokens"].loc[idx].append(self._mixed_tokenizer(usersay))
+        self.index["user_says"] = self._build_index(self.dialogs["user_say_tokens"])
+
+    def get_usersays(self, idx):
+        """
+            return user says via idx. if Multiple user says available, will ramdonly return one
+
+            Input:
+                - id: int, intent id
+        """
+        if not idx in self.dialogs["user_says"].index:
+            return None
+        return random.choice(self.dialogs["user_says"].loc[idx])
+
     def get_response(self, idx):
         """
             return response template via idx. If multiple response template available, will randomly return one
@@ -87,8 +114,11 @@ class ReaderXLSX:
             lambda x: [s.strip().upper() for s in re.split("[,| ]", x) if s.strip()]\
             if isinstance(x, str) else None)
         dialogs["user_says"] = dialogs["user_says"].apply(
-            lambda x: [self._mixed_tokenizer(s.strip()) for s in re.split("\n", x) if s.strip()]\
+            lambda x: [s.strip() for s in re.split("\n", x) if s.strip()]\
             if isinstance(x, str) else None)
+        dialogs["user_say_tokens"] = dialogs["user_says"].apply(
+            lambda x: [self._mixed_tokenizer(s) for s in x]\
+            if isinstance(x, list) else None)
         dialogs["response"] = dialogs["response"].apply(
             lambda x: [s.strip() for s in re.split("\n\n", x) if s.strip()]\
             if isinstance(x, str) else None)
@@ -97,7 +127,7 @@ class ReaderXLSX:
             if isinstance(x, str) else None)
         self.index = {}
         self.index["response"] = self._build_index(dialogs["response"])
-        self.index["user_says"] = self._build_index(dialogs["user_says"])
+        self.index["user_says"] = self._build_index(dialogs["user_say_tokens"])
 
         dialog_len = dialogs.index.max() + 1
         

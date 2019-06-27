@@ -19,18 +19,20 @@ backend:
     port: 5000
 
 skills:
-    babi:
+    faq1:
         wrapper: RuleResponse
         dialogflow: data/FAQs.xlsx
         w2v_word2idx: data/word2vec/en/bert-base-uncased.lookup 
         w2v_idx2vec: data/word2vec/en/bert-base-uncased.h5py 
         prefilter: 500
-        tolerate: 0
+        score_tolerate: 0.2
+        min_score: 0.63
+        believe_score: 0.85
+        confuse_reply: "Sorry I'm confused about your question, could you please type the correct ID of following question list?"
 
-    cornell: 
-        wrapper: GenerativeResponse
-        model_type: transformer
-        beam_size: 5
-        saved_model: 'data/cornell/cornell.pt'
+        #cornell: 
+        #wrapper: GenerativeResponse
+        #beam_size: 5
+        #saved_model: 'data/cornell/cornell.pt'
 
 

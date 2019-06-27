@@ -71,7 +71,7 @@ class TopicManager:
                 - incre_state: incremental state, default is None
 
         """
-        response_value, response_score = self.skills[self.current_skill].get_response(current_data, incre_state)
+        response_value, response_score = self.skills[self.current_skill].get_response(current_data, current_status, incre_state)
         current_status["response_score_"+self.current_skill] = response_score
         if response_value is None:
             return self.get_fallback(current_status)

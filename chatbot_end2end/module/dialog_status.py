@@ -131,6 +131,7 @@ class DialogStatus:
         """
         # get entities
         utterance = utterance.strip()
+        self.current_status["entity"]["UTTERANCE"] = utterance
 
         if self.ner is None:
             utterance_replaced = utterance

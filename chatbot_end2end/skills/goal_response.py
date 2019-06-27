@@ -75,12 +75,13 @@ class GoalResponse(RuleResponse):
         """
         self.model.eval()
 
-    def get_response(self, status_data, incre_state=None):
+    def get_response(self, status_data, current_status=None, incre_state=None):
         """
             predict response value from current status
 
             Input:
                 - status_data: data converted from dialog status
+                - current_status: dictionary of status, generated from dialog_status module
                 - incre_state: incremental state, default is None
         """
         if self.model.training:

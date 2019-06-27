@@ -199,7 +199,8 @@ class Supervised:
                 _, loss = self.skill.get_response(d)
                 
                 if math.isnan(loss.item()):
-                    raise RuntimeError("Error!! nan loss!")
+                    print("Warning!! nan loss!")
+                    continue
 
                 pbar.set_description('loss:{}'.format(loss.item()))
                 
