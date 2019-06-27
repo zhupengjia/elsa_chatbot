@@ -34,8 +34,8 @@ model:
     momentum: 0.9
     optimizer: "fp16"
     loss_scale: 0
-    epochs: 100
-    batch_size: 1000
+    epochs: 1000
+    batch_size: 950
     num_workers: 1
     #saved_model: '/data/omnia-010_1/data/cornell.pt'
     saved_model: 'data/cornell/cornell.pt'

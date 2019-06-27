@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import torch, numpy, os
+import torch, numpy, math, os
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm, trange
@@ -197,6 +197,9 @@ class Supervised:
                 d.to(self.device)
 
                 _, loss = self.skill.get_response(d)
+                
+                if math.isnan(loss.item()):
+                    raise RuntimeError("Error!! nan loss!")
 
                 pbar.set_description('loss:{}'.format(loss.item()))
                 
@@ -208,6 +211,7 @@ class Supervised:
                 self.optimizer.step()
                 self.optimizer.zero_grad()
                 ave_loss.append(loss.item())
+
                 if self.fp16:
                     lr_this_step = self.learning_rate * self.warmup_linear.get_lr(tot_it, self.warmup_proportion)
                     for param_group in self.optimizer.param_groups:
@@ -215,8 +219,8 @@ class Supervised:
 
              
                 # save
-                if (tot_it+1)%self.save_per_epoch == 0 and numpy.nanmean(ave_loss) < self.best_loss:
-                    self.best_loss = loss
+                if (tot_it+1)%self.save_per_epoch == 0:# and numpy.nanmean(ave_loss) < self.best_loss:
+                    #self.best_loss = loss
                     state = {
                         'state_dict': self.skill.model.state_dict(),
                         'config_model': self.skill.model.config,

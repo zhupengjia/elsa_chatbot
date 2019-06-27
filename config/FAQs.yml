@@ -27,4 +27,10 @@ skills:
         prefilter: 500
         tolerate: 0
 
+    cornell: 
+        wrapper: GenerativeResponse
+        model_type: transformer
+        beam_size: 5
+        saved_model: 'data/cornell/cornell.pt'
+
 

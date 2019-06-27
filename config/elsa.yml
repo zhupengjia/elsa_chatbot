@@ -25,7 +25,7 @@ skills:
         wrapper: GenerativeResponse
         model_type: transformer
         beam_size: 5
-        saved_model: 'data/cornell/generative_cornell.pt'
+        saved_model: 'data/cornell/cornell.pt'
 
         #babi:
         #wrapper: GoalResponse

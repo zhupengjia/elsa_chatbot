@@ -28,12 +28,13 @@ model:
     decoder_hidden_layers: 4
     decoder_attention_heads: 8
     decoder_hidden_size: 2048
-    learning_rate: 0.0001
+    learning_rate: 0.01
     weight_decay: 0
     momentum: 0.9
-    optimizer: "adam"
-    epochs: 10000
-    batch_size: 110
+    optimizer: "fp16"
+    loss_scale: 128
+    epochs: 100
+    batch_size: 300
     num_workers: 1
     saved_model: '/data/omnia-010_1/data/generative_5.pt'
     #saved_model: 'data/cornell/model_transformer.pt'
