@@ -124,6 +124,7 @@ class RuleResponse(SkillBase):
         self.similarity = WMDSim(vocab=self.vocab, **args)
         self.similarity.to(device)
         user_says_series = self.dialogflow.dialogs["user_say_tokens"]
+
         fallback_says = user_says_series.isnull()
         fallback_says = fallback_says[fallback_says].index.values
         
@@ -156,7 +157,7 @@ class RuleResponse(SkillBase):
         if "childid_" + self.skill_name in current_status and current_status["childid_" + self.skill_name] == -10000:
             response_id = re.sub("\D", "", current_status["entity"]["UTTERANCE"])
             if len(response_id) < 1:
-                return None, 0
+                return self.get_fallback(current_status)
             response_id = int(response_id)
             if response_id > 0 and response_id <= len(current_status['response_' + self.skill_name]):
                 response_id = current_status['response_' + self.skill_name][response_id]
@@ -168,10 +169,11 @@ class RuleResponse(SkillBase):
                                        tokenizer=self.tokenizer,
                                        max_seq_len=self.max_seq_len)
                 if _tmp is not None:
-                    self.usersays_index["user_emb"] = numpy.concatenate((self.usersays_index["user_emb"], self.similarity([_tmp[0]], [_tmp[1]])))
-                    self.usersays_index["ids"] = numpy.concatenate((self.usersays_index["ids"], [response_id]))
+                    _tmp_emb = self.similarity([_tmp[0]], [_tmp[1]])
+                    self.usersays_index["user_emb"] = numpy.array(list(self.usersays_index["user_emb"]) + [_tmp_emb[0]])
+                    self.usersays_index["ids"] = numpy.append(self.usersays_index["ids"], response_id)
                 return response_id, 1
-            return None, 0
+            return self.get_fallback(current_status)
 
         utterance, utterance_mask = status_data["utterance"].data, status_data["utterance_mask"].data
 
@@ -193,17 +195,17 @@ class RuleResponse(SkillBase):
 
         filtered_data = {"user_emb":self.usersays_index["user_emb"][response_mask*filter_idx],
                          "ids":self.usersays_index["ids"][response_mask*filter_idx]}
-        
+
         if len(filtered_data["ids"]) < 1:
-            return None, 0
+            return self.get_fallback(current_status)
 
         similarity = self.similarity.similarity(utterance_embedding, filtered_data["user_emb"])[0]
-        
+
         response_ids = filtered_data["ids"][similarity >= self.min_score]
         similarity = similarity[similarity >= self.min_score]
         if len(response_ids) < 1:
-            return None, 0
-        
+            return self.get_fallback(current_status)
+
         # sort the answers
         id_order = numpy.argsort(similarity)[::-1]
         response_ids = response_ids[id_order]
@@ -218,12 +220,12 @@ class RuleResponse(SkillBase):
         #if maximum similarity is less than believe score, but larger than minimum score, then ask user to choice one 
         response_ids = response_ids[similarity >= max(similarity[0]-self.score_tolerate, self.min_score)]
         similarity = similarity[similarity >= max(similarity[0]-self.score_tolerate, self.min_score)]
-       
+
         response_ids = numpy.unique(response_ids[:5])
 
         if len(response_ids) < 2:
             return response_ids[0], similarity[0]
-       
+
         return response_ids, similarity[0]
 
 
@@ -232,6 +234,6 @@ class RuleResponse(SkillBase):
             Get fallback feedback
         '''
         if len(self.usersays_index["fallback"]) < 1:
-            return None
-        return numpy.random.choice(self.usersays_index["fallback"])
+            return None, 0
+        return numpy.random.choice(self.usersays_index["fallback"]), 1
 

@@ -156,8 +156,7 @@ class DialogStatus:
         self.current_status["utterance"], self.current_status["utterance_mask"] = u_and_mask
 
         # get topic
-        self.current_status["topic"] = self.topic_manager.get_topic(
-            self.current_status)
+        self.current_status["topic"] = self.topic_manager.get_topic(self.current_status)
 
         # get sentiment
         self.current_status["sentiment"] = self.sentiment_analyzer(utterance)
@@ -204,10 +203,6 @@ class DialogStatus:
                                             self.current_status,
                                             incre_state=self.incre_state)
         self.history_status.append(copy.deepcopy(self.current_status))
-        return self.current_status["entity"]['RESPONSE']
-
-    def get_fallback(self):
-        self.curent_status = self.topic_manager.get_fallback(self.current_status)
         return self.current_status["entity"]['RESPONSE']
 
     def __str__(self):

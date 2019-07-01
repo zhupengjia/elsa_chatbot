@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import copy
 
 """
     Author: Pengjia Zhu (zhupengjia@gmail.com)
@@ -6,12 +7,14 @@
 
 
 class TopicManager:
-    def __init__(self):
+    def __init__(self, config=None):
         """
             Topic Manager to manage skills
         """
         self.skills = {}
+        self.skill_names = []
         self.current_skill = None
+        self.stradegy = config.strategy if config else "current"
 
     def register(self, skill_name, skill_instance):
         """
@@ -22,6 +25,10 @@ class TopicManager:
                 - skill_instance: instance of skill
         """
         self.skills[skill_name] = skill_instance
+        self.skill_names.append(skill_name)
+        if len(self.skill_names) < 2:
+            #init current skill
+            self.current_skill = skill_name 
 
     def update_response_masks(self, current_status):
         """
@@ -33,20 +40,6 @@ class TopicManager:
         current_status["response_mask_" + self.current_skill] = \
             self.skills[self.current_skill].update_mask(current_status)
         return current_status
-
-    def get_topic(self, current_status=None):
-        """
-            get current topic
-
-            Input:
-                - current_status: dictionary of status, generated from dialog_status module. Default is None. If only one skill in topic_manager, will return the only topic name
-        """
-        if len(self.skills) < 2:
-            self.current_skill = list(self.skills.keys())[0]
-            return self.current_skill
-        self.current_skill = list(self.skills.keys())[0]
-        # TODO, Need to implement
-        return self.current_skill
 
     def update_response(self, response_value, current_status):
         """
@@ -61,6 +54,12 @@ class TopicManager:
             current_status = self.skills[self.current_skill].update_response(response_value, current_status)
         return current_status
 
+    def get_topic(self, current_status=None):
+        """
+            Todo: will use classification method to choose topic
+        """
+        return self.current_skill
+
     def get_response(self, current_data, current_status, incre_state=None):
         """
             get response from current status
@@ -71,12 +70,25 @@ class TopicManager:
                 - incre_state: incremental state, default is None
 
         """
-        response_value, response_score = self.skills[self.current_skill].get_response(current_data, current_status, incre_state)
-        current_status["response_score_"+self.current_skill] = response_score
+        old_skill = self.current_skill
+        if self.stradegy == "current":
+            # current skill first
+            self.skill_names.remove(self.current_skill)
+            self.skill_names.insert(0, self.current_skill)
+        for skill in self.skill_names:
+            response_value, response_score = self.skills[skill].get_response(current_data, current_status, incre_state)
+            self.current_skill = skill
+            if response_value is not None:
+                break
         if response_value is None:
-            return self.get_fallback(current_status)
-        status = self.update_response(response_value, current_status)
-        return status
+            self.current_skill = old_skill
+            current_status["entity"]["RESPONSE"] = ":)"
+            return current_status
+
+        current_status["topic"] = self.current_skill
+            
+        current_status["response_score_"+self.current_skill] = response_score
+        return self.update_response(response_value, current_status)
 
     def add_response(self, response, current_status):
         """
@@ -88,17 +100,6 @@ class TopicManager:
 
         """
         response_value = self.skills[self.current_skill][response]
-        if response_value is None:
-            return None
-        return self.update_response(response_value, current_status)
-
-    def get_fallback(self, current_status):
-        """
-            return fallback response
-        """
-        if self.current_skill is None:
-            self.get_topic()
-        response_value = self.skills[self.current_skill].get_fallback(current_status)
         if response_value is None:
             return None
         return self.update_response(response_value, current_status)

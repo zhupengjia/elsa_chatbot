@@ -60,10 +60,3 @@ class SkillBase:
         """
         return current_status
 
-    def get_fallback(self, current_status):
-        """
-            return fallback response
-        """
-        current_status["entity"]["RESPONSE"] = None
-        return current_status
-

@@ -64,7 +64,7 @@ class InteractSession:
         shared_layers = {}
 
         # skills
-        topic_manager = TopicManager()
+        topic_manager = TopicManager(config.topic_switch)
         for skill_name in config.skills:
             response_params = config.skills[skill_name]
             if not hasattr(Skills, response_params.wrapper):
@@ -144,7 +144,7 @@ class InteractSession:
             return str(self.dialog_status[session_id])
 
         if len(query) < 1 or self.dialog_status[session_id].add_utterance(query) is None:
-            return self.dialog_status[session_id].get_fallback()
+            return ":)"
 
         response = self.dialog_status[session_id].get_response(response_sentiment, self.device)
 

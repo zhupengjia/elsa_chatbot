@@ -38,8 +38,7 @@ class Supervised:
         """
         self.reader = reader
         topic_manager = self.reader.topic_manager
-        self.skill_name = topic_manager.get_topic()
-        self.skill = topic_manager.skills[self.skill_name]
+        self.skill = topic_manager.skills[topic_manager.current_skill]
         self.save_per_epoch = save_per_epoch
 
         self.saved_model = saved_model
