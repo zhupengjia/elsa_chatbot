@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import torch
+import torch, time
 from nlptools.text.tokenizer import Tokenizer_BERT
 from nlptools.text.ner import NER
 from .nltk_sentiment import NLTKSentiment
@@ -17,7 +17,7 @@ from ..reader import ReaderXLSX
 class InteractSession:
     def __init__(self, vocab, tokenizer, ner, topic_manager,
                  sentiment_analyzer, max_seq_len=100,
-                 max_entity_types=1024, device='cpu', **args):
+                 max_entity_types=1024, device='cpu', timeout=300, **args):
         """
             General interact session
 
@@ -30,6 +30,7 @@ class InteractSession:
                 - sentiment_analyzer: sentiment analyzer instance
                 - max_seq_len: int, maximum sequence length
                 - max_entity_types: int, maximum entity types
+                - timeout: int, seconds to session timeout
                 - device: string of torch device, default is "cpu"
         """
 
@@ -42,6 +43,7 @@ class InteractSession:
         self.topic_manager = topic_manager
         self.max_seq_len = max_seq_len
         self.max_entity_types = max_entity_types
+        self.timeout = timeout
         self.dialog_status = {}
 
     @classmethod
@@ -114,7 +116,9 @@ class InteractSession:
 
         return cls(vocab=vocab, tokenizer=tokenizer, ner=ner,
                    topic_manager=topic_manager,
-                   sentiment_analyzer=sentiment_analyzer, **config.model)
+                   sentiment_analyzer=sentiment_analyzer,
+                   timeout=config.timeout,
+                   **config.model)
 
     def new_dialog(self):
         return DialogStatus.new_dialog(self.vocab, self.tokenizer,
@@ -122,7 +126,7 @@ class InteractSession:
                                        self.sentiment_analyzer,
                                        self.max_seq_len, self.max_entity_types)
 
-    def response(self, query, response_sentiment=0, session_id="default"):
+    def __call__(self, query, response_sentiment=0, session_id="default"):
         """
             get response
 
@@ -135,6 +139,10 @@ class InteractSession:
         if session_id not in self.dialog_status:
             self.dialog_status[session_id] = self.new_dialog()
 
+        #timeout
+        if time.time() - self.dialog_status[session_id].last_time > self.timeout:
+            self.dialog_status[session_id] = self.new_dialog()
+
         #special commands
         if query in ["clear", "reset", "restart", "exit", "stop", "quit", "q"]:
             self.dialog_status[session_id] = self.new_dialog()
@@ -142,6 +150,12 @@ class InteractSession:
 
         if query in ["debug"]:
             return str(self.dialog_status[session_id])
+
+        if query == "history":
+            response = []
+            for d in self.dialog_status[session_id].export_history():
+                response.append("## {}\t{}\t{}\t{}".format(d["time"], d["topic"], d["utterance"], d["response"]))
+            return "\n".join(response)
 
         if len(query) < 1 or self.dialog_status[session_id].add_utterance(query) is None:
             return ":)"

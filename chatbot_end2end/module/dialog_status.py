@@ -5,6 +5,7 @@
 import copy
 import numpy
 import torch
+import time
 from torch.nn import functional as F
 from torch.nn.utils.rnn import pack_padded_sequence
 from nlptools.text.tokenizer import format_sentence
@@ -103,7 +104,8 @@ class DialogStatus:
                       "utterance_mask": None,
                       "sentiment": 0,
                       "response_sentiment": 0,
-                      "topic": None
+                      "topic": None,
+                      "time": time.time()
                       }
         return initstatus
 
@@ -202,8 +204,28 @@ class DialogStatus:
             self.topic_manager.get_response(current_data,
                                             self.current_status,
                                             incre_state=self.incre_state)
+        self.current_status["time"] = time.time()
         self.history_status.append(copy.deepcopy(self.current_status))
         return self.current_status["entity"]['RESPONSE']
+
+    @property
+    def last_time(self):
+        """
+            Return the time of last response
+        """
+        return self.current_status["time"]
+
+    def export_history(self):
+        """
+            dialog history export
+        """
+        dialogs = []
+        for s in self.history_status:
+            dialogs.append({"utterance": s['entity']['UTTERANCE'],
+                            "response": s['entity']['RESPONSE'],
+                            "time": s["time"],
+                            "topic": s["topic"]})
+        return dialogs
 
     def __str__(self):
         """

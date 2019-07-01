@@ -40,6 +40,8 @@ RUN python3 -c "import nltk;nltk.download('vader_lexicon')"
 
 WORKDIR $WORKDIR
 
+ENV BOT_VERSION a0.1
+
 ADD chatbot_end2end chatbot_end2end
 
 

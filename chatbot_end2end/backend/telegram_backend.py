@@ -9,7 +9,7 @@ class TelegramBackend:
     def run(self):
         while True:
             query = input(":: ")
-            response = self.session.response(query)
+            response = self.session(query)
             print(response)
 
     def query(self, text, chat_id='676345402'):

@@ -7,11 +7,11 @@ class Shell:
     def run(self):
         while True:
             query = input(":: ")
-            response = self.session.response(query)
+            response = self.session(query)
             print(response)
 
     def query(self, text):
-        response = self.session.response(text)
+        response = self.session(text)
         print(response)
         
 
