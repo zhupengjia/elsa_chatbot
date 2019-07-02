@@ -159,7 +159,7 @@ class RuleResponse(SkillBase):
             if len(response_id) < 1:
                 return self.get_fallback(current_status)
             response_id = int(response_id)
-            if response_id > 0 and response_id <= len(current_status['response_' + self.skill_name]):
+            if response_id >= 0 and response_id <= len(current_status['response_' + self.skill_name]):
                 response_id = current_status['response_' + self.skill_name][response_id]
                 current_status['response_' + self.skill_name] = response_id
                 usersay = current_status['entity']["UTTERANCE_OLD"]

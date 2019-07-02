@@ -15,7 +15,7 @@ model:
     max_entity_types: 512
 
 backend:
-    type: restful
+    type: shell
     url_rule: /robot/api/query
     methods:
         - POST
