@@ -15,7 +15,10 @@ model:
     max_entity_types: 512
 
 backend:
-    type: shell
+    type: restful
+    url_rule: /robot/api/query
+    methods:
+        - POST
     port: 5000
 
 topic_switch:
@@ -35,9 +38,19 @@ skills:
         believe_score: 0.85
         confuse_reply: "Sorry I'm confused about your question, could you please type the correct ID of following question list?"
 
-        #cornell: 
-        #wrapper: GenerativeResponse
-        #beam_size: 5
-        #saved_model: 'data/cornell/cornell.pt'
+    faq2:
+        wrapper: RuleResponse
+        dialogflow: data/elsa.xlsx
+        w2v_word2idx: data/word2vec/en/bert-base-uncased.lookup 
+        w2v_idx2vec: data/word2vec/en/bert-base-uncased.h5py 
+        prefilter: 500
+        score_tolerate: 0.05
+        min_score: 0.85
+        believe_score: 0.85
+
+    cornell: 
+        wrapper: GenerativeResponse
+        beam_size: 5
+        saved_model: data/cornell/cornell.pt
 
 

@@ -167,6 +167,7 @@ class DialogStatus:
         self.current_status = self.topic_manager.update_response_masks(
             self.current_status)
 
+
         return True
 
     def add_response(self, response):

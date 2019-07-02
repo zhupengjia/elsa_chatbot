@@ -160,7 +160,7 @@ class InteractSession:
         if len(query) < 1 or self.dialog_status[session_id].add_utterance(query) is None:
             return ":)"
 
-        response = self.dialog_status[session_id].get_response(response_sentiment, self.device)
+        response = self.dialog_status[session_id].get_response(response_sentiment=response_sentiment, device=self.device)
 
         if "SESSION_RESET" in self.dialog_status[session_id].current_status["entity"]:
             del self.dialog_status[session_id]

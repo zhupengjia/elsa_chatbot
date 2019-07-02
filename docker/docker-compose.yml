@@ -1,4 +1,4 @@
-version: '2'
+version: '3'
 
 services:
 
@@ -6,10 +6,10 @@ services:
     image: elsa_chatbot:latest
     restart: always
     ports:
-      - 8080:80
+        - 5000:5000
+    volumes:
+        - ../config:/opt/chatbot/config
+        - ../data:/opt/chatbot/data
+    working_dir: /opt/chatbot
     environment:
-      YOURLS_DB_PASS: siriusvoce
-      YOURLS_SITE: https://nlp-lab.com
-      YOURLS_USER: higgslab
-      YOURLS_PASS: legalhigh
-
+        BOT_CONFIG: config/FAQs.yml

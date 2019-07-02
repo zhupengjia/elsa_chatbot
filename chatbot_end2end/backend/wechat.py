@@ -9,10 +9,10 @@ class Wechat(werobot.WeRoBot):
     def reset(self):
         return "reset"
 
-    
+
     def interact(self, query, session_id="wechat"):
         return "response"
 
-    
+
 
 

@@ -37,8 +37,9 @@ class TopicManager:
             Input:
                 - current_status: dictionary of status, generated from Dialog_Status module
         """
-        current_status["response_mask_" + self.current_skill] = \
-            self.skills[self.current_skill].update_mask(current_status)
+        for s in self.skill_names:
+            current_status["response_mask_" + s] = \
+                    self.skills[s].update_mask(current_status)
         return current_status
 
     def update_response(self, response_value, current_status):
@@ -71,13 +72,14 @@ class TopicManager:
 
         """
         old_skill = self.current_skill
-        if self.stradegy == "current":
+        if self.stradegy == "current" and len(self.skill_names)>1:
             # current skill first
             self.skill_names.remove(self.current_skill)
             self.skill_names.insert(0, self.current_skill)
         for skill in self.skill_names:
-            response_value, response_score = self.skills[skill].get_response(current_data, current_status, incre_state)
+            # response mask
             self.current_skill = skill
+            response_value, response_score = self.skills[skill].get_response(current_data, current_status, incre_state)
             if response_value is not None:
                 break
         if response_value is None:
