@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import torch, time
+import torch, time, copy
 from nlptools.text.tokenizer import Tokenizer_BERT
 from nlptools.text.ner import NER
 from .nltk_sentiment import NLTKSentiment
@@ -126,13 +126,12 @@ class InteractSession:
                                        self.sentiment_analyzer,
                                        self.max_seq_len, self.max_entity_types)
 
-    def __call__(self, query, response_sentiment=0, session_id="default"):
+    def __call__(self, query, session_id="default"):
         """
             get response
 
             Input:
                 - query: string
-                - response_sentiment: float between -1 and 1, wanted sentiment of response, default is 0
                 - session_id: string, session id, default is "default"
         """
         #create new session for user
@@ -144,9 +143,9 @@ class InteractSession:
             self.dialog_status[session_id] = self.new_dialog()
 
         #special commands
-        if query in ["clear", "reset", "restart", "exit", "stop", "quit", "q"]:
+        if query in ["clear", "restart", "exit", "stop", "quit", "q"]:
             self.dialog_status[session_id] = self.new_dialog()
-            return "reset"
+            return "reseted the session"
 
         if query in ["debug"]:
             return str(self.dialog_status[session_id])
@@ -160,6 +159,7 @@ class InteractSession:
         if len(query) < 1 or self.dialog_status[session_id].add_utterance(query) is None:
             return ":)"
 
+        response_sentiment = (int(time.time()%2419200)/2419200-0.5) * 0.6
         response = self.dialog_status[session_id].get_response(response_sentiment=response_sentiment, device=self.device)
 
         if "SESSION_RESET" in self.dialog_status[session_id].current_status["entity"]:

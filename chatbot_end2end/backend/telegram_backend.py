@@ -1,18 +1,20 @@
 #!/usr/bin/env python
+from .backend import BackendBase
 import telegram
 
-class TelegramBackend:
-    def __init__(self, interact_session, cfg):
-        self.session = interact_session
-        self.bot = telegram.Bot(token=cfg.token)
-    
-    def run(self):
-        while True:
-            query = input(":: ")
-            response = self.session(query)
-            print(response)
+class TelegramBackend(BackendBase):
+    def __init__(self, session_config, token, **args):
+        super().__init__(session_config=session_config, **args)
+        self.bot = telegram.Bot(token=token)
 
     def query(self, text, chat_id='676345402'):
+        text = text.strip()
+        if text in ["reset"]:
+            self.init_session()
+            self.bot.send_message(chat_id=chat_id, text="reseted all")
+            return
         response = self.session.response(text)
         self.bot.send_message(chat_id=chat_id, text=response)
 
+    def run(self):
+        self.bot.start_polling()

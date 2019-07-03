@@ -77,7 +77,7 @@ class RuleResponse(SkillBase):
 
     def update_response(self, response_id, current_status):
         """
-            update current response to the response status. 
+            update current response to the response status.
 
             Input:
                 - response id: int

@@ -1,9 +1,10 @@
 #!/usr/bin/env python
+from .backend import BackendBase
 import werobot
 
-class Wechat(werobot.WeRoBot):
-    def __init__(self, session, cfg):
-        super().__init__(token=cfg.token, APP_ID=cfg.app_id, APP_SECRET=cfg.app_secret, HOST=cfg.host, PORT=cfg.port, enable_session=True)
+class WechatClient(werobot.WeRoBot):
+    def __init__(self, token, app_id, app_secret, host, port, **args):
+        super().__init__(token=token, APP_ID=app_id, APP_SECRET=app_secret, HOST=host, PORT=port, enable_session=True)
 
 
     def reset(self):
@@ -14,5 +15,7 @@ class Wechat(werobot.WeRoBot):
         return "response"
 
 
-
-
+class Wechat(BackendBase):
+    def __init__(self, session_config, **args):
+        super().__init__(session_config=session_config, **args)
+        self.client = WechatClient(**args)

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from .backend import BackendBase
 from sleekxmpp import ClientXMPP
 
 class XMPPClient(ClientXMPP):
@@ -20,9 +21,10 @@ class XMPPClient(ClientXMPP):
             msg.reply(reply).send()
 
 
-class XMPP:
-    def __init__(self, interact_session, cfg):
-        self.xmpp = XMPPClient(jid=cfg.jid, password=cfg.password, session=interact_session)
+class XMPP(BackendBase):
+    def __init__(self, session_config, jid, paassword, **args):
+        super().__init__(session_config=session_config, **args)
+        self.xmpp = XMPPClient(jid=jid, password=password, session=self.session)
 
     def run(self):
         #import logging
