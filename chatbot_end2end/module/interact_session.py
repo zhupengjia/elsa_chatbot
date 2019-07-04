@@ -145,26 +145,26 @@ class InteractSession:
         #special commands
         if query in ["clear", "restart", "exit", "stop", "quit", "q"]:
             self.dialog_status[session_id] = self.new_dialog()
-            return "reset the session"
+            return "reset the session", 0
 
         if query in ["debug"]:
-            return str(self.dialog_status[session_id])
+            return str(self.dialog_status[session_id]), 0
 
         if query == "history":
             response = []
             for d in self.dialog_status[session_id].export_history():
                 response.append("## {}\t{}\t{}\t{}".format(d["time"], d["topic"], d["utterance"], d["response"]))
-            return "\n".join(response)
+            return "\n".join(response), 0
 
         if len(query) < 1 or self.dialog_status[session_id].add_utterance(query) is None:
-            return ":)"
+            return ":)", 0
 
         response_sentiment = (int(time.time()%2419200)/2419200-0.5) * 0.6
-        response = self.dialog_status[session_id].get_response(response_sentiment=response_sentiment, device=self.device)
+        response, score = self.dialog_status[session_id].get_response(response_sentiment=response_sentiment, device=self.device)
 
         if "SESSION_RESET" in self.dialog_status[session_id].current_status["entity"]:
             del self.dialog_status[session_id]
 
-        return response
+        return response, score
 
 

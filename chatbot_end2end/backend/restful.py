@@ -18,10 +18,10 @@ class Restful(BackendBase):
             self.init_session()
             return Response(json.dumps({"code":0, "message":"200 OK", 'sessionId':session_id, "data":{"response": "reset all"}}), mimetype='application/json')
 
-        response = self.session(query, session_id=session_id)
+        response, score = self.session(query, session_id=session_id)
         if response is None:
             return Response(json.dumps({"code":0, "message":"200 OK", 'sessionId':session_id, "data":{"response": ":)"}}), mimetype='application/json')
-        return Response(json.dumps({"code":0, "message":"200 OK", 'sessionId':session_id, "data":{"response": response}}), mimetype='application/json')
+        return Response(json.dumps({"code":0, "message":"200 OK", 'sessionId':session_id, "data":{"response": response, "score":score}}), mimetype='application/json')
 
     def run(self):
         self.app.run(host='0.0.0.0', port=self.port, threaded=True)

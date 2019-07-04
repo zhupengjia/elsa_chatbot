@@ -12,6 +12,6 @@ class Shell(BackendBase):
                 self.init_session()
                 print("reset all")
                 continue
-            response = self.session(query)
+            response, score = self.session(query)
             print(response)
 

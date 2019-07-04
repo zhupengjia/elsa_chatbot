@@ -85,11 +85,13 @@ class TopicManager:
         if response_value is None:
             self.current_skill = old_skill
             current_status["entity"]["RESPONSE"] = ":)"
+            current_status["entity"]["RESPONSE_SCORE"] = 0
             return current_status
 
         current_status["topic"] = self.current_skill
             
         current_status["response_score_"+self.current_skill] = response_score
+        current_status["entity"]["RESPONSE_SCORE"] = response_score
         return self.update_response(response_value, current_status)
 
     def add_response(self, response, current_status):

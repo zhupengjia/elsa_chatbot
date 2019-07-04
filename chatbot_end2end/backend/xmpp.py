@@ -17,7 +17,7 @@ class XMPPClient(ClientXMPP):
         if msg['type'] in ('chat', 'normal'):
             question = msg["body"]
             from_client = msg["from"]
-            reply = self.session(question, session_id=from_client)
+            reply, score = self.session(question, session_id=from_client)
             msg.reply(reply).send()
 
 

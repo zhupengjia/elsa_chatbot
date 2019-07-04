@@ -12,11 +12,7 @@ ner:
     tokenizer: spacy
 
 backend:
-    backend_type: restful
-    url_rule: /robot/api/query
-    methods:
-        - POST
-    port: 5000
+    backend_type: shell
 
 topic_switch:
     strategy: queue # switch strategy, queue, current
@@ -24,13 +20,12 @@ topic_switch:
 timeout: 300 # seconds for session timeout
 
 model:
-    device: "cuda:0"
+    device: "cpu"
     max_seq_len: 20
     max_entity_types: 512
 
 skills:
     cornell: 
-        wrapper: GenerativeResponse
-        beam_size: 5
-        saved_model: 'data/cornell/cornell.pt'
-
+        wrapper: RestResponse
+        rest_url: http://localhost:5000/robot/api/query
+        timeout: 3

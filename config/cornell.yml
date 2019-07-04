@@ -33,7 +33,7 @@ model:
     weight_decay: 0
     momentum: 0.9
     optimizer: "fp16"
-    loss_scale: 0
+    loss_scale: 128
     epochs: 1000
     batch_size: 800
     num_workers: 1

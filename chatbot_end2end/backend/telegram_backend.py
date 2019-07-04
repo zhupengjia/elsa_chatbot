@@ -13,7 +13,7 @@ class TelegramBackend(BackendBase):
             self.init_session()
             self.bot.send_message(chat_id=chat_id, text="reset all")
             return
-        response = self.session.response(text)
+        response, score = self.session.response(text)
         self.bot.send_message(chat_id=chat_id, text=response)
 
     def run(self):

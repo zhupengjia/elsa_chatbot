@@ -98,7 +98,9 @@ class DialogStatus:
         self.sentiment_analyzer = sentiment_analyzer
 
     def __init_status(self):
-        initstatus = {"entity": {"RESPONSE":None},
+        initstatus = {"entity": {"RESPONSE":None,
+                                 "RESPONSE_SCORE":0,
+                                 "UTTERANCE":None},
                       "entity_emb": None,
                       "utterance": None,
                       "utterance_mask": None,
@@ -207,7 +209,7 @@ class DialogStatus:
                                             incre_state=self.incre_state)
         self.current_status["time"] = time.time()
         self.history_status.append(copy.deepcopy(self.current_status))
-        return self.current_status["entity"]['RESPONSE']
+        return self.current_status["entity"]['RESPONSE'], self.current_status["entity"]['RESPONSE_SCORE']
 
     @property
     def last_time(self):
@@ -286,7 +288,7 @@ class DialogStatus:
             status["reward"][i, 0] =\
                 reward_base * self.rl_discount**(i+turn_start)
             for tk in skill_names:
-                for k in ["response", "response_mask"]:
+                for k in ["response_mask"]:
                     rkey = k+'_'+tk
                     if rkey not in s:
                         continue
