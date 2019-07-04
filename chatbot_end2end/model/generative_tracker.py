@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import torch, math, numpy, sys
 import torch.nn as nn
+from torch.nn.utils.rnn import PackedSequence
 from nlptools.zoo.encoders.transformer import TransformerDecoder, TransformerEncoder
 
 '''
@@ -55,7 +56,8 @@ class GenerativeTracker(nn.Module):
 
         embedding_dim = self.encoder.config.hidden_size
         self.num_embeddings = self.encoder.config.vocab_size
-        self.control_layer = nn.Linear(embedding_dim+2, embedding_dim)
+        self.control_layer = nn.Linear(embedding_dim+1, embedding_dim)
+        self.activation = nn.Tanh()
 
         self.decoder = TransformerDecoder(self.encoder.embeddings,
                                           num_hidden_layers=decoder_hidden_layers,
@@ -79,18 +81,19 @@ class GenerativeTracker(nn.Module):
 
     def dialog_embedding(self, utterance, utterance_mask, sentiment):
         #utterance embedding
-        sequence_output, encoder_hidden = self.encoder(utterance, attention_mask=utterance_mask, output_all_encoded_layers=False)
+        sequence_out, encoder_hidden = self.encoder(utterance, attention_mask=utterance_mask, output_all_encoded_layers=False)
         
         #sentiment
-        sentiment = sentiment.unsqueeze(1).expand(-1, sequence_output.size(1), -1)
+        sentiment = sentiment[:, 1:] #only use response sentiment
+        sentiment = sentiment.unsqueeze(1).expand(-1, sequence_out.size(1), -1)
 
         #combine together
-        sequence_out = torch.cat((sequence_output, sentiment), 2)
-        sequence_out = self.control_layer(sequence_out)
+        sequence_out = torch.cat((sequence_out, sentiment), 2)
+        sequence_out = self.activation(self.control_layer(sequence_out))
 
         return sequence_out, encoder_hidden
 
-    def beam_search(self, encoder_out, encoder_hidden, utterance_mask, incre_state=None):
+    def beam_search(self, encoder_out, utterance_mask, incre_state=None):
         bsz = encoder_out.size(0)
         max_len = encoder_out.size(1)
 
@@ -102,7 +105,6 @@ class GenerativeTracker(nn.Module):
 
         # expand encoder out and utterance mask
         encoder_out = encoder_out.repeat(bsz*self.beam_size, 1, 1)
-        encoder_hidden = encoder_hidden.repeat(1, bsz*self.beam_size, 1)
         utterance_mask = utterance_mask.repeat(self.beam_size, 1)
 
         for i in range(max_len - 1):
@@ -110,8 +112,7 @@ class GenerativeTracker(nn.Module):
             #print("output_buf", output_buf[:, i:i+1].size())
 
             output = self.decoder(output_buf[:, i:i+1], encoder_out=encoder_out,
-                                  encoder_padding_mask=utterance_mask,
-                                  encoder_hidden=encoder_hidden, time_step=i,
+                                  encoder_padding_mask=utterance_mask, time_step=i,
                                   incre_state=incre_state)
             #output = output[:, -1:, :]
 
@@ -190,34 +191,33 @@ class GenerativeTracker(nn.Module):
         for j in range(bsz):
             output[j, :] = output_buf[j*self.beam_size, :]
             scores[j] = scores_buf[j*self.beam_size]
-        
+
         #print("scores_buf", scores_buf.shape)
         #print("output_buf", output_buf.shape)
 
         return output, scores
 
     def forward(self, dialogs, incre_state=None):
+        pack_batch = dialogs['utterance'].batch_sizes
         #encoder
-        utterance_mask = dialogs["utterance_mask"].data
-        encoder_out, encoder_hidden = self.dialog_embedding(dialogs['utterance'].data, utterance_mask, dialogs["sentiment"].data)
+        utterance_mask = dialogs["utterance_mask"]
+        encoder_out, _ = self.dialog_embedding(dialogs['utterance'].data, utterance_mask.data, dialogs["sentiment"].data)
 
         #decoder
         if self.training:
-            prev_output = dialogs[self.response_key].data[:, :-1]
-            target_output = dialogs[self.response_key].data[:, 1:]
-           
-            target_output = target_output.unsqueeze(-1).contiguous().view(-1)
-            
-            output = self.decoder(prev_output,
+            prev_out = dialogs[self.response_key].data[:, :-1]
+            target_out = dialogs[self.response_key].data[:, 1:]
+            target_out = target_out.unsqueeze(-1).contiguous().view(-1)
+
+            output = self.decoder(prev_out,
                                   encoder_out=encoder_out,
-                                  encoder_padding_mask=utterance_mask,
-                                  encoder_hidden=encoder_hidden)
+                                  encoder_padding_mask=utterance_mask.data)
             output_probs = self.logsoftmax(output)
 
             output_probs_expand = output_probs.contiguous().view(-1, output_probs.size(2))
 
-            loss = self.loss_function(output_probs_expand, target_output)
+            loss = self.loss_function(output_probs_expand, target_out)
             return output_probs, loss
         else:
-            return self.beam_search(encoder_out, encoder_hidden, utterance_mask, incre_state)
+            return self.beam_search(encoder_out, utterance_mask.data, incre_state)
 

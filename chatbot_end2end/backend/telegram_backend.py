@@ -11,7 +11,7 @@ class TelegramBackend(BackendBase):
         text = text.strip()
         if text in ["reset"]:
             self.init_session()
-            self.bot.send_message(chat_id=chat_id, text="reseted all")
+            self.bot.send_message(chat_id=chat_id, text="reset all")
             return
         response = self.session.response(text)
         self.bot.send_message(chat_id=chat_id, text=response)

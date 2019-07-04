@@ -145,7 +145,7 @@ class InteractSession:
         #special commands
         if query in ["clear", "restart", "exit", "stop", "quit", "q"]:
             self.dialog_status[session_id] = self.new_dialog()
-            return "reseted the session"
+            return "reset the session"
 
         if query in ["debug"]:
             return str(self.dialog_status[session_id])

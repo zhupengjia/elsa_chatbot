@@ -10,7 +10,7 @@ class Shell(BackendBase):
             query = input(":: ")
             if query in ["reset"]:
                 self.init_session()
-                print("reseted all")
+                print("reset all")
                 continue
             response = self.session(query)
             print(response)

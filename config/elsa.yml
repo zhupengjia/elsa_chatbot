@@ -21,7 +21,7 @@ timeout: 300 # seconds for session timeout
 
 model:
     device: "cuda:0"
-    max_seq_len: 20
+    max_seq_len: 50
     max_entity_types: 512
 
 backend:
@@ -33,7 +33,7 @@ skills:
         wrapper: GenerativeResponse
         model_type: transformer
         beam_size: 5
-        saved_model: 'data/cornell/cornell.pt'
+        saved_model: 'data/cornell/generative_5.pt'
 
         #babi:
         #wrapper: GoalResponse

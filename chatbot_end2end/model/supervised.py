@@ -219,8 +219,8 @@ class Supervised:
 
              
                 # save
-                if (tot_it+1)%self.save_per_epoch == 0:# and numpy.nanmean(ave_loss) < self.best_loss:
-                    #self.best_loss = loss
+                if (tot_it+1)%self.save_per_epoch == 0 and numpy.nanmean(ave_loss) < self.best_loss:
+                    self.best_loss = loss
                     state = {
                         'state_dict': self.skill.model.state_dict(),
                         'config_model': self.skill.model.config,

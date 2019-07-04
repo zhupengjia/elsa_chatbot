@@ -12,8 +12,8 @@ tokenizer:
 
 reader:
     wrapper: ReaderCornell
-    #train_data: /data/omnia-010_1/data/cornell_corpus
-    train_data: data/dialog/cornell_corpus
+    train_data: /data/omnia-010_1/data/cornell_corpus
+    #train_data: data/dialog/cornell_corpus
     max_seq_len: 20
     flat_mode: True
 
@@ -23,22 +23,22 @@ model:
     encoder_hidden_layers: 3
     encoder_hidden_size: 768
     encoder_intermediate_size: 1536
-    encoder_attention_heads: 8
+    encoder_attention_heads: 3
     encoder_freeze: False
     dropout: 0.1
     decoder_hidden_layers: 3
-    decoder_attention_heads: 8
+    decoder_attention_heads: 3
     decoder_hidden_size: 1536
-    learning_rate: 0.01
+    learning_rate: 0.002
     weight_decay: 0
     momentum: 0.9
     optimizer: "fp16"
     loss_scale: 0
     epochs: 1000
-    batch_size: 950
+    batch_size: 800
     num_workers: 1
-    #saved_model: '/data/omnia-010_1/data/cornell.pt'
-    saved_model: 'data/cornell/cornell.pt'
+    saved_model: '/data/omnia-010_1/data/cornell.pt'
+    #saved_model: 'data/cornell/cornell.pt'
     save_per_epoch: 100
 
 reinforcement:
