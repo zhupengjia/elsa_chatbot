@@ -29,13 +29,13 @@ model:
     decoder_hidden_layers: 3
     decoder_attention_heads: 3
     decoder_hidden_size: 1536
-    learning_rate: 0.002
+    learning_rate: 0.0001
     weight_decay: 0
     momentum: 0.9
-    optimizer: "fp16"
+    optimizer: "adam"
     loss_scale: 128
     epochs: 1000
-    batch_size: 800
+    batch_size: 400
     num_workers: 1
     saved_model: '/data/omnia-010_1/data/cornell.pt'
     #saved_model: 'data/cornell/cornell.pt'
