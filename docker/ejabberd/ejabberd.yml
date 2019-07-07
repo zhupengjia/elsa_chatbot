@@ -58,23 +58,13 @@ listen:
     module: ejabberd_s2s_in
     max_stanza_size: 524288
   -
-    port: 5443
-    ip: "::"
-    module: ejabberd_http
-    tls: true
-    request_handlers:
-      "/admin": ejabberd_web_admin
-      "/api": mod_http_api
-      "/bosh": mod_bosh
-      "/captcha": ejabberd_captcha
-      "/upload": mod_http_upload
-      "/ws": ejabberd_http_ws
-      "/oauth": ejabberd_oauth
-  -
     port: 5280
     ip: "::"
     module: ejabberd_http
     request_handlers:
+      "/oauth": ejabberd_oauth
+      "/ws": ejabberd_http_ws
+      "/bosh": mod_bosh
       "/admin": ejabberd_web_admin
   -
     port: 1883

@@ -28,11 +28,11 @@ model:
     decoder_hidden_layers: 4
     decoder_attention_heads: 8
     decoder_hidden_size: 2048
-    learning_rate: 0.0001
+    learning_rate: 0.01
     weight_decay: 0
     momentum: 0.9
-    optimizer: "adam"
-    epochs: 10000
+    optimizer: "bertadam"
+    epochs: 100
     batch_size: 110
     num_workers: 8
     saved_model: 'data/cngen/model.pt'
@@ -42,10 +42,4 @@ reinforcement:
     learning_rate: 0.0001
     maxloop: 20
     discount: 0.95
-
-logger:
-    appname: cngen
-    loglevel_console:  20
-    loglevel_file: 0
-    logfile: data/cngen/train.log
 
