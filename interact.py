@@ -11,7 +11,7 @@ if len(sys.argv) < 2:
     parser.print_help()
     parser.exit()
 
-from chatbot_end2end.backend import Backend
+from elsabot.backend import Backend
 from nlptools.utils import Config
 
 cfg = Config(args.config)

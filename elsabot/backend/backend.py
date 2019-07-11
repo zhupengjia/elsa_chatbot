@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from chatbot_end2end.module.interact_session import InteractSession
+from ..module.interact_session import InteractSession
 from nlptools.utils import Config
 
 class BackendBase:

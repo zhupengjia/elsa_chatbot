@@ -22,12 +22,13 @@ class XMPPClient(ClientXMPP):
 
 
 class XMPP(BackendBase):
-    def __init__(self, session_config, jid, paassword, **args):
+    def __init__(self, session_config, jid, password, **args):
         super().__init__(session_config=session_config, **args)
         self.xmpp = XMPPClient(jid=jid, password=password, session=self.session)
 
     def run(self):
-        #import logging
-        #logging.basicConfig(level=logging.DEBUG, format='%(levelname)-8s %(message)s')
+        import logging
+        logging.basicConfig(level=logging.DEBUG, format='%(levelname)-8s %(message)s')
+        self.xmpp.connect()
         self.xmpp.process(block=True)
 

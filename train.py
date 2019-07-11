@@ -10,7 +10,7 @@ if len(sys.argv) < 2:
     parser.print_help()
     parser.exit()
 
-from chatbot_end2end.model.supervised import Supervised
+from elsabot.model.supervised import Supervised
 from nlptools.utils import Config
 import torch
 
