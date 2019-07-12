@@ -28,7 +28,7 @@ class XMPP(BackendBase):
 
     def run(self):
         import logging
-        logging.basicConfig(level=logging.DEBUG, format='%(levelname)-8s %(message)s')
+        logging.basicConfig(level=logging.ERROR, format='%(levelname)-8s %(message)s')
         self.xmpp.connect()
         self.xmpp.process(block=True)
 
