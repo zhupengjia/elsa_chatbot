@@ -159,7 +159,9 @@ class InteractSession:
         if len(query) < 1 or self.dialog_status[session_id].add_utterance(query) is None:
             return ":)", 0
 
+        #automatic response sentiment with period
         response_sentiment = (int(time.time()%2419200)/2419200-0.5) * 0.6
+
         response, score = self.dialog_status[session_id].get_response(response_sentiment=response_sentiment, device=self.device)
 
         if "SESSION_RESET" in self.dialog_status[session_id].current_status["entity"]:

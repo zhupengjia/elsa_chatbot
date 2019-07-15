@@ -12,9 +12,8 @@ ner:
     tokenizer: spacy
 
 backend:
-    backend_type: xmpp
-    jid: elsa@elsabot.org
-    password: elsa123
+    backend_type: telegram
+    token: "670380934:AAHDxft69znEBLK_0z1G7uzv5obLEqFdndg"
 
 topic_switch:
     strategy: queue # switch strategy, queue, current

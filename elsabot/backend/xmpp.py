@@ -17,8 +17,15 @@ class XMPPClient(ClientXMPP):
         if msg['type'] in ('chat', 'normal'):
             question = msg["body"]
             from_client = msg["from"]
-            reply, score = self.session(question, session_id=from_client)
-            msg.reply(reply).send()
+            if question in ["reset"]:
+                self.init_session()
+                msg.reply("reset all").send()
+            else:
+                reply, score = self.session(question, session_id=from_client)
+                msg.reply(reply).send()
+        else:
+            print(msg)
+            msg.reply(msg["type"]).send()
 
 
 class XMPP(BackendBase):
@@ -28,7 +35,7 @@ class XMPP(BackendBase):
 
     def run(self):
         import logging
-        logging.basicConfig(level=logging.ERROR, format='%(levelname)-8s %(message)s')
+        logging.basicConfig(level=logging.WARNING, format='%(levelname)-8s %(message)s')
         self.xmpp.connect()
         self.xmpp.process(block=True)
 

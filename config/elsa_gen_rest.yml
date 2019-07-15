@@ -12,9 +12,11 @@ ner:
     tokenizer: spacy
 
 backend:
-    backend_type: xmpp
-    jid: elsa@elsabot.org
-    password: elsa123
+    backend_type: restful
+    url_rule: /robot/api/query
+    methods:
+        - POST
+    port: 5001
 
 topic_switch:
     strategy: queue # switch strategy, queue, current
@@ -28,7 +30,7 @@ model:
 
 skills:
     cornell: 
-        wrapper: RestResponse
-        rest_url: http://192.168.1.112:5001/robot/api/query
-        timeout: 3
+        wrapper: GenerativeResponse
+        beam_size: 5
+        saved_model: 'data/cornell/cornell.pt'
 
