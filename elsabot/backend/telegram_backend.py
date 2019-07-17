@@ -40,16 +40,34 @@ class TelegramBackend(BackendBase):
         text = re.split("\s", text, maxsplit=1)[1]
 
         random_id = random.randint(0,100000)
-        ogg_file = "/tmp/{}_{}.ogg".format(chat_id, random_id)
+
+        wav_base = "/tmp/{}_{}_%i.wav".format(chat_id, random_id)
         wav_file = "/tmp/{}_{}.wav".format(chat_id, random_id)
+        ogg_file = "/tmp/{}_{}.ogg".format(chat_id, random_id)
+
+        wav_files = []
+
+        import spacy
+        nlp = spacy.load("en")
 
         if self.tts_model:
-            self.tts_model(text, wav_file)
+            doc = nlp(text)
+            for i, sent in enumerate(doc.sents):
+                wavefile = wav_base%i
+                wav_files.append(wavefile)
+                text = sent.text.strip()
+                self.tts_model(text, wavefile)
+             
+            sox_cmd = ["sox"] + wav_files + [wav_file]
+            os.system(" ".join(sox_cmd))
+            
             Speech_Deepspeech.wav2ogg(wav_file, ogg_file)
             with open(ogg_file, "rb") as oggf:
                 context.bot.send_voice(chat_id=chat_id, voice=oggf)
             os.remove(wav_file)
             os.remove(ogg_file)
+            for f in wav_files:
+                os.remove(f)
         else:
             context.bot.send_message(chat_id=chat_id, text=text)
 
