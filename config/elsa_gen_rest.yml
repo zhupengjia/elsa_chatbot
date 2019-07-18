@@ -12,7 +12,7 @@ ner:
     tokenizer: spacy
 
 backend:
-    backend_type: shell
+    backend_type: restful
     url_rule: /robot/api/query
     methods:
         - POST
