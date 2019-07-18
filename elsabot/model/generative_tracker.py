@@ -81,7 +81,7 @@ class GenerativeTracker(nn.Module):
 
     def dialog_embedding(self, utterance, utterance_mask, sentiment):
         #utterance embedding
-        sequence_out, encoder_hidden = self.encoder(utterance, attention_mask=utterance_mask, output_all_encoded_layers=False)
+        sequence_out, encoder_hidden = self.encoder(utterance, attention_mask=utterance_mask)
         
         #sentiment
         sentiment = sentiment[:, 1:] #only use response sentiment

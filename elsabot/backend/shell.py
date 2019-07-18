@@ -14,4 +14,8 @@ class Shell(BackendBase):
                 continue
             response, score = self.session(query)
             print(response)
+    
+    def query(self, text):
+        response, score = self.session(text.strip())
+        print(response)
 
