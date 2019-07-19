@@ -3,6 +3,7 @@ import random, os, re
 from .backend import BackendBase
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from nlptools.audio.speech import Speech_Deepspeech
+from nlptools.audio.utils import *
 
 class TelegramBackend(BackendBase):
     def __init__(self, session_config, token, deepspeech=None, tts=None, **args):
@@ -37,7 +38,10 @@ class TelegramBackend(BackendBase):
     def get_tts(self, update, context):
         chat_id = update.message.chat_id
         text = update.message.text.strip()
-        text = re.split("\s", text, maxsplit=1)[1]
+        text = re.split("\s", text, maxsplit=1)
+        if len(text) < 2:
+            return
+        text = text[1]
 
         random_id = random.randint(0,100000)
 
@@ -57,11 +61,9 @@ class TelegramBackend(BackendBase):
                 wav_files.append(wavefile)
                 text = sent.text.strip()
                 self.tts_model(text, wavefile)
-             
-            sox_cmd = ["sox"] + wav_files + [wav_file]
-            os.system(" ".join(sox_cmd))
-            
-            Speech_Deepspeech.wav2ogg(wav_file, ogg_file)
+
+            concat_wavs(wav_files, wav_file, 0.6)
+            wav2ogg(wav_file, ogg_file)
             with open(ogg_file, "rb") as oggf:
                 context.bot.send_voice(chat_id=chat_id, voice=oggf)
             os.remove(wav_file)
@@ -86,11 +88,10 @@ class TelegramBackend(BackendBase):
 
         update.message.voice.get_file().download(ogg_file)
         try:
-            Speech_Deepspeech.ogg2wav(ogg_file, wav_file)
+            ogg2wav(ogg_file, wav_file)
         except Exception as err:
             context.bot.send_message(chat_id=chat_id, text=err)
             os.remove(ogg_file)
-            os.remove(wav_file)
             return
 
         text = self.ds_model(wav_file)
@@ -103,7 +104,7 @@ class TelegramBackend(BackendBase):
         #tts
         if self.tts_model:
             self.tts_model(response, response_wave_file)
-            Speech_Deepspeech.wav2ogg(response_wave_file, response_ogg_file)
+            wav2ogg(response_wave_file, response_ogg_file)
             with open(response_ogg_file, "rb") as oggf:
                 context.bot.send_voice(chat_id=chat_id, voice=oggf)
             os.remove(response_wave_file)
@@ -112,6 +113,8 @@ class TelegramBackend(BackendBase):
             context.bot.send_message(chat_id=chat_id, text=response)
 
     def query(self, update, context):
+        if update.message is None:
+            return
         chat_id = update.message.chat_id
         text = update.message.text.strip()
         response, score = self.session(text, session_id=chat_id)
