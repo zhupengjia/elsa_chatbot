@@ -11,7 +11,7 @@ RUN apt-get update &&\
     rm -rf /var/lib/apt/lists/*
 
 # python packages
-RUN pip3 install --no-cache --upgrade pip setuptools wheel flask sleekxmpp python-telegram-bot&&\
+RUN pip3 install --no-cache --upgrade pip setuptools wheel flask sleekxmpp python-telegram-bot deepspeech&&\
     pip3 install --no-cache pyyaml bidict tqdm h5py numpy scipy pandas sklearn spacy nltk xlrd librosa unidecode lws&&\
     pip3 install --no-cache https://download.pytorch.org/whl/cpu/torch-1.1.0-cp37-cp37m-linux_x86_64.whl &&\
     python3 -m spacy download en &&\
