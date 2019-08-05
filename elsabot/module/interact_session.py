@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import torch, time, copy
+import torch, time, copy, sqlite3
 from nlptools.text.tokenizer import Tokenizer_BERT
 from nlptools.text.ner import NER
 from .nltk_sentiment import NLTKSentiment
@@ -17,7 +17,8 @@ from ..reader import ReaderXLSX
 class InteractSession:
     def __init__(self, vocab, tokenizer, ner, topic_manager,
                  sentiment_analyzer, max_seq_len=100,
-                 max_entity_types=1024, device='cpu', timeout=300, **args):
+                 max_entity_types=1024, device='cpu', timeout=300,
+                 log_db=None, log_table=None, **args):
         """
             General interact session
 
@@ -30,8 +31,10 @@ class InteractSession:
                 - sentiment_analyzer: sentiment analyzer instance
                 - max_seq_len: int, maximum sequence length
                 - max_entity_types: int, maximum entity types
-                - timeout: int, seconds to session timeout
                 - device: string of torch device, default is "cpu"
+                - timeout: int, seconds to session timeout
+                - log_db: sqlite db file for chat log saving
+                - log_table: sqlite db name for chat log saving
         """
 
         super().__init__()
@@ -45,6 +48,24 @@ class InteractSession:
         self.max_entity_types = max_entity_types
         self.timeout = timeout
         self.dialog_status = {}
+        self.log_db = log_db
+        self.log_table = log_table
+        self._init_logdb()
+
+    def _get_cursor(self, dbfile):
+        db = sqlite3.connect(dbfile)
+        cursor = db.cursor()
+        return db, cursor
+
+    def _init_logdb(self):
+        db, cursor = self._get_cursor(self.log_db)
+        cursor.execute('''create table if not exists {} (
+            id integer primary key auto increment,
+            sid text,
+            time int,
+            topic text,
+            utterance text,
+            response text)'''.format(self.log_table))
 
     @classmethod
     def build(cls, config):
@@ -126,6 +147,20 @@ class InteractSession:
                                        self.sentiment_analyzer,
                                        self.max_seq_len, self.max_entity_types)
 
+    def _save_log(self, session_id, dialog_status):
+        '''save log'''
+        db, cursor = self._get_cursor(logfile)
+        now = int(time.time())
+        data = []
+        sid = "{}_{}".format(session_id, now)
+        for s in dialog_status.history_status:
+            utterance = s["entity"]["UTTERANCE"] if s['entity']['UTTERANCE'] else ""
+            response = s["entity"]["RESPONSE"] if s['entity']['RESPONSE'] else ""
+            topic = s["topic"] if s['topic'] else ""
+            timeinfo = int(s["time"])
+            data.append((sid, timeinfo, topic, utterance, response))
+        cursor.executemany("""insert into {} (sid,time,topic,utterance,response) values (?,?,?,?,?)""".format(self.log_table), data)
+
     def __call__(self, query, session_id="default"):
         """
             get response
@@ -140,6 +175,8 @@ class InteractSession:
 
         #timeout
         if time.time() - self.dialog_status[session_id].last_time > self.timeout:
+            # timeout reset
+            self._save_log(session_id, self.dialog_status[session_id])
             self.dialog_status[session_id] = self.new_dialog()
 
         #special commands
