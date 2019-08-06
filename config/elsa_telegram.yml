@@ -35,6 +35,7 @@ model:
     device: "cuda:0"
     max_seq_len: 20
     max_entity_types: 512
+    log_db: "elsalog.db"
 
 skills:
     cornell: 

@@ -18,7 +18,7 @@ class InteractSession:
     def __init__(self, vocab, tokenizer, ner, topic_manager,
                  sentiment_analyzer, max_seq_len=100,
                  max_entity_types=1024, device='cpu', timeout=300,
-                 log_db=None, log_table=None, **args):
+                 log_db="chatlog.db", log_table="log", **args):
         """
             General interact session
 
@@ -59,13 +59,16 @@ class InteractSession:
 
     def _init_logdb(self):
         db, cursor = self._get_cursor(self.log_db)
-        cursor.execute('''create table if not exists {} (
-            id integer primary key auto increment,
+        cmd = '''create table if not exists {} (
+            id integer primary key autoincrement,
             sid text,
             time int,
             topic text,
             utterance text,
-            response text)'''.format(self.log_table))
+            response text)'''.format(self.log_table)
+        cursor.execute(cmd)
+        db.commit()
+        db.close()
 
     @classmethod
     def build(cls, config):
@@ -149,7 +152,7 @@ class InteractSession:
 
     def _save_log(self, session_id, dialog_status):
         '''save log'''
-        db, cursor = self._get_cursor(logfile)
+        db, cursor = self._get_cursor(self.log_db)
         now = int(time.time())
         data = []
         sid = "{}_{}".format(session_id, now)
@@ -160,6 +163,8 @@ class InteractSession:
             timeinfo = int(s["time"])
             data.append((sid, timeinfo, topic, utterance, response))
         cursor.executemany("""insert into {} (sid,time,topic,utterance,response) values (?,?,?,?,?)""".format(self.log_table), data)
+        db.commit()
+        db.close()
 
     def __call__(self, query, session_id="default"):
         """
@@ -181,6 +186,7 @@ class InteractSession:
 
         #special commands
         if query in ["clear", "restart", "exit", "stop", "quit", "q"]:
+            self._save_log(session_id, self.dialog_status[session_id])
             self.dialog_status[session_id] = self.new_dialog()
             return "reset the session", 0
 
@@ -202,6 +208,7 @@ class InteractSession:
         response, score = self.dialog_status[session_id].get_response(response_sentiment=response_sentiment, device=self.device)
 
         if "SESSION_RESET" in self.dialog_status[session_id].current_status["entity"]:
+            self._save_log(session_id, self.dialog_status[session_id])
             del self.dialog_status[session_id]
 
         return response, score
