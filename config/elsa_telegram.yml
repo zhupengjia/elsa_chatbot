@@ -38,6 +38,10 @@ model:
     log_db: "elsalog.db"
 
 skills:
+    wikiqa:
+        wrapper: RestResponse
+        rest_url: http://192.168.1.112:5002/api/query
+        timeout: 3
     cornell: 
         wrapper: RestResponse
         rest_url: http://192.168.1.112:5001/robot/api/query
