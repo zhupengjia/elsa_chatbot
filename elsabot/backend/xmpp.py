@@ -1,13 +1,19 @@
 #!/usr/bin/env python
-from .backend import BackendBase
+from ..module.interact_session import InteractSession
+from nlptools.utils import Config
 from sleekxmpp import ClientXMPP
 
 class XMPPClient(ClientXMPP):
-    def __init__(self, jid, password, session):
+    def __init__(self, jid, password, session_config):
         ClientXMPP.__init__(self, jid, password)
         self.add_event_handler("session_start", self.session_start)
         self.add_event_handler("message", self.message)
-        self.session = session
+        self.config_path = session_config
+        self.init_session()
+    
+    def init_session(self):
+        cfg = Config(self.config_path)
+        self.session = InteractSession.build(cfg)
 
     def session_start(self, event):
         self.send_presence()
@@ -28,14 +34,15 @@ class XMPPClient(ClientXMPP):
             msg.reply(msg["type"]).send()
 
 
-class XMPP(BackendBase):
-    def __init__(self, session_config, jid, password, **args):
-        super().__init__(session_config=session_config, **args)
-        self.xmpp = XMPPClient(jid=jid, password=password, session=self.session)
+class XMPP:
+    def __init__(self, session_config, jid, password, host, port=5222, **args):
+        self.xmpp = XMPPClient(jid=jid, password=password, session_config=session_config)
+        self.host = host
+        self.port = port
 
     def run(self):
         import logging
         logging.basicConfig(level=logging.WARNING, format='%(levelname)-8s %(message)s')
-        self.xmpp.connect()
+        self.xmpp.connect((self.host, self.port))
         self.xmpp.process(block=True)
 

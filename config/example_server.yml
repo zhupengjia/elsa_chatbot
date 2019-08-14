@@ -1,30 +1,33 @@
 %YAML 1.2
 ---
 
-ner:
-    tokenizer: spacy
+#Config for elsa chatbot, interactive mode only
 
 tokenizer:
     bert_model_name: bert-base-uncased
     do_lower_case: 1
     stopwords_path: config/en_stopwords.txt
 
-model:
-    device: "cpu"
-    max_seq_len: 20
-    max_entity_types: 512
+ner:
+    tokenizer: spacy
 
 backend:
-    backend_type: restful
-    url_rule: /robot/api/query
-    methods:
-        - POST
-    port: 5000
+    backend_type: xmpp
+    jid: ***@elsabot.org
+    password: ***
+    host: ***
+    port: 5222
 
 topic_switch:
     strategy: queue # switch strategy, queue, current
 
 timeout: 300 # seconds for session timeout
+
+model:
+    device: "cpu"
+    max_seq_len: 20
+    max_entity_types: 512
+    log_db: "elsalog.db"
 
 skills:
     faq1:
@@ -34,8 +37,8 @@ skills:
         w2v_idx2vec: data/word2vec/en/bert-base-uncased.h5py 
         prefilter: 500
         score_tolerate: 0.05
-        min_score: 0.7
-        believe_score: 0.85
+        min_score: 0.8
+        believe_score: 0.9
         confuse_reply: "Sorry I'm confused about your question, could you please type the correct ID of following question list?"
 
     faq2:
@@ -48,9 +51,13 @@ skills:
         min_score: 0.85
         believe_score: 0.85
 
-    cornell: 
+    wikiqa:
+        wrapper: RestResponse
+        rest_url: http://***:5002/api/query
+        timeout: 3
+
+    cornell:
         wrapper: GenerativeResponse
         beam_size: 5
-        saved_model: data/cornell/cornell.pt
-
+        saved_model: 'data/cornell/cornell.pt'
 

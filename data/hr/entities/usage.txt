@@ -1,3 +1,0 @@
-WBS: WBS Code
-Letter: Verification Letter
-Inquiry: Leave Inquiry
