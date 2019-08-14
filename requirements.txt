@@ -4,7 +4,7 @@ scipy
 h5py
 pandas
 torch
-sklearn
+scikit-learn
 pyyaml
 bidict
 spacy
