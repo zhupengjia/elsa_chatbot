@@ -1,4 +1,4 @@
-This repo is for elsa chatbot, For more details please check [README](https://nlp-lab.com/chatbot)
+This repo is for elsa chatbot, For more details please check [this presentation](https://nlp-lab.com/chatbot)
 
 Elsa chatbot is a general purpose chatbot as a human-machine dialogue interface for other services. It allows people to interact with each backend service via natural language. Elsa chatbot not only allows to do several different types of jobs at a time, but also allows to reply a human-like emotional response. An easy-to-use dialog-design system can also be used for designing to do a custom job. Elsa chatbot can be embedded into several different business scenarios, such like customer service, recommondation, investment assistant, risk alert, system monitor.
 
