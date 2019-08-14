@@ -14,10 +14,10 @@ parser.add_argument('-data', type=str, default="twitter_ids.txt",
 opt = parser.parse_args()
 
 # these arguments can be accessed in facebook developer.
-consumer_key = "RDaZCa1eoJxRvu4c2Kmla3vfV"
-consumer_secret = "a0htK5PXKPWAigvrOZQ9GUCyTUZW23mvzDoMBwhI0fZyhpBYfx"
-access_token = "2253624944-rgZEy2d6HusPn7VlaZ07x1jb4rLokh9aXRCTBUx"
-access_token_secret = "MNL2uwADADlbHTPW5LYj0NlTGkO15tsUKSMNIOA1Ebg9o"
+consumer_key = sys.argv[1]
+consumer_secret = sys.argv[2]
+access_token = sys.argv[3]
+access_token_secret = sys.argv[4]
 
 auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
 auth.set_access_token(access_token, access_token_secret)
