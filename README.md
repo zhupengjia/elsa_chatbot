@@ -10,7 +10,7 @@ Challenge:
 Currently the chatbot includes a simple retrieval-based engine, a neural network based goal-oriented chat engine, a generative based chat engine, a read-comprehension chat engine for open domain QA, managed by a topic manager. A global dialog status allows to track the current status or variables such like entities, sentiment, current topic, history dialogs. The goal-oriented dialog engine uses a LSTM dialog tracker to support multi-turn dialog. The generative based engine uses a transformer based seq2seq model with additional dialog status input in hidden layer for controllable response generation. The read-comprehension engin is finetuned from XLNet and trained from SQuAD2 dataset.
 
 The general framework is: 
-![elsabot](https://github.com/zhupengjia/elsa_chatbot/blob/develop/docs/chatbot.png?raw=true)
+![elsabot](https://github.com/zhupengjia/elsa_chatbot/blob/develop/docs/img/chatbot.png?raw=true)
 
 The code reserved several readers for different sources, such like api.ai like json file, etc. Also the code reserved a sentence embedding connector for further transfer learnings of sentence embedding. The chatbot uses entity masks in response template to support manually control the dialog flow, some tests in previous show that this can significantly improve the performance. The code also integrated the hook functions to the neural network via dialog status.
 
