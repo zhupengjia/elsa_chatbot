@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import torch, time, copy, sqlite3
+import torch, time, sqlite3
 from nlptools.text.tokenizer import Tokenizer_BERT
 from nlptools.text.ner import NER
 from .nltk_sentiment import NLTKSentiment
@@ -61,7 +61,7 @@ class InteractSession:
         db, cursor = self._get_cursor(self.log_db)
         cmd = '''create table if not exists {} (
             id integer primary key autoincrement,
-            sid text,
+            session text,
             time int,
             topic text,
             utterance text,
@@ -144,25 +144,21 @@ class InteractSession:
                    timeout=config.timeout,
                    **config.model)
 
-    def new_dialog(self):
-        return DialogStatus.new_dialog(self.vocab, self.tokenizer,
+    def new_dialog(self, session_id):
+        dialog = DialogStatus.new_dialog(self.vocab, self.tokenizer,
                                        self.ner, self.topic_manager,
                                        self.sentiment_analyzer,
                                        self.max_seq_len, self.max_entity_types)
+        dialog.current_status["session"] = session_id
+        return dialog
 
     def _save_log(self, session_id, dialog_status):
         '''save log'''
         db, cursor = self._get_cursor(self.log_db)
         now = int(time.time())
-        data = []
-        sid = "{}_{}".format(session_id, now)
-        for s in dialog_status.history_status:
-            utterance = s["entity"]["UTTERANCE"] if s['entity']['UTTERANCE'] else ""
-            response = s["entity"]["RESPONSE"] if s['entity']['RESPONSE'] else ""
-            topic = s["topic"] if s['topic'] else ""
-            timeinfo = int(s["time"])
-            data.append((sid, timeinfo, topic, utterance, response))
-        cursor.executemany("""insert into {} (sid,time,topic,utterance,response) values (?,?,?,?,?)""".format(self.log_table), data)
+        data = [(d["session"], d["time"], d["topic"], d["utterance"], d["response"]) for d in dialog_status.export_history()]
+        print(data)
+        cursor.executemany("""insert into {} (session,time,topic,utterance,response) values (?,?,?,?,?)""".format(self.log_table), data)
         db.commit()
         db.close()
 
@@ -176,31 +172,31 @@ class InteractSession:
         """
         #create new session for user
         if session_id not in self.dialog_status:
-            self.dialog_status[session_id] = self.new_dialog()
+            self.dialog_status[session_id] = self.new_dialog(session_id)
 
         #timeout
         if time.time() - self.dialog_status[session_id].last_time > self.timeout:
             # timeout reset
             self._save_log(session_id, self.dialog_status[session_id])
-            self.dialog_status[session_id] = self.new_dialog()
+            self.dialog_status[session_id] = self.new_dialog(session_id)
 
         #special commands
         if query in ["clear", "restart", "exit", "stop", "quit", "q"]:
             self._save_log(session_id, self.dialog_status[session_id])
-            self.dialog_status[session_id] = self.new_dialog()
-            return "reset the session", 0
+            self.dialog_status[session_id] = self.new_dialog(session_id)
+            return session_id, "reset the session", 1
 
         if query in ["debug"]:
-            return str(self.dialog_status[session_id]), 0
+            return session_id, str(self.dialog_status[session_id]), 1
 
         if query == "history":
             response = []
             for d in self.dialog_status[session_id].export_history():
-                response.append("## {}\t{}\t{}\t{}".format(d["time"], d["topic"], d["utterance"], d["response"]))
-            return "\n".join(response), 0
+                response.append("## {}\t{}\t{}\t{}\t{}".format(d["session"], d["time"], d["topic"], d["utterance"], d["response"]))
+            return session_id, "\n".join(response), 1
 
         if len(query) < 1 or self.dialog_status[session_id].add_utterance(query) is None:
-            return ":)", 0
+            return session_id, ":)", 0
 
         #automatic response sentiment with period
         response_sentiment = (int(time.time()%2419200)/2419200-0.5) * 0.6
@@ -210,7 +206,9 @@ class InteractSession:
         if "SESSION_RESET" in self.dialog_status[session_id].current_status["entity"]:
             self._save_log(session_id, self.dialog_status[session_id])
             del self.dialog_status[session_id]
+            return session_id, "reset the session", 1
 
-        return response, score
+        session_id = self.dialog_status[session_id].session #update session_id
+        return session_id, response, score
 
 

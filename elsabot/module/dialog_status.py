@@ -105,7 +105,8 @@ class DialogStatus:
                       "utterance_mask": None,
                       "sentiment": 0,
                       "response_sentiment": 0,
-                      "topic": None,
+                      "topic": self.topic_manager.skill_names[0],
+                      "session": "default",
                       "time": time.time()
                       }
         return initstatus
@@ -120,6 +121,20 @@ class DialogStatus:
         """
         return cls(vocab, tokenizer, ner, topic_manager,
                    sentiment_analyzer, max_seq_len, max_entity_types)
+
+    @property
+    def session(self):
+        """
+            get current session id
+        """
+        return self.current_status["session"]
+    
+    @property
+    def topic(self):
+        """
+            get current topic
+        """
+        return self.current_status["topic"]
 
     def add_utterance(self, utterance):
         """
@@ -191,7 +206,7 @@ class DialogStatus:
         self.current_status = _tmp
         self.history_status.append(copy.deepcopy(self.current_status))
 
-    def get_response(self, response_sentiment=0, device="cpu"):
+    def get_response(self, response_sentiment=0, device="cpu", **args):
         """
             get response from current status
 
@@ -206,7 +221,8 @@ class DialogStatus:
         self.current_status = \
             self.topic_manager.get_response(current_data,
                                             self.current_status,
-                                            incre_state=incre_state)
+                                            incre_state=incre_state,
+                                            **args)
         self.current_status["time"] = time.time()
         self.history_status.append(copy.deepcopy(self.current_status))
         return self.current_status["entity"]['RESPONSE'], self.current_status["entity"]['RESPONSE_SCORE']
@@ -225,8 +241,9 @@ class DialogStatus:
         dialogs = []
         for s in self.history_status:
             dialogs.append({"utterance": s['entity']['UTTERANCE'],
-                            "response": s['entity']['RESPONSE'],
+                            "response": str(s['entity']['RESPONSE']),
                             "time": s["time"],
+                            "session": str(s["session"]),
                             "topic": s["topic"]})
         return dialogs
 

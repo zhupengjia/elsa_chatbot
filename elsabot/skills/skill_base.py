@@ -39,7 +39,7 @@ class SkillBase:
         """
         return 0
 
-    def get_response(self, status_data, current_status=None, incre_state=None):
+    def get_response(self, status_data, current_status=None, incre_state=None, **args):
         """
             predict response value from current status
 

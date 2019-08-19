@@ -144,7 +144,7 @@ class RuleResponse(SkillBase):
                                "ids":numpy.array(dialog_ids),
                                "fallback": fallback_says}
 
-    def get_response(self, status_data, current_status, incre_state=None):
+    def get_response(self, status_data, current_status, incre_state=None, **args):
         '''
             get response from utterance
 

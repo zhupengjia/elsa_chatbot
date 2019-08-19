@@ -37,6 +37,6 @@ class RestResponse(SkillBase):
         current_status["entity"]["RESPONSE"] = response
         return current_status
 
-    def get_response(self, status_data, current_status, incre_state=None):
+    def get_response(self, status_data, current_status, incre_state=None, **args):
         result = self.rest_post(current_status["entity"]["UTTERANCE"])
         return result["response"], result["score"]

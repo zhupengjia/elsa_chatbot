@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from ..module.interact_session import InteractSession
 from nlptools.utils import Config
-from sleekxmpp import ClientXMPP
+from slixmpp import ClientXMPP
 
 class XMPPClient(ClientXMPP):
     def __init__(self, jid, password, session_config):
@@ -27,8 +27,13 @@ class XMPPClient(ClientXMPP):
                 self.init_session()
                 msg.reply("reset all").send()
             else:
-                reply, score = self.session(question, session_id=from_client)
-                msg.reply(reply).send()
+                session_id, reply, score = self.session(question, session_id=from_client)
+                if isinstance(reply, dict):
+                    for sid in reply:
+                        msg["from"] = sid
+                else:
+                    msg["from"] = session_id
+                    msg.reply(reply).send()
         else:
             print(msg)
             msg.reply(msg["type"]).send()
@@ -37,6 +42,11 @@ class XMPPClient(ClientXMPP):
 class XMPP:
     def __init__(self, session_config, jid, password, host, port=5222, **args):
         self.xmpp = XMPPClient(jid=jid, password=password, session_config=session_config)
+        self.xmpp.register_plugin('xep_0030') # Service Discovery
+        self.xmpp.register_plugin('xep_0004') # Data Forms
+        self.xmpp.register_plugin('xep_0060') # PubSub
+        self.xmpp.register_plugin('xep_0199') # XMPP Ping
+
         self.host = host
         self.port = port
 
@@ -44,5 +54,5 @@ class XMPP:
         import logging
         logging.basicConfig(level=logging.WARNING, format='%(levelname)-8s %(message)s')
         self.xmpp.connect((self.host, self.port))
-        self.xmpp.process(block=True)
+        self.xmpp.process(forever=True)
 

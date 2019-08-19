@@ -10,3 +10,4 @@ bidict
 spacy
 nltk
 xlrd
+slixmpp

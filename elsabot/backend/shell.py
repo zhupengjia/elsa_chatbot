@@ -12,10 +12,10 @@ class Shell(BackendBase):
                 self.init_session()
                 print("reset all")
                 continue
-            response, score = self.session(query)
+            _, response, score = self.session(query)
             print(response)
     
     def query(self, text):
-        response, score = self.session(text.strip())
+        _, response, score = self.session(text.strip())
         print(response)
 

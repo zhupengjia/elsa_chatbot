@@ -99,7 +99,7 @@ class TelegramBackend(BackendBase):
         os.remove(wav_file)
 
         #query
-        response, score = self.session(text, session_id=chat_id)
+        chat_id, response, score = self.session(text, session_id=chat_id)
 
         #tts
         if self.tts_model:
@@ -117,7 +117,7 @@ class TelegramBackend(BackendBase):
             return
         chat_id = update.message.chat_id
         text = update.message.text.strip()
-        response, score = self.session(text, session_id=chat_id)
+        chat_id, response, score = self.session(text, session_id=chat_id)
         context.bot.send_message(chat_id=chat_id, text=response)
 
     def run(self):
