@@ -5,6 +5,7 @@
     Reader for dialog flow excel format config
 '''
 import os, re, pandas, random, numpy
+import ipdb
 from nlptools.utils import decode_child_id, flat_list
 from nlptools.text.ngrams import Ngrams
 from nlptools.text import VecTFIDF
@@ -18,7 +19,7 @@ class ReaderXLSX:
 
         Input:
             - dialog_file: xlsx file of rule definition
-            - tokenizer: instance iof tokenizer
+            - tokenizer: instance of tokenizer
             - ner_config: dictionary of ner config, used to replace the related words in sentence, default is None
     '''
 
@@ -90,7 +91,9 @@ class ReaderXLSX:
         """
         if not idx in self.dialogs["response"].index:
             return None
-        return random.choice(self.dialogs["response"].loc[idx])
+        if self.dialogs["response"].loc[idx]:
+            return random.choice(self.dialogs["response"].loc[idx])
+        return None
 
     def _mixed_tokenizer(self, d):
         if self.ner is not None:
@@ -156,7 +159,7 @@ class ReaderXLSX:
                 ids_flat.append(ids[i])
         vocab = Ngrams(ngrams=3)
         search_index = VecTFIDF(vocab)
-        if isinstance(data_flat[0], str):
+        if len(data_flat)>0 and isinstance(data_flat[0], str):
             data_flat = [self._mixed_tokenizer(d) for d in data_flat]
         data_ids = [flat_list(vocab(d).values()) for d in data_flat]
         vocab.freeze()
@@ -230,15 +233,20 @@ class ReaderXLSX:
             return None
         if action_table.shape[0] < 1:
             return None
-        actions = {}
+        all_names = []
+        all_func = []
+
+        base_class = """class ActionClass:\n  def __getitem__(self, x):\n    return eval("self."+x)\n"""
+
         for i in range(action_table.shape[0]):
             name = action_table.iloc[i, 0].strip()
             action = ["    "+x for x in re.split("\n", action_table.iloc[i, 1])]
-            action.insert(0, "def {}(entities):".format(name))
+            action.insert(0, "  def {}(self, entities):".format(name))
             action = "\n".join(action)
-            exec(action)
-            actions[name] = eval(name)
-        return actions
+            all_func.append(action)
+            all_names.append(name)
+        exec(base_class + "\n".join(all_func))
+        return eval("ActionClass()")
 
     def _build_entity_mask(self, data):
         """

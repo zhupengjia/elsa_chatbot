@@ -90,7 +90,7 @@ class InteractSession:
         shared_layers = {}
 
         # skills
-        topic_manager = TopicManager(config.topic_switch)
+        topic_manager = TopicManager()
         for skill_name in config.skills:
             response_params = config.skills[skill_name]
             if not hasattr(Skills, response_params.wrapper):
@@ -149,15 +149,13 @@ class InteractSession:
                                        self.ner, self.topic_manager,
                                        self.sentiment_analyzer,
                                        self.max_seq_len, self.max_entity_types)
-        dialog.current_status["session"] = session_id
+        dialog.current_status["$SESSION"] = session_id
         return dialog
 
     def _save_log(self, session_id, dialog_status):
         '''save log'''
         db, cursor = self._get_cursor(self.log_db)
-        now = int(time.time())
         data = [(d["session"], d["time"], d["topic"], d["utterance"], d["response"]) for d in dialog_status.export_history()]
-        print(data)
         cursor.executemany("""insert into {} (session,time,topic,utterance,response) values (?,?,?,?,?)""".format(self.log_table), data)
         db.commit()
         db.close()
@@ -181,15 +179,7 @@ class InteractSession:
             self.dialog_status[session_id] = self.new_dialog(session_id)
 
         #special commands
-        if query in ["clear", "restart", "exit", "stop", "quit", "q"]:
-            self._save_log(session_id, self.dialog_status[session_id])
-            self.dialog_status[session_id] = self.new_dialog(session_id)
-            return session_id, "reset the session", 1
-
-        if query in ["debug"]:
-            return session_id, str(self.dialog_status[session_id]), 1
-
-        if query == "history":
+        if query == "`history":
             response = []
             for d in self.dialog_status[session_id].export_history():
                 response.append("## {}\t{}\t{}\t{}\t{}".format(d["session"], d["time"], d["topic"], d["utterance"], d["response"]))
@@ -203,7 +193,7 @@ class InteractSession:
 
         response, score = self.dialog_status[session_id].get_response(response_sentiment=response_sentiment, device=self.device)
 
-        if "SESSION_RESET" in self.dialog_status[session_id].current_status["entity"]:
+        if self.dialog_status[session_id].current_status["$SESSION_RESET"]:
             self._save_log(session_id, self.dialog_status[session_id])
             del self.dialog_status[session_id]
             return session_id, "reset the session", 1

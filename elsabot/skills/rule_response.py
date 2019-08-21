@@ -3,8 +3,7 @@
     Author: Pengjia Zhu (zhupengjia@gmail.com)
     Response skill for rule-based chatbot
 """
-import numpy, pandas, random, re
-from sklearn.metrics.pairwise import cosine_distances
+import numpy, re
 from nlptools.text.docsim import WMDSim
 from nlptools.text.embedding import Embedding
 from nlptools.text.tokenizer import format_sentence
@@ -40,7 +39,7 @@ class RuleResponse(SkillBase):
                 - current_status: dictionary of status, generated from Dialog_Status module
         """
         entity_mask = numpy.ones((len(self.dialogflow.entity_maskdict),1), 'bool_')
-        for e in current_status["entity"]:
+        for e in current_status:
             if e in self.dialogflow.entity_maskdict:
                 entity_mask[self.dialogflow.entity_maskdict[e], 0] = False #mask for response choose
         #calculate response mask
@@ -50,9 +49,9 @@ class RuleResponse(SkillBase):
         mask_notneed = numpy.logical_not(mask_notneed)
         mask = mask_need * mask_notneed
 
-        if "childid_"+self.skill_name in current_status\
-           and isinstance(current_status["childid_"+self.skill_name], numpy.ndarray):
-            mask = mask * current_status["childid_"+self.skill_name]
+        if self.skill_name in current_status["$CHILD_ID"]\
+           and isinstance(current_status["$CHILD_ID"][self.skill_name], numpy.ndarray):
+            mask = mask * current_status["$CHILD_ID"][self.skill_name]
 
         return mask.astype("float32")
 
@@ -67,11 +66,11 @@ class RuleResponse(SkillBase):
             Output:
                 - response, string
         """
-        if entity["RESPONSE"] is not None:
-            response = entity["RESPONSE"]
+        if entity["$RESPONSE"] is not None:
+            response = entity["$RESPONSE"]
         else:
             response = self.dialogflow.get_response(response_id)
-        if entity is not None:
+        if entity and response and isinstance(response, str):
             response = response.format(**entity)
         return response
 
@@ -85,26 +84,33 @@ class RuleResponse(SkillBase):
         """
         # for multi response ids
         if isinstance(response_id, (numpy.ndarray, list)):
-            current_status['childid_' + self.skill_name] = -10000
-            current_status['response_' + self.skill_name] = response_id
+            current_status['$CHILD_ID'][self.skill_name] = [-10000]
+            current_status['$TENSOR_RESPONSE'][self.skill_name] = response_id
             questions = [self.dialogflow.get_usersays(i) for i in response_id]
             questions = [" {}: {}".format(q[1], q[0]) for q in zip(questions, range(len(questions)))]
-            current_status["entity"]["RESPONSE"] = self.confuse_reply + "\n{}".format("\n".join(questions))
-            current_status["entity"]["UTTERANCE_OLD"] = current_status["entity"]["UTTERANCE"]
+            current_status["$RESPONSE"] = self.confuse_reply + "\n{}".format("\n".join(questions))
+            current_status["$UTTERANCE_LAST"] = current_status["$UTTERANCE"]
+            current_status["$TOPIC_LAST"] = current_status["$TOPIC"]
             return current_status
 
         # function call
+        current_status['$TENSOR_RESPONSE'][self.skill_name] = response_id
         func_need = self.dialogflow.get_action(response_id)
         if func_need is not None:
             for funcname in func_need:
-                if not funcname in self.dialogflow.actions:
+                if not funcname in dir(self.dialogflow.actions):
                     continue
-                entities_get = self.dialogflow.actions[funcname](current_status["entity"])
+                try:
+                    entities_get = self.dialogflow.actions[funcname](current_status)
+                except Exception as err:
+                    # return traceback information
+                    current_status["$RESPONSE"] = "Error while processing user-defined function: " + str(err)
+                    current_status["$RESPONSE_SCORE"] = 1
+                    return current_status
                 for e in entities_get:
-                    current_status["entity"][e] = entities_get[e]
-        current_status['response_' + self.skill_name] = response_id
-        current_status["entity"]["RESPONSE"] = self.get_response_by_id(response_id, entity=current_status["entity"])
-        current_status['childid_' + self.skill_name] = self.dialogflow.dialogs.loc[response_id, 'child_id']
+                    current_status[e] = entities_get[e]
+        current_status["$RESPONSE"] = self.get_response_by_id(response_id, entity=current_status)
+        current_status['$CHILD_ID'][self.skill_name] = self.dialogflow.dialogs.loc[response_id, 'child_id']
         return current_status
 
     def init_model(self, device='cpu', prefilter=500, score_tolerate=0.01, min_score=0.7, believe_score=0.85, confuse_reply="Please select:", **args):
@@ -154,15 +160,17 @@ class RuleResponse(SkillBase):
                 - incre_state: incremental state, default is None
         '''
         # for special interaction
-        if "childid_" + self.skill_name in current_status and current_status["childid_" + self.skill_name] == -10000:
-            response_id = re.sub("\D", "", current_status["entity"]["UTTERANCE"])
+        if self.skill_name in current_status["$CHILD_ID"]\
+           and current_status["$CHILD_ID"][self.skill_name] is not None\
+           and -10000 in current_status["$CHILD_ID"][self.skill_name]:
+            response_id = re.sub("\D", "", current_status["$UTTERANCE"])
             if len(response_id) < 1:
                 return self.get_fallback(current_status)
             response_id = int(response_id)
-            if response_id >= 0 and response_id <= len(current_status['response_' + self.skill_name]):
-                response_id = current_status['response_' + self.skill_name][response_id]
-                current_status['response_' + self.skill_name] = response_id
-                usersay = current_status['entity']["UTTERANCE_OLD"]
+            if response_id >= 0 and response_id <= len(current_status['$TENSOR_RESPONSE'][self.skill_name]):
+                response_id = current_status['$TENSOR_RESPONSE'][self.skill_name][response_id]
+                current_status['$TENSOR_RESPONSE'][self.skill_name] = response_id
+                usersay = current_status["$UTTERANCE_LAST"]
                 self.dialogflow.add_usersay(response_id, usersay)
                 _tmp = format_sentence(usersay,
                                        vocab=self.vocab,
@@ -190,12 +198,11 @@ class RuleResponse(SkillBase):
         # search by word embedding
         utterance_embedding = self.similarity.get_embedding(utterance, utterance_mask)
 
-        response_mask = status_data["response_mask_"+self.skill_name].data[0].cpu().detach().numpy().astype("bool_")
+        response_mask = status_data["$TENSOR_RESPONSE_MASK_"+self.skill_name].data[0].cpu().detach().numpy().astype("bool_")
         response_mask = response_mask[self.usersays_index["ids"]]
 
         filtered_data = {"user_emb":self.usersays_index["user_emb"][response_mask*filter_idx],
                          "ids":self.usersays_index["ids"][response_mask*filter_idx]}
-
         if len(filtered_data["ids"]) < 1:
             return self.get_fallback(current_status)
 

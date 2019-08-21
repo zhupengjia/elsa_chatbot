@@ -51,8 +51,8 @@ class GenerativeTracker(nn.Module):
             self.encoder = shared_layers["encoder"]
         if encoder_freeze: self.encoder.freeze()
 
-        self.response_key = 'response_' + skill_name
-        self.mask_key = 'response_mask_' + skill_name
+        self.response_key = '$TENSOR_RESPONSE_' + skill_name
+        self.mask_key = '$TENSOR_RESPONSE_MASK_' + skill_name
 
         embedding_dim = self.encoder.config.hidden_size
         self.num_embeddings = self.encoder.config.vocab_size

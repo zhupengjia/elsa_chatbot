@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-import copy
+import copy, ipdb
+from ..skills.cmd_response import CMDResponse
 
 """
     Author: Pengjia Zhu (zhupengjia@gmail.com)
@@ -7,14 +8,12 @@ import copy
 
 
 class TopicManager:
-    def __init__(self, config=None):
+    def __init__(self):
         """
             Topic Manager to manage skills
         """
-        self.skills = {}
+        self.skills = {"cmd": CMDResponse("cmd")}
         self.skill_names = []
-        self.skill_names_bak = None
-        self.stradegy = config.strategy if config else "current"
 
     def register(self, skill_name, skill_instance):
         """
@@ -34,8 +33,8 @@ class TopicManager:
             Input:
                 - current_status: dictionary of status, generated from Dialog_Status module
         """
-        for s in self.skill_names:
-            current_status["response_mask_" + s] = \
+        for s in current_status["$TOPIC_LIST"]:
+            current_status["$TENSOR_RESPONSE_MASK"][s] = \
                     self.skills[s].update_mask(current_status)
         return current_status
 
@@ -47,16 +46,22 @@ class TopicManager:
                 - response_value: response target value
                 - current_status: dictionary of status, generated from dialog_status module
         """
-        current_status["entity"]["RESPONSE"] = None # clear response
+        current_status["$RESPONSE"] = None # clear response
         if response_value is not None:
-            current_status = self.skills[current_status["topic"]].update_response(response_value, current_status)
+            current_status = self.skills[current_status["$TOPIC"]].update_response(response_value, current_status)
+        return current_status
+
+    def redirect_message(self, current_status):
+        current_status["$RESPONSE"] = current_status["$UTTERANCE"]
+        current_status["$SESSION"] = current_status["$REDIRECT_SESSION"]
+        current_status["$RESPONSE_SCORE"] = 1
         return current_status
 
     def get_topic(self, current_status=None):
         """
             Todo: will use classification method to choose topic
         """
-        return current_status["topic"]
+        return current_status["$TOPIC"]
 
     def get_response(self, current_data, current_status, incre_state=None, **args):
         """
@@ -68,31 +73,57 @@ class TopicManager:
                 - incre_state: incremental state, default is None
 
         """
-        old_skill = current_status["topic"]
-        if self.stradegy == "current" and len(self.skill_names)>1:
-            # current skill first
-            if self.skill_names_bak is not None:
-                self.skill_names = copy.deepcopy(self.skill_names_bak)
-            else:
-                self.skill_names_bak = copy.deepcopy(self.skill_names)
+        old_skill = current_status["$TOPIC"]
+        skill_names = copy.deepcopy(current_status["$TOPIC_LIST"])
+        origin_skill_names = copy.deepcopy(current_status["$TOPIC_LIST"])
+        
+        finished_skill = set()
 
-            self.skill_names.remove(current_status["topic"])
-            self.skill_names.insert(0, current_status["topic"])
-        for skill in self.skill_names:
-            # response mask
-            current_status["topic"] = skill
-            response_value, response_score = self.skills[skill].get_response(current_data, current_status, incre_state=incre_state, **args)
-            if response_value is not None:
-                break
-        if response_value is None:
-            current_status["topic"] = old_skill
-            current_status["entity"]["RESPONSE"] = ":)"
-            current_status["entity"]["RESPONSE_SCORE"] = 0
+        # CMD skill
+        response_value, response_score = self.skills["cmd"].get_response(current_data, current_status)
+        if response_value is not None:
+            current_status = self.skills["cmd"].update_response(response_value, current_status)
+            if current_status["$RESPONSE"] is not None:
+                return current_status
+
+        # check if redirect message
+        if current_status["$REDIRECT_SESSION"]:
+            current_status = self.redirect_message(current_status)
             return current_status
 
-        current_status["response_score_"+current_status["topic"]] = response_score
-        current_status["entity"]["RESPONSE_SCORE"] = response_score
-        return self.update_response(response_value, current_status)
+        while len(skill_names) > 0:
+            skill = skill_names[0]
+            if current_status["$TOPIC_LIST"] != origin_skill_names:
+                skill_names = copy.deepcopy(current_status["$TOPIC_LIST"])
+                origin_skill_names = copy.deepcopy(current_status["$TOPIC_LIST"])
+                continue
+            if skill in finished_skill:
+                skill_names.pop(0)
+                continue
+            if current_status["$TOPIC_NEXT"] and skill != current_status["$TOPIC_NEXT"]:
+                #check if TOPIC_NEXT in entity, if yes, will try to jump to that skill
+                finished_skill.add(skill)
+                skill_names.pop(0)
+                continue
+            current_status["$TOPIC"] = skill
+            # response mask
+            response_value, response_score = self.skills[skill].get_response(current_data, current_status, incre_state=incre_state, **args)
+            current_status["$TOPIC_NEXT"] = None #clear TOPIC_NEXT
+            current_status["$RESPONSE_SCORE"] = response_score
+            finished_skill.add(skill)
+            skill_names.pop(0)
+            if response_value is not None:
+                # get final response
+                current_status = self.update_response(response_value, current_status)
+                if current_status["$RESPONSE"] is not None:
+                    break
+        if response_value is None:
+            current_status["$TOPIC"] = old_skill
+            current_status["$RESPONSE"] = ":)"
+            current_status["$RESPONSE_SCORE"] = 0
+            return current_status
+
+        return current_status
 
     def add_response(self, response, current_status):
         """
@@ -103,7 +134,7 @@ class TopicManager:
                 - current_status: dictionary of status, generated from dialog_status module
 
         """
-        response_value = self.skills[current_status["topic"]][response]
+        response_value = self.skills[current_status["$TOPIC"]][response]
         if response_value is None:
             return None
         return self.update_response(response_value, current_status)

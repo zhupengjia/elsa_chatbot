@@ -30,10 +30,16 @@ class XMPPClient(ClientXMPP):
                 session_id, reply, score = self.session(question, session_id=from_client)
                 if isinstance(reply, dict):
                     for sid in reply:
-                        msg["from"] = sid
+                        if sid == from_client:
+                            msg.reply(reply[sid]).send()
+                        else:
+                            self.send_message(mto=sid, mbody=reply[sid])
                 else:
-                    msg["from"] = session_id
-                    msg.reply(reply).send()
+                    if session_id == from_client:
+                        msg.reply(reply).send()
+                    else:
+                        self.send_message(mto=session_id, mbody=reply)
+
         else:
             print(msg)
             msg.reply(msg["type"]).send()

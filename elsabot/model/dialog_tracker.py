@@ -62,8 +62,8 @@ class DialogTracker(nn.Module):
         self.num_hidden_layers = num_hidden_layers
         self.hidden_size = hidden_size
         self.num_responses = num_responses
-        self.response_key = 'response_' + skill_name
-        self.mask_key = 'response_mask_' + skill_name
+        self.response_key = '$TENSOR_RESPONSE_' + skill_name
+        self.mask_key = '$TENSOR_RESPONSE_MASK_' + skill_name
 
         fc_entity_layers = []
         for i in range(entity_layers-1, ):

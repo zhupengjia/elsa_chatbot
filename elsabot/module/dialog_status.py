@@ -6,6 +6,7 @@ import copy
 import numpy
 import torch
 import time
+import ipdb
 from torch.nn import functional as F
 from torch.nn.utils.rnn import pack_padded_sequence
 from nlptools.text.tokenizer import format_sentence
@@ -96,19 +97,31 @@ class DialogStatus:
         self.history_status = []
         self.sentiment_analyzer = sentiment_analyzer
 
+        self.special_entities = set(self.__init_status().keys())
+
+
     def __init_status(self):
-        initstatus = {"entity": {"RESPONSE":None,
-                                 "RESPONSE_SCORE":0,
-                                 "UTTERANCE":None},
-                      "entity_emb": None,
-                      "utterance": None,
-                      "utterance_mask": None,
-                      "sentiment": 0,
-                      "response_sentiment": 0,
-                      "topic": self.topic_manager.skill_names[0],
-                      "session": "default",
-                      "time": time.time()
-                      }
+        initstatus = {"$RESPONSE":None,
+                      "$RESPONSE_SCORE":0,
+                      "$UTTERANCE":None,
+                      "$UTTERANCE_LAST":None,
+                      "$TOPIC": self.topic_manager.skill_names[0],
+                      "$TOPIC_NEXT": None,
+                      "$TOPIC_LIST": self.topic_manager.skill_names,
+                      "$SESSION":"default",
+                      "$TIME": time.time(),
+                      "$SESSION_RESET": False, #will reset session if true
+                      "$REDIRECT_SESSION": None, #will redirect message to this userid if it is not None
+
+                      "$TENSOR_ENTITIES": None,
+                      "$TENSOR_UTTERANCE": None,
+                      "$TENSOR_UTTERANCE_MASK": None,
+                      "$TENSOR_RESPONSE": {},
+                      "$TENSOR_RESPONSE_MASK":{},
+                      "$CHILD_ID": {},
+                      "$SENTIMENT": 0,
+                      "$RESPONSE_SENTIMENT": 0
+                     }
         return initstatus
 
     @classmethod
@@ -127,14 +140,21 @@ class DialogStatus:
         """
             get current session id
         """
-        return self.current_status["session"]
+        return self.current_status["$SESSION"]
     
     @property
     def topic(self):
         """
             get current topic
         """
-        return self.current_status["topic"]
+        return self.current_status["$TOPIC"]
+
+    @property
+    def last_time(self):
+        """
+            Return the time of last response
+        """
+        return self.current_status["$TIME"]
 
     def add_utterance(self, utterance):
         """
@@ -149,8 +169,12 @@ class DialogStatus:
         """
         # get entities
         utterance = utterance.strip()
-        self.current_status["entity"]["UTTERANCE"] = utterance
-
+        self.current_status["$UTTERANCE"] = utterance
+        
+        if utterance[0] == "`":
+            # special commands
+            return True
+    
         if self.ner is None:
             utterance_replaced = utterance
         else:
@@ -158,9 +182,9 @@ class DialogStatus:
                                                         return_dict=True)
             for e in entities:
                 # only keep first value
-                self.current_status["entity"][e] = entities[e][0]
-            self.current_status["entity_emb"] =\
-                EntityDict.name2onehot(self.current_status["entity"].keys(),
+                self.current_status[e] = entities[e][0]
+            self.current_status["$TENSOR_ENTITY_EMB"] =\
+                EntityDict.name2onehot(set(self.current_status.keys())-self.special_entities,
                                        self.max_entity_types).astype("float32")
 
         # utterance to id
@@ -171,18 +195,16 @@ class DialogStatus:
         if u_and_mask is None:
             return None
 
-        self.current_status["utterance"], self.current_status["utterance_mask"] = u_and_mask
+        self.current_status["$TENSOR_UTTERANCE"], self.current_status["$TENSOR_UTTERANCE_MASK"] = u_and_mask
 
         # get topic
-        self.current_status["topic"] = self.topic_manager.get_topic(self.current_status)
+        #self.current_status["entity"]["TOPIC"] = self.topic_manager.get_topic(self.current_status)
 
         # get sentiment
-        self.current_status["sentiment"] = self.sentiment_analyzer(utterance)
-
+        self.current_status["$SENTIMENT"] = self.sentiment_analyzer(utterance)
         # response mask
         self.current_status = self.topic_manager.update_response_masks(
             self.current_status)
-
 
         return True
 
@@ -194,7 +216,7 @@ class DialogStatus:
                 - response: string
         """
         response = response.strip()
-        self.current_status["response_sentiment"] = self.sentiment_analyzer(response)
+        self.current_status["$RESPONSE_SENTIMENT"] = self.sentiment_analyzer(response)
         if self.ner is None:
             response_replaced = response
         else:
@@ -214,7 +236,7 @@ class DialogStatus:
                 - response_sentiment: wanted sentiment of response, default is 0
                 - device: "cpu" or "cuda:x"
         """
-        self.current_status["response_sentiment"] = response_sentiment
+        self.current_status["$RESPONSE_SENTIMENT"] = response_sentiment
         current_data = self.status2data()
         current_data.to(device)
         incre_state={}
@@ -223,16 +245,9 @@ class DialogStatus:
                                             self.current_status,
                                             incre_state=incre_state,
                                             **args)
-        self.current_status["time"] = time.time()
+        self.current_status["$TIME"] = time.time()
         self.history_status.append(copy.deepcopy(self.current_status))
-        return self.current_status["entity"]['RESPONSE'], self.current_status["entity"]['RESPONSE_SCORE']
-
-    @property
-    def last_time(self):
-        """
-            Return the time of last response
-        """
-        return self.current_status["time"]
+        return self.current_status['$RESPONSE'], self.current_status['$RESPONSE_SCORE']
 
     def export_history(self):
         """
@@ -240,11 +255,11 @@ class DialogStatus:
         """
         dialogs = []
         for s in self.history_status:
-            dialogs.append({"utterance": s['entity']['UTTERANCE'],
-                            "response": str(s['entity']['RESPONSE']),
-                            "time": s["time"],
-                            "session": str(s["session"]),
-                            "topic": s["topic"]})
+            dialogs.append({"utterance": s['$UTTERANCE'],
+                            "response": str(s['$RESPONSE']),
+                            "time": s["$TIME"],
+                            "session": str(s["$SESSION"]),
+                            "topic": s["$TOPIC"]})
         return dialogs
 
     def __str__(self):
@@ -297,28 +312,30 @@ class DialogStatus:
             reward_base = 0
 
         for i, s in enumerate(status_list):
-            status["entity"][i] = s["entity_emb"]
-            status["utterance"][i] = s["utterance"]
-            status["utterance_mask"][i] = s["utterance_mask"]
-            status["sentiment"][i, 0] = s["sentiment"]
-            status["sentiment"][i, 1] = s["response_sentiment"]
+            if s["$TENSOR_UTTERANCE"] is None:
+                continue
+            status["entity"][i] = s["$TENSOR_ENTITIES"]
+            status["utterance"][i] = s["$TENSOR_UTTERANCE"]
+            status["utterance_mask"][i] = s["$TENSOR_UTTERANCE_MASK"]
+            status["sentiment"][i, 0] = s["$SENTIMENT"]
+            status["sentiment"][i, 1] = s["$RESPONSE_SENTIMENT"]
             status["reward"][i, 0] =\
                 reward_base * self.rl_discount**(i+turn_start)
             for tk in skill_names:
-                for k in ["response_mask"]:
+                for k in ["$TENSOR_RESPONSE_MASK"]:
                     rkey = k+'_'+tk
-                    if rkey not in s:
+                    if tk not in s[k]:
                         continue
                     if rkey not in status:
-                        if isinstance(s[rkey], numpy.ndarray):
+                        if isinstance(s[k][tk], numpy.ndarray):
                             status[rkey] = numpy.repeat(
                                 numpy.expand_dims(
-                                    numpy.zeros_like(s[rkey]), axis=0),
+                                    numpy.zeros_like(s[k][tk]), axis=0),
                                 n_status, axis=0)
                         else:
                             status[rkey] = numpy.zeros((n_status, 1),
-                                                       type(s[rkey]))
-                    status[rkey][i] = s[rkey]
+                                                       type(s[k][tk]))
+                    status[rkey][i] = s[k][tk]
         status["reward"] = status["reward"]/(n_status+turn_start)
         return status
 

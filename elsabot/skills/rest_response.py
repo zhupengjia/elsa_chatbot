@@ -33,10 +33,10 @@ class RestResponse(SkillBase):
             return {"response": None, "score": 0}
 
     def update_response(self, response, current_status):
-        current_status['response_' + self.skill_name] = response
-        current_status["entity"]["RESPONSE"] = response
+        current_status['$TENSOR_RESPONSE'][self.skill_name] = response
+        current_status["$RESPONSE"] = response
         return current_status
 
     def get_response(self, status_data, current_status, incre_state=None, **args):
-        result = self.rest_post(current_status["entity"]["UTTERANCE"])
+        result = self.rest_post(current_status["$UTTERANCE"])
         return result["response"], result["score"]
