@@ -14,13 +14,19 @@ class CMDResponse(SkillBase):
         super().__init__(skill_name)
 
     def update_response(self, response, current_status):
+        current_status["$REDIRECT_SESSION"] = None
         utterance = current_status["$UTTERANCE"].strip()
         cmd = [s.strip() for s in re.split("\s", utterance) if s.strip()]
-        if cmd[0] in ["`clear", "`restart", "`exit", "`stop", "`quit", "`q"]:
+        if cmd[0] in ["`clear", "`restart", "`exit", "`stop", "`quit"]:
             current_status["$SESSION_RESET"] = True
-        elif cmd[0] in ["`redirect", "`connect"] and len(cmd) > 1:
-            current_status["$REDIRECT_SESSION"] = cmd[1]
-            current_status["$RESPONSE"] = "Connect to {}".format(cmd[1])
+        elif cmd[0] in ["`redirect", "`connect"]:
+            if len(cmd) > 1:
+                current_status["$REDIRECT_SESSION"] = cmd[1]
+                current_status["$RESPONSE"] = "Connect to {}".format(cmd[1])
+            else:
+                current_status["$REDIRECT_SESSION"] = None
+        elif cmd[0] in ["`list"]:
+            current_status["$RESPONSE"] = str("Available variables:\n {}".format("\n".join(list(current_status.keys()))))
         elif cmd[0] in ["`get"]:
             if len(cmd) < 2:
                 current_status["$RESPONSE"] = str(current_status)
@@ -34,7 +40,10 @@ class CMDResponse(SkillBase):
                 current_status["$RESPONSE"] = current_status[cmd[2:]]
             except:
                 current_status["$RESPONSE"] = traceback.format_exc()
-        elif cmd[0] in ["`h", "`help"]:
+        elif cmd[0] in ["`history"]:
+            history = "\n".join(["======{}\n- {}\n * {}".format(x[0], x[1], x[2]) for x in current_status["$HISTORY"]])
+            current_status["$RESPONSE"] = history
+        elif cmd[0] in ["`help"]:
             current_status["$RESPONSE"] = """
                 Commands:
                     `clear, `restart, `exit, `stop, `quit, `q: reset the session

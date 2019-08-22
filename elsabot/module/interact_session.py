@@ -178,15 +178,11 @@ class InteractSession:
             self._save_log(session_id, self.dialog_status[session_id])
             self.dialog_status[session_id] = self.new_dialog(session_id)
 
-        #special commands
-        if query == "`history":
-            response = []
-            for d in self.dialog_status[session_id].export_history():
-                response.append("## {}\t{}\t{}\t{}\t{}".format(d["session"], d["time"], d["topic"], d["utterance"], d["response"]))
-            return session_id, "\n".join(response), 1
-
         if len(query) < 1 or self.dialog_status[session_id].add_utterance(query) is None:
             return session_id, ":)", 0
+
+        #reset SESSION
+        self.dialog_status[session_id].current_status["$SESSION"] = session_id
 
         #automatic response sentiment with period
         response_sentiment = (int(time.time()%2419200)/2419200-0.5) * 0.6

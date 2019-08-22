@@ -6,6 +6,7 @@ from slixmpp import ClientXMPP
 class XMPPClient(ClientXMPP):
     def __init__(self, jid, password, session_config):
         ClientXMPP.__init__(self, jid, password)
+        self.jabber_id = jid
         self.add_event_handler("session_start", self.session_start)
         self.add_event_handler("message", self.message)
         self.config_path = session_config
@@ -32,16 +33,16 @@ class XMPPClient(ClientXMPP):
                     for sid in reply:
                         if sid == from_client:
                             msg.reply(reply[sid]).send()
-                        else:
+                        elif sid != self.jabber_id:
                             self.send_message(mto=sid, mbody=reply[sid])
                 else:
                     if session_id == from_client:
                         msg.reply(reply).send()
-                    else:
+                    elif session_id != self.jabber_id:
                         self.send_message(mto=session_id, mbody=reply)
 
         else:
-            print(msg)
+            #TODO, other type of messages
             msg.reply(msg["type"]).send()
 
 

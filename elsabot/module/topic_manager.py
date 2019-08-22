@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import copy, ipdb
+import copy
 from ..skills.cmd_response import CMDResponse
 
 """

@@ -5,7 +5,6 @@
     Reader for dialog flow excel format config
 '''
 import os, re, pandas, random, numpy
-import ipdb
 from nlptools.utils import decode_child_id, flat_list
 from nlptools.text.ngrams import Ngrams
 from nlptools.text import VecTFIDF

@@ -6,7 +6,6 @@ import copy
 import numpy
 import torch
 import time
-import ipdb
 from torch.nn import functional as F
 from torch.nn.utils.rnn import pack_padded_sequence
 from nlptools.text.tokenizer import format_sentence
@@ -105,6 +104,7 @@ class DialogStatus:
                       "$RESPONSE_SCORE":0,
                       "$UTTERANCE":None,
                       "$UTTERANCE_LAST":None,
+                      "$HISTORY": [],
                       "$TOPIC": self.topic_manager.skill_names[0],
                       "$TOPIC_NEXT": None,
                       "$TOPIC_LIST": self.topic_manager.skill_names,
@@ -246,6 +246,8 @@ class DialogStatus:
                                             incre_state=incre_state,
                                             **args)
         self.current_status["$TIME"] = time.time()
+        self.current_status["$HISTORY"].append([self.current_status["$TOPIC"], self.current_status["$UTTERANCE"], self.current_status["$RESPONSE"]])
+        self.current_status["$HISTORY"] = self.current_status["$HISTORY"][-5:]
         self.history_status.append(copy.deepcopy(self.current_status))
         return self.current_status['$RESPONSE'], self.current_status['$RESPONSE_SCORE']
 
