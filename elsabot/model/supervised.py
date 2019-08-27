@@ -5,6 +5,8 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm, trange
 from nlptools.text.ner import NER
 from nlptools.text.tokenizer import Tokenizer_BERT
+from pytorch_transformers.optimization import AdamW, WarmupLinearSchedule
+from tensorboardX import SummaryWriter
 from ..module.topic_manager import TopicManager
 from ..module.nltk_sentiment import NLTKSentiment
 from ..module.dialog_status import dialog_collate
@@ -17,10 +19,7 @@ from ..reader import ReaderXLSX
 
 
 class Supervised:
-    def __init__(self, reader,  batch_size=100, num_workers=1, epochs=1000, optimizer="adam",
-                 weight_decay=0, learning_rate=0.001, momentum=0.9, warmup_proportion=0.1,
-                 loss_scale=0, saved_model="model.pt",
-                 device='cpu', gpu_ids=None, save_per_epoch=1, **tracker_args):
+    def __init__(self, reader, skill_name, batch_size=100, num_workers=1, epochs=1000, optimizer="adam", weight_decay=0, learning_rate=0.001, momentum=0.9, warmup_steps=0, adam_epsilon=1e-8, loss_scale=0, fp16_opt_level='O1', max_grad_norm=1.0, saved_model="model.pt", device='cpu', gpu_ids=None, save_per_epoch=1, gradient_accumulation_steps=1, logging_steps=50, **tracker_args):
         """
             Supervised learning for chatbot
 
@@ -38,7 +37,7 @@ class Supervised:
         """
         self.reader = reader
         topic_manager = self.reader.topic_manager
-        self.skill = topic_manager.skills[topic_manager.current_skill]
+        self.skill = topic_manager.skills[skill_name]
         self.save_per_epoch = save_per_epoch
 
         self.saved_model = saved_model
@@ -49,8 +48,13 @@ class Supervised:
         self.epochs = epochs
         self.optimizer_type = optimizer
         self.momentum = momentum
-        self.warmup_proportion = warmup_proportion
+        self.adam_epsilon = adam_epsilon
+        self.warmup_steps = warmup_steps
+        self.fp16_opt_level = fp16_opt_level
+        self.max_grad_norm = max_grad_norm
         self.loss_scale = loss_scale
+        self.gradient_accumulation_steps = gradient_accumulation_steps
+        self.logging_steps = logging_steps
         self.device = torch.device(device) if torch.cuda.is_available() else torch.device('cpu')
         self.gpu_ids = gpu_ids
 
@@ -137,36 +141,35 @@ class Supervised:
         self.skill.init_model(saved_model=self.saved_model, device=str(self.device), gpu_ids=self.gpu_ids, **args)
 
         self.fp16 = False
-        parameter_groups = [p for p in self.skill.model.parameters() if p.requires_grad]
+
+        param_optimizer = list(self.skill.model.named_parameters())
+        no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
+        optimizer_grouped_parameters = [
+            {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': 0.01},
+            {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
+            ]
+
+
+        num_train_optimization_steps = int(len(self.reader) / self.batch_size) * self.epochs
         if self.optimizer_type.lower() == "adam":
-            self.optimizer = optim.Adam(parameter_groups, lr=self.learning_rate,
-                                        weight_decay=self.weight_decay)
+            self.optimizer = optim.Adam(optimizer_grouped_parameters, lr=self.learning_rate, eps=self.adam_epsilon, weight_decay=self.weight_decay)
         elif self.optimizer_type.lower() == "sgd":
-            self.optimizer = optim.SGD(parameter_groups, lr=self.learning_rate,
+            self.optimizer = optim.SGD(optimizer_grouped_parameters, lr=self.learning_rate,
                                        momentum=self.momentum)
-        elif self.optimizer_type.lower() in ["fp16", "bertadam"]:
-            from apex.optimizers import FP16_Optimizer
-            from apex.optimizers import FusedAdam
-            from pytorch_pretrained_bert.optimization import BertAdam, WarmupLinearSchedule
-            num_train_optimization_steps = int(len(self.reader) / self.batch_size) * self.epochs
+        elif self.optimizer_type.lower() in ["fp16", "adamw"]:
+            from apex import amp
+            self.optimizer = AdamW(optimizer_grouped_parameters,
+                       lr=self.learning_rate,
+                       eps=self.adam_epsilon)
             if self.optimizer_type.lower() == "fp16":
                 self.fp16 = True
-                self.skill.model.half()
-                self.optimizer = FusedAdam(parameter_groups,
-                                      lr=self.learning_rate,
-                                      bias_correction=False,
-                                      max_grad_norm=1.0)
-                if self.loss_scale == 0:
-                    self.optimizer = FP16_Optimizer(self.optimizer, dynamic_loss_scale=True)
-                else:
-                    self.optimizer = FP16_Optimizer(self.optimizer, static_loss_scale=self.loss_scale)
-                self.warmup_linear = WarmupLinearSchedule(warmup=self.warmup_proportion,
-                                                 t_total=num_train_optimization_steps)
-            else:
-                self.optimizer = BertAdam(parameter_groups,
-                                 lr=self.learning_rate,
-                                 warmup=self.warmup_proportion,
-                                 t_total=num_train_optimization_steps)
+                self.skill.model, self.optimizer = amp.initialize(self.skill.model, self.optimizer, opt_level=self.fp16_opt_level)
+
+        self.scheduler = WarmupLinearSchedule(self.optimizer, warmup_steps=self.warmup_steps, t_total=num_train_optimization_steps)
+    
+        # multi-gpu training (should be after apex fp16 initialization)
+        if self.gpu_ids and len(self.gpu_ids) > 1:
+            self.skill.model = torch.nn.DataParallel(self.skill.model)
 
         print('Optimizer: {} with learning_rate: {}'.format(self.optimizer_type, self.learning_rate))
 
@@ -181,13 +184,17 @@ class Supervised:
             self.start_epoch = self.skill.checkpoint['epoch']
             self.best_loss = self.skill.checkpoint["loss"] if "loss" in self.skill.checkpoint else 1e9
 
-        self.generator = DataLoader(self.reader, batch_size=self.batch_size, collate_fn=dialog_collate,
-                                    shuffle=True, num_workers=self.num_workers)
+        self.generator = DataLoader(self.reader, batch_size=self.batch_size, collate_fn=dialog_collate, shuffle=True, num_workers=self.num_workers)
 
     def train(self):
+        if self.fp16:
+            from apex import amp
         self.skill.model.train() # set train flag
         ave_loss = []
-        tot_it = -1
+        global_steps = -1
+        tb_writer = SummaryWriter()
+        tr_loss, logging_loss = 0.0, 0.0
+        self.skill.model.zero_grad()
         for epoch in trange(self.start_epoch, self.epochs, desc="Epoch"):
             pbar = tqdm(self.generator, desc="Iteration")
             for step, d in enumerate(pbar):
@@ -202,24 +209,36 @@ class Supervised:
                     continue
 
                 pbar.set_description('loss:{}'.format(loss.item()))
-                
+              
+                if self.gpu_ids and len(self.gpu_ids) > 1:
+                    loss = loss.mean()
+                if self.gradient_accumulation_steps > 1:
+                    loss = loss/self.gradient_accumulation_steps
+
                 if self.fp16:
-                    self.optimizer.backward(loss)
+                    with amp.scale_loss(loss, self.optimizer) as scaled_loss:
+                        scaled_loss.backward()
+                    torch.nn.utils.clip_grad_norm_(amp.master_params(self.optimizer), self.max_grad_norm)
                 else:
                     loss.backward()
+                    torch.nn.utils.clip_grad_norm_(self.skill.model.parameters(), self.max_grad_norm)
+                
+                tr_loss += loss.item()
 
-                self.optimizer.step()
-                self.optimizer.zero_grad()
-                ave_loss.append(loss.item())
+                if (step +1) % self.gradient_accumulation_steps == 0:
+                    self.optimizer.step()
+                    self.scheduler.step()
+                    self.optimizer.zero_grad()
+                    
+                    ave_loss.append(loss.item())
+                    
+                    if self.logging_steps > 0 and global_steps % self.logging_steps == 0:
+                        tb_writer.add_scalar('lr', self.scheduler.get_lr()[0], global_steps)
+                        tb_writer.add_scalar('loss', (tr_loss - logging_loss)/self.logging_steps, global_steps)
+                        logging_loss = tr_loss
 
-                if self.fp16:
-                    lr_this_step = self.learning_rate * self.warmup_linear.get_lr(tot_it, self.warmup_proportion)
-                    for param_group in self.optimizer.param_groups:
-                        param_group['lr'] = lr_this_step
-
-             
                 # save
-                if (tot_it+1)%self.save_per_epoch == 0 and numpy.nanmean(ave_loss) < self.best_loss:
+                if (global_steps+1)%self.save_per_epoch == 0 and len(ave_loss)>0 and numpy.nanmean(ave_loss) < self.best_loss:
                     self.best_loss = loss
                     state = {
                         'state_dict': self.skill.model.state_dict(),
@@ -231,4 +250,7 @@ class Supervised:
                     }
                     torch.save(state, self.saved_model)
                     ave_loss = []
-                tot_it += 1
+                global_steps += 1
+
+
+        tb_writer.close()

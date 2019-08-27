@@ -169,6 +169,9 @@ class DialogStatus:
         """
         # get entities
         utterance = utterance.strip()
+        if len(utterance) < 1:
+            return None
+
         self.current_status["$UTTERANCE"] = utterance
         
         if utterance[0] == "`":
@@ -324,7 +327,7 @@ class DialogStatus:
             status["reward"][i, 0] =\
                 reward_base * self.rl_discount**(i+turn_start)
             for tk in skill_names:
-                for k in ["$TENSOR_RESPONSE_MASK"]:
+                for k in ["$TENSOR_RESPONSE_MASK", "$TENSOR_RESPONSE"]:
                     rkey = k+'_'+tk
                     if tk not in s[k]:
                         continue
@@ -334,10 +337,11 @@ class DialogStatus:
                                 numpy.expand_dims(
                                     numpy.zeros_like(s[k][tk]), axis=0),
                                 n_status, axis=0)
-                        else:
+                        elif isinstance(s[k][tk], (int, float)):
                             status[rkey] = numpy.zeros((n_status, 1),
                                                        type(s[k][tk]))
-                    status[rkey][i] = s[k][tk]
+                    if rkey in status:
+                        status[rkey][i] = s[k][tk]
         status["reward"] = status["reward"]/(n_status+turn_start)
         return status
 

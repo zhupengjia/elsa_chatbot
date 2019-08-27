@@ -7,7 +7,7 @@
 import os, re, pandas, random, numpy
 from nlptools.utils import decode_child_id, flat_list
 from nlptools.text.ngrams import Ngrams
-from nlptools.text import VecTFIDF
+from nlptools.text import TFIDF
 from nlptools.text.tokenizer import Tokenizer_Simple
 from nlptools.text.ner import NER
 
@@ -157,7 +157,7 @@ class ReaderXLSX:
                 data_flat.append(r)
                 ids_flat.append(ids[i])
         vocab = Ngrams(ngrams=3)
-        search_index = VecTFIDF(vocab)
+        search_index = TFIDF(vocab.vocab_size)
         if len(data_flat)>0 and isinstance(data_flat[0], str):
             data_flat = [self._mixed_tokenizer(d) for d in data_flat]
         data_ids = [flat_list(vocab(d).values()) for d in data_flat]
