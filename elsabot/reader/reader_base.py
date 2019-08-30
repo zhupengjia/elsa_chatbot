@@ -52,37 +52,16 @@ class ReaderBase(Dataset):
     @staticmethod
     def clean_text(text):
         '''Clean text by removing unnecessary characters and altering the format of words.'''
-        text = re.sub(r"([%s])+" % punctuation, r"\1", text.lower())
-        text = re.sub(r"i' ?m", "i am", text)
-        text = re.sub(r"he' ?s", "he is", text)
-        text = re.sub(r"she' ?s", "she is", text)
-        text = re.sub(r"it' ?s", "it is", text)
-        text = re.sub(r"that' ?s", "that is", text)
-        text = re.sub(r"there' ?s", "that is", text)
-        text = re.sub(r"what' ?s", "that is", text)
-        text = re.sub(r"where' ?s", "where is", text)
-        text = re.sub(r"how' ?s", "how is", text)
-        text = re.sub(r"let' ?s", "let us", text)
-        text = re.sub(r"\' ?ll", " will", text)
-        text = re.sub(r"\' ?ve", " have", text)
-        text = re.sub(r"\' ?re", " are", text)
-        text = re.sub(r"\' ?d", " would", text)
-        text = re.sub(r"\' ?re", " are", text)
-        text = re.sub(r"\' ?il", " will", text)
-        text = re.sub(r"won' ?t", "will not", text)
-        text = re.sub(r"can' ?t", "cannot", text)
-        text = re.sub(r"n' ?t", " not", text)
-        text = re.sub(r"n'", "ng", text)
-        text = re.sub(r"' ?bout", "about", text)
-        text = re.sub(r"' ?til", "until", text)
+        text = re.sub(r"([%s])+" % punctuation, r"\1", text)
         text = re.sub("(@\S*|\S*&\S*|#\S*|http\S*|\S*[\(\)\[\]\*\_]\S*)", "", text)
         text = re.sub("\S{20,}", "", text)
         text = re.sub(r'(<!--.*?-->|<[^>]*>|\. ?\. ?\.)', "", text)
         text = re.sub(r"[-()\"#/@;:<>{}`+=~|]", "", text)
         text = re.sub("[^a-zA-Z0-9%s ]"%punctuation, "", text)
         text = re.sub("^[%s]*"%punctuation, "", text)
+        text = re.sub(r"([{}])(\w)".format(punctuation), r"\1 \2", text)
         text = " ".join([s.strip() for s in re.split("\s", text) if s.strip()])
-        return text
+        return text.strip()
 
     @staticmethod
     def add_trace(dset, arr):

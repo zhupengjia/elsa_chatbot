@@ -1,7 +1,6 @@
 #!/usr/bin/env python
-import torch, math, numpy, sys
+import torch, numpy, ipdb
 import torch.nn as nn
-from torch.nn.utils.rnn import PackedSequence
 from nlptools.zoo.encoders.transformer import TransformerDecoder, TransformerEncoder
 
 '''
@@ -18,6 +17,9 @@ class GenerativeTracker(nn.Module):
             - decoder_hidden_layers (int, optional): number of decoder layers, used for training only, default is 1
             - decoder_attention_heads (int, optional): number of decoder heads, used for training only, default is 2
             - decoder_hidden_size (int, optional): decoder hidden size, used for training only, default is 1024
+            - max_entity_types: int, default is 1024
+            - entity_layers: int, default is 2
+            - entity_emb_dim: int, dimention of entity embedding, default is 20
             - dropout (float, option): dropout, default is 0
             - pad_id (int, option): PAD ID, used for prediction only, default is 0
             - bos_id (int, option): BOS ID, used for prediction only, default is 1
@@ -30,8 +32,10 @@ class GenerativeTracker(nn.Module):
     def __init__(self, skill_name, shared_layers=None, bert_model_name=None,
                  vocab_size=30522, encoder_hidden_layers=5, encoder_attention_heads=8,
                  encoder_hidden_size=768, encoder_intermediate_size=3072,
-                 encoder_freeze=False, max_position_embeddings=512, decoder_hidden_layers=5,
-                 decoder_attention_heads=8, decoder_hidden_size=2048, max_seq_len=50,
+                 encoder_freeze=False, max_position_embeddings=512,
+                 decoder_hidden_layers=5, decoder_attention_heads=8,
+                 decoder_hidden_size=2048, max_seq_len=50, shared_embed=True,
+                 max_entity_types=1024, entity_layers=2, entity_emb_dim=20,
                  dropout=0, pad_id=0, bos_id=1, eos_id=2, unk_id=3, beam_size=1,
                  len_penalty=1., unk_penalty=1., **args):
         super().__init__()
@@ -56,18 +60,35 @@ class GenerativeTracker(nn.Module):
 
         embedding_dim = self.encoder.config.hidden_size
         self.num_embeddings = self.encoder.config.vocab_size
-        self.control_layer = nn.Linear(embedding_dim+1, embedding_dim)
+        self.control_layer = nn.Linear(embedding_dim+entity_emb_dim+1, embedding_dim)
         self.activation = nn.Tanh()
 
         self.decoder = TransformerDecoder(self.encoder.embeddings,
                                           num_hidden_layers=decoder_hidden_layers,
                                           num_attention_heads=decoder_attention_heads,
                                           intermediate_size=decoder_hidden_size,
+                                          shared_embed=shared_embed,
                                           dropout=dropout)
 
-        self.config = {"encoder":self.encoder.config.to_dict(), "decoder":self.decoder.config}
+        self.config = {"encoder":self.encoder.config.to_dict(),
+                       "decoder":self.decoder.config,
+                       "hidden":{"max_entity_types":max_entity_types,
+                                 "entity_layers":entity_layers,
+                                 "entity_emb_dim":entity_emb_dim
+                                }
+                      }
         
         print("model config", self.config)
+        
+        fc_entity_layers = []
+        for i in range(entity_layers-1, ):
+            fc_entity_layers.append(nn.Linear(max_entity_types, max_entity_types))
+            fc_entity_layers.append(nn.ReLU())
+            fc_entity_layers.append(nn.Dropout(dropout))
+        fc_entity_layers.append(nn.Linear(max_entity_types, entity_emb_dim))
+        fc_entity_layers.append(nn.ReLU())
+        fc_entity_layers.append(nn.Dropout(dropout))
+        self.fc_entity = nn.Sequential(*fc_entity_layers)
 
         self.pad_id = pad_id
         self.bos_id = bos_id
@@ -79,18 +100,23 @@ class GenerativeTracker(nn.Module):
         self.loss_function = nn.NLLLoss(ignore_index=0) #ignore padding loss
         self.logsoftmax = nn.LogSoftmax(dim=2)
 
-    def dialog_embedding(self, utterance, utterance_mask, sentiment):
+    def dialog_embedding(self, utterance, utterance_mask, sentiment, entity):
         #utterance embedding
         sequence_out, encoder_hidden = self.encoder(utterance, attention_mask=utterance_mask)
-        
+
+        #entity name embedding
+        entity_emb = self.activation(self.fc_entity(entity))
+
         #sentiment
         sentiment = sentiment[:, 1:] #only use response sentiment
-        sentiment = sentiment.unsqueeze(1).expand(-1, sequence_out.size(1), -1)
+
+        add_hidden = torch.cat((sentiment, entity_emb), 1)
+        add_hidden = add_hidden.unsqueeze(1).expand(-1, sequence_out.size(1), -1)
 
         #combine together
-        sequence_out = torch.cat((sequence_out, sentiment), 2)
+        sequence_out = torch.cat((sequence_out, add_hidden), 2)
         sequence_out = self.activation(self.control_layer(sequence_out))
-
+        
         return sequence_out, encoder_hidden
 
     def beam_search(self, encoder_out, utterance_mask, incre_state=None):
@@ -198,10 +224,9 @@ class GenerativeTracker(nn.Module):
         return output, scores
 
     def forward(self, dialogs, incre_state=None):
-        pack_batch = dialogs['utterance'].batch_sizes
         #encoder
         utterance_mask = dialogs["utterance_mask"]
-        encoder_out, _ = self.dialog_embedding(dialogs['utterance'].data, utterance_mask.data, dialogs["sentiment"].data)
+        encoder_out, _ = self.dialog_embedding(dialogs['utterance'].data, utterance_mask.data, dialogs["sentiment"].data, dialogs['entity'].data)
 
         #decoder
         if self.training:

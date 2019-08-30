@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import torch, numpy, math, os
+import torch, numpy, math, os, copy
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm, trange
@@ -85,7 +85,8 @@ class Supervised:
         reader_cls = getattr(Reader, config.reader.wrapper)
 
         topic_manager = TopicManager()
-        response_params = config.skill
+        response_params = copy.deepcopy(config.skill)
+        
         if "dialogflow" in config.skill:
             dialogflow = ReaderXLSX(config.skill.dialogflow,
                                     tokenizer=tokenizer,
@@ -203,17 +204,17 @@ class Supervised:
                 d.to(self.device)
 
                 _, loss = self.skill.get_response(d)
-                
+
                 if math.isnan(loss.item()):
                     print("Warning!! nan loss!")
                     continue
 
-                pbar.set_description('loss:{}'.format(loss.item()))
-              
                 if self.gpu_ids and len(self.gpu_ids) > 1:
                     loss = loss.mean()
                 if self.gradient_accumulation_steps > 1:
                     loss = loss/self.gradient_accumulation_steps
+
+                pbar.set_description('loss:{}'.format(loss.item()))
 
                 if self.fp16:
                     with amp.scale_loss(loss, self.optimizer) as scaled_loss:
@@ -222,16 +223,16 @@ class Supervised:
                 else:
                     loss.backward()
                     torch.nn.utils.clip_grad_norm_(self.skill.model.parameters(), self.max_grad_norm)
-                
+
                 tr_loss += loss.item()
 
                 if (step +1) % self.gradient_accumulation_steps == 0:
                     self.optimizer.step()
                     self.scheduler.step()
                     self.optimizer.zero_grad()
-                    
+
                     ave_loss.append(loss.item())
-                    
+
                     if self.logging_steps > 0 and global_steps % self.logging_steps == 0:
                         tb_writer.add_scalar('lr', self.scheduler.get_lr()[0], global_steps)
                         tb_writer.add_scalar('loss', (tr_loss - logging_loss)/self.logging_steps, global_steps)

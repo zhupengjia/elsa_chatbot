@@ -2,10 +2,7 @@
 """
     Author: Pengjia Zhu (zhupengjia@gmail.com)
 """
-import copy
-import numpy
-import torch
-import time
+import copy, numpy, torch, time, re, ipdb
 from torch.nn import functional as F
 from torch.nn.utils.rnn import pack_padded_sequence
 from nlptools.text.tokenizer import format_sentence
@@ -124,6 +121,36 @@ class DialogStatus:
                      }
         return initstatus
 
+    def clean_text(self, text):
+        text = text.lower()
+        text = re.sub(r"i' ?m", "i am", text)
+        text = re.sub(r"he' ?s", "he is", text)
+        text = re.sub(r"she' ?s", "she is", text)
+        text = re.sub(r"it' ?s", "it is", text)
+        text = re.sub(r"that' ?s", "that is", text)
+        text = re.sub(r"there' ?s", "there is", text)
+        text = re.sub(r"what' ?s", "what is", text)
+        text = re.sub(r"where' ?s", "where is", text)
+        text = re.sub(r"how' ?s", "how is", text)
+        text = re.sub(r"let' ?s", "let us", text)
+        text = re.sub(r"you' ?d", "you had", text)
+        text = re.sub(r"i' ?d", "i had", text)
+        text = re.sub(r"\' ?ll", " will", text)
+        text = re.sub(r"\' ?ve", " have", text)
+        text = re.sub(r"\' ?re", " are", text)
+        text = re.sub(r"\' ?d", " would", text)
+        text = re.sub(r"\' ?re", " are", text)
+        text = re.sub(r"\' ?il", " will", text)
+        text = re.sub(r"won' ?t", "will not", text)
+        text = re.sub(r"didn' ?t", "did not", text)
+        text = re.sub(r"wasn' ?t", "was not", text)
+        text = re.sub(r"can' ?t", "cannot", text)
+        text = re.sub(r"n' ?t", " not", text)
+        text = re.sub(r"n'", "ng", text)
+        text = re.sub(r"' ?bout", "about", text)
+        text = re.sub(r"' ?til", "until", text)
+        return text
+
     @classmethod
     def new_dialog(cls, vocab, tokenizer, ner, topic_manager,
                    sentiment_analyzer, max_seq_len=100,
@@ -174,24 +201,21 @@ class DialogStatus:
 
         self.current_status["$UTTERANCE"] = utterance
         
-        if utterance[0] == "`":
-            # special commands
-            return True
-    
         if self.ner is None:
             utterance_replaced = utterance
         else:
-            entities, utterance_replaced = self.ner.get(utterance,
-                                                        return_dict=True)
+            entities, utterance_replaced = self.ner.get(utterance, return_dict=True)
             for e in entities:
                 # only keep first value
                 self.current_status[e] = entities[e][0]
-            self.current_status["$TENSOR_ENTITY_EMB"] =\
+            self.current_status["$TENSOR_ENTITIES"] =\
                 EntityDict.name2onehot(set(self.current_status.keys())-self.special_entities,
                                        self.max_entity_types).astype("float32")
+        
+        #print("utterance", utterance_replaced, entities, sep=" | ")
 
         # utterance to id
-        u_and_mask = format_sentence(utterance_replaced,
+        u_and_mask = format_sentence(self.clean_text(utterance_replaced),
                                 vocab=self.vocab,
                                 tokenizer=self.tokenizer,
                                 max_seq_len=self.max_seq_len)
@@ -225,7 +249,8 @@ class DialogStatus:
         else:
             _, response_replaced = self.ner.get(response, return_dict=True)
 
-        _tmp = self.topic_manager.add_response(response_replaced,
+        #print("response", response_replaced, sep=" | ")
+        _tmp = self.topic_manager.add_response(self.clean_text(response_replaced),
                                             self.current_status)
         if _tmp is None: return
         self.current_status = _tmp

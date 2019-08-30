@@ -4,7 +4,7 @@
 
     Reader for dialog flow excel format config
 '''
-import os, re, pandas, random, numpy
+import os, re, pandas, random, numpy, ipdb
 from nlptools.utils import decode_child_id, flat_list
 from nlptools.text.ngrams import Ngrams
 from nlptools.text import TFIDF
@@ -190,7 +190,7 @@ class ReaderXLSX:
             print(error)
             return None
         entities = {"keywords":None, "regex":None, "ner":None, "ner_name_replace":None}
-        if entities_table.shape[0] < 3:
+        if entities_table.shape[0] < 2 or entities_table.shape[1] < 1:
             return entities
         for i in range(entities_table.shape[1]):
             name = entities_table.columns[i]

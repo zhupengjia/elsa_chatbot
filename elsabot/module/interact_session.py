@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import torch, time, sqlite3
+import torch, time, sqlite3, copy
 from nlptools.text.tokenizer import Tokenizer_BERT
 from nlptools.text.ner import NER
 from .nltk_sentiment import NLTKSentiment
@@ -92,7 +92,7 @@ class InteractSession:
         # skills
         topic_manager = TopicManager()
         for skill_name in config.skills:
-            response_params = config.skills[skill_name]
+            response_params = copy.deepcopy(config.skills[skill_name])
             if not hasattr(Skills, response_params.wrapper):
                 raise RuntimeError(
                     "Error!! Skill {} not implemented!".format(
