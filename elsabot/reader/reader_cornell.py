@@ -50,6 +50,7 @@ class ReaderCornell(ReaderBase):
                             continue
                         utterance = ReaderBase.clean_text(id2line[conv_map[i]])
                         response = ReaderBase.clean_text(id2line[conv_map[i+1]])
+
                         if len(conv) > max_conv_len:
                             yield conv[::2]
                             yield conv[1::2]
@@ -65,5 +66,6 @@ class ReaderCornell(ReaderBase):
         #for c in convs_iter(id2line):
         #    print(c)
         #sys.exit()
-        self.data = self.predeal(convs_iter(id2line), cached_data)
+        self.predeal(convs_iter(id2line), cached_data)
+        self.data = h5py.File(cached_data, 'r', libver='latest', swmr=True)
 

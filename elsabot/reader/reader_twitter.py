@@ -65,5 +65,7 @@ class ReaderTwitter(ReaderBase):
         #for c in convs_iter():
         #    print(c)
         #sys.exit()
-        self.data = self.predeal(convs_iter(), cached_data)
+        self.predeal(convs_iter(), cached_data)
+        self.data = h5py.File(cached_data, 'r', libver='latest', swmr=True)
+
 

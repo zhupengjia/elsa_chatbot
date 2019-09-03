@@ -5,10 +5,11 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm, trange
 from nlptools.text.ner import NER
 from nlptools.text.tokenizer import Tokenizer_BERT
+from nlptools.text.sentiment import Sentiment
+from nlptools.text.spellcheck import SpellCorrection
 from pytorch_transformers.optimization import AdamW, WarmupLinearSchedule
 from tensorboardX import SummaryWriter
 from ..module.topic_manager import TopicManager
-from ..module.nltk_sentiment import NLTKSentiment
 from ..module.dialog_status import dialog_collate
 from .. import reader as Reader, skills as Skills
 from ..reader import ReaderXLSX
@@ -74,7 +75,8 @@ class Supervised:
             ner_config = None
         tokenizer = Tokenizer_BERT(**config.tokenizer)
         vocab = tokenizer.vocab
-        sentiment_analyzer = NLTKSentiment()
+        sentiment_analyzer = Sentiment()
+        spellcheck = SpellCorrection(**config.spell)
 
         # reader and skill class
         if not hasattr(Reader, config.reader.wrapper):
@@ -128,6 +130,7 @@ class Supervised:
         reader = reader_cls(vocab=vocab, tokenizer=tokenizer,
                             ner=ner, topic_manager=topic_manager,
                             sentiment_analyzer=sentiment_analyzer,
+                            spell_check=spellcheck,
                             max_seq_len=config.reader.max_seq_len,
                             max_entity_types=max_entity_types,
                             flat_mode=config.reader.flat_mode)
@@ -194,7 +197,6 @@ class Supervised:
         ave_loss = []
         global_steps = -1
         tb_writer = SummaryWriter()
-        tr_loss, logging_loss = 0.0, 0.0
         self.skill.model.zero_grad()
         for epoch in trange(self.start_epoch, self.epochs, desc="Epoch"):
             pbar = tqdm(self.generator, desc="Iteration")
@@ -224,8 +226,6 @@ class Supervised:
                     loss.backward()
                     torch.nn.utils.clip_grad_norm_(self.skill.model.parameters(), self.max_grad_norm)
 
-                tr_loss += loss.item()
-
                 if (step +1) % self.gradient_accumulation_steps == 0:
                     self.optimizer.step()
                     self.scheduler.step()
@@ -235,8 +235,7 @@ class Supervised:
 
                     if self.logging_steps > 0 and global_steps % self.logging_steps == 0:
                         tb_writer.add_scalar('lr', self.scheduler.get_lr()[0], global_steps)
-                        tb_writer.add_scalar('loss', (tr_loss - logging_loss)/self.logging_steps, global_steps)
-                        logging_loss = tr_loss
+                        tb_writer.add_scalar('loss', loss, global_steps)
 
                 # save
                 if (global_steps+1)%self.save_per_epoch == 0 and len(ave_loss)>0 and numpy.nanmean(ave_loss) < self.best_loss:

@@ -2,7 +2,7 @@
 """
     Author: Pengjia Zhu (zhupengjia@gmail.com)
 """
-import copy, numpy, torch, time, re, ipdb
+import copy, numpy, torch, time, re, nltk, ipdb
 from torch.nn import functional as F
 from torch.nn.utils.rnn import pack_padded_sequence
 from nlptools.text.tokenizer import format_sentence
@@ -42,7 +42,7 @@ def dialog_collate(batch):
 
 class DialogStatus:
     def __init__(self, vocab, tokenizer, ner, topic_manager,
-                 sentiment_analyzer, max_seq_len=100,
+                 sentiment_analyzer, spell_check, max_seq_len=100,
                  max_entity_types=1024, rl_maxloop=20, rl_discount=0.95):
         """
         Maintain the dialog status in a dialog
@@ -71,6 +71,7 @@ class DialogStatus:
             - topic_manager: topic manager instance,
                 see src/module/topic_manager
             - sentiment_analyzer: sentiment analyzer instance
+            - spell_check: spell correction instance
             - max_seq_len: int, maximum sequence length
             - max_entity_types: int, maximum entity types
 
@@ -92,6 +93,7 @@ class DialogStatus:
         self.current_status = self.__init_status()
         self.history_status = []
         self.sentiment_analyzer = sentiment_analyzer
+        self.spell_check = spell_check
 
         self.special_entities = set(self.__init_status().keys())
 
@@ -153,14 +155,14 @@ class DialogStatus:
 
     @classmethod
     def new_dialog(cls, vocab, tokenizer, ner, topic_manager,
-                   sentiment_analyzer, max_seq_len=100,
+                   sentiment_analyzer, spell_check, max_seq_len=100,
                    max_entity_types=1024):
         """
             create a new dialog
             data[k][tk] = data[k][tk].data
         """
         return cls(vocab, tokenizer, ner, topic_manager,
-                   sentiment_analyzer, max_seq_len, max_entity_types)
+                   sentiment_analyzer, spell_check, max_seq_len, max_entity_types)
 
     @property
     def session(self):
@@ -194,13 +196,20 @@ class DialogStatus:
                 - if success, return True, otherwise return None
 
         """
-        # get entities
-        utterance = utterance.strip()
+        utterance_raw = utterance.strip()
+        
+        # spell correction
+        utterance = self.spell_check(self.clean_text(utterance_raw))
+        
         if len(utterance) < 1:
             return None
 
+        # get sentiment
+        self.current_status["$SENTIMENT"] = self.sentiment_analyzer(utterance)
+
         self.current_status["$UTTERANCE"] = utterance
         
+        # get entities
         if self.ner is None:
             utterance_replaced = utterance
         else:
@@ -211,11 +220,10 @@ class DialogStatus:
             self.current_status["$TENSOR_ENTITIES"] =\
                 EntityDict.name2onehot(set(self.current_status.keys())-self.special_entities,
                                        self.max_entity_types).astype("float32")
-        
-        #print("utterance", utterance_replaced, entities, sep=" | ")
 
         # utterance to id
-        u_and_mask = format_sentence(self.clean_text(utterance_replaced),
+        #print("utterance", utterance_raw, utterance, utterance_replaced, entities, sep=" | ")
+        u_and_mask = format_sentence(utterance_replaced,
                                 vocab=self.vocab,
                                 tokenizer=self.tokenizer,
                                 max_seq_len=self.max_seq_len)
@@ -227,8 +235,6 @@ class DialogStatus:
         # get topic
         #self.current_status["entity"]["TOPIC"] = self.topic_manager.get_topic(self.current_status)
 
-        # get sentiment
-        self.current_status["$SENTIMENT"] = self.sentiment_analyzer(utterance)
         # response mask
         self.current_status = self.topic_manager.update_response_masks(
             self.current_status)
@@ -242,17 +248,22 @@ class DialogStatus:
             Input:
                 - response: string
         """
-        response = response.strip()
+        response_raw = response.strip()
+        response = self.spell_check(self.clean_text(response_raw))
+        if len(response) < 1:
+            return None
+
         self.current_status["$RESPONSE_SENTIMENT"] = self.sentiment_analyzer(response)
         if self.ner is None:
             response_replaced = response
         else:
             _, response_replaced = self.ner.get(response, return_dict=True)
 
-        #print("response", response_replaced, sep=" | ")
-        _tmp = self.topic_manager.add_response(self.clean_text(response_replaced),
+        #print("response", response_raw, response, response_replaced, sep=" | ")
+        _tmp = self.topic_manager.add_response(response_replaced,
                                             self.current_status)
-        if _tmp is None: return
+        if _tmp is None: 
+            return None
         self.current_status = _tmp
         self.history_status.append(copy.deepcopy(self.current_status))
 

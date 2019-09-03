@@ -118,4 +118,8 @@ class ReaderSubtitles(ReaderBase):
         #    pass
         #sys.exit()
 
-        self.data = self.predeal(convs_iter(all_files), cached_data)
+        self.predeal(convs_iter(all_files), cached_data)
+        self.data = h5py.File(cached_data, 'r', libver='latest', swmr=True)
+
+
+

@@ -2,7 +2,8 @@
 import torch, time, sqlite3, copy
 from nlptools.text.tokenizer import Tokenizer_BERT
 from nlptools.text.ner import NER
-from .nltk_sentiment import NLTKSentiment
+from nlptools.text.sentiment import Sentiment
+from nlptools.text.spellcheck import SpellCorrection
 from .dialog_status import DialogStatus
 from .topic_manager import TopicManager
 from .. import skills as Skills
@@ -16,7 +17,7 @@ from ..reader import ReaderXLSX
 
 class InteractSession:
     def __init__(self, vocab, tokenizer, ner, topic_manager,
-                 sentiment_analyzer, max_seq_len=100,
+                 sentiment_analyzer, spell_check, max_seq_len=100,
                  max_entity_types=1024, device='cpu', timeout=300,
                  log_db="chatlog.db", log_table="log", **args):
         """
@@ -29,6 +30,7 @@ class InteractSession:
                 - topic_manager: instance of topic manager,
                     see ..module.topic_manager
                 - sentiment_analyzer: sentiment analyzer instance
+                - spell_check: spell correction instance
                 - max_seq_len: int, maximum sequence length
                 - max_entity_types: int, maximum entity types
                 - device: string of torch device, default is "cpu"
@@ -43,6 +45,7 @@ class InteractSession:
         self.vocab = vocab
         self.ner = ner
         self.sentiment_analyzer = sentiment_analyzer
+        self.spell_check = spell_check
         self.topic_manager = topic_manager
         self.max_seq_len = max_seq_len
         self.max_entity_types = max_entity_types
@@ -85,7 +88,8 @@ class InteractSession:
         else:
             ner_config = None
         vocab = tokenizer.vocab
-        sentiment_analyzer = NLTKSentiment()
+        sentiment_analyzer = Sentiment()
+        spellcheck = SpellCorrection(**config.spell)
 
         shared_layers = {}
 
@@ -141,14 +145,16 @@ class InteractSession:
         return cls(vocab=vocab, tokenizer=tokenizer, ner=ner,
                    topic_manager=topic_manager,
                    sentiment_analyzer=sentiment_analyzer,
+                   spell_check=spellcheck,
                    timeout=config.timeout,
                    **config.model)
 
     def new_dialog(self, session_id):
         dialog = DialogStatus.new_dialog(self.vocab, self.tokenizer,
-                                       self.ner, self.topic_manager,
-                                       self.sentiment_analyzer,
-                                       self.max_seq_len, self.max_entity_types)
+                                         self.ner, self.topic_manager,
+                                         self.sentiment_analyzer,
+                                         self.spell_check,
+                                         self.max_seq_len, self.max_entity_types)
         dialog.current_status["$SESSION"] = session_id
         return dialog
 

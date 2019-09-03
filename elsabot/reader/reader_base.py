@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import os, numpy, h5py, torch, re
+import os, numpy, h5py, torch, nltk, re
 from string import punctuation
 from tqdm import tqdm
 from torch.utils.data import Dataset
@@ -19,6 +19,7 @@ class ReaderBase(Dataset):
             - ner: instance of nlptools.text.ner
             - topic_manager: topic manager instance, see src/module/topic_manager
             - sentiment_analyzer: sentiment analyzer instance
+            - spell_check: spell correction instance
             - max_seq_len: int, maximum sequence length
 
         Special method supported:
@@ -27,12 +28,14 @@ class ReaderBase(Dataset):
     """
 
     def __init__(self, vocab, tokenizer, ner, topic_manager, sentiment_analyzer,
-                 max_seq_len=10, max_entity_types=1024, flat_mode=False, **args):
+                 spell_check, max_seq_len=10, max_entity_types=1024, flat_mode=False,
+                 **args):
         self.tokenizer = tokenizer
         self.ner = ner
         self.vocab = vocab
         self.topic_manager = topic_manager
         self.sentiment_analyzer = sentiment_analyzer
+        self.spell_check = spell_check
         self.max_seq_len = max_seq_len
         self.max_entity_types = max_entity_types
         self.flat_mode = flat_mode
@@ -49,12 +52,21 @@ class ReaderBase(Dataset):
         except Exception as err:
             return default
 
+    def cut_sent(self, raw_string):
+        """
+            cut sentence for raw string
+        """
+        for sent in nltk.sent_tokenize(raw_string):
+            return sent
+        return raw_string
+
     @staticmethod
     def clean_text(text):
         '''Clean text by removing unnecessary characters and altering the format of words.'''
         text = re.sub(r"([%s])+" % punctuation, r"\1", text)
         text = re.sub("(@\S*|\S*&\S*|#\S*|http\S*|\S*[\(\)\[\]\*\_]\S*)", "", text)
         text = re.sub("\S{20,}", "", text)
+        text = re.sub(r"(\S)\1{2,}", r"\1", text)
         text = re.sub(r'(<!--.*?-->|<[^>]*>|\. ?\. ?\.)', "", text)
         text = re.sub(r"[-()\"#/@;:<>{}`+=~|]", "", text)
         text = re.sub("[^a-zA-Z0-9%s ]"%punctuation, "", text)
@@ -103,12 +115,12 @@ class ReaderBase(Dataset):
         n_tot = 0
         for dialog_data in tqdm(data):
             # dialog simulator
-            dialog = DialogStatus.new_dialog(self.vocab, self.tokenizer, self.ner, self.topic_manager,
-                                              self.sentiment_analyzer, self.max_seq_len, self.max_entity_types)
+            dialog = DialogStatus.new_dialog(self.vocab, self.tokenizer, self.ner, self.topic_manager, self.sentiment_analyzer, self.spell_check, self.max_seq_len, self.max_entity_types)
             for i_p, pair in enumerate(dialog_data):
                 if dialog.add_utterance(pair[0]) is None:
                     continue
-                dialog.add_response(pair[1])
+                if dialog.add_response(pair[1]) is None:
+                    continue
             # save to hdf5
             ddata = dialog.data()
             for k in ddata.keys():
@@ -126,8 +138,7 @@ class ReaderBase(Dataset):
                 ReaderBase.add_trace(h5datasets[k], ddata[k])
             ReaderBase.add_trace(h5datasets['point'], numpy.array([[n_tot, ddata['entity'].shape[0]]]))
             n_tot += ddata['entity'].shape[0]
-        
-        return h5file
+        h5file.close() 
 
     def __len__(self):
         if self.flat_mode:
