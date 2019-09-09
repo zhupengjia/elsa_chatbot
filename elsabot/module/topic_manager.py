@@ -139,3 +139,6 @@ class TopicManager:
             return None
         return self.update_response(response_value, current_status)
 
+    def get_fallback(self, current_status):
+        return self.skills[skill].get_fallback(current_status)
+

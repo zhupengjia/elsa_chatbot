@@ -122,10 +122,16 @@ class GenerativeResponse(SkillBase):
             response, response_mask = response
         else:
             response_mask = response > 0
-        current_status['$RESPONSE'] = self.tokenizer.tokens2sentence(self.vocab.id2words(response[response_mask.astype("bool_")][1:-1]))
-
+        
         current_status["$TENSOR_RESPONSE"][self.skill_name] = response
         current_status["$TENSOR_RESPONSE_MASK"][self.skill_name] = response_mask
+        
+        response_string = self.tokenizer.tokens2sentence(self.vocab.id2words(response[response_mask.astype("bool_")][1:-1]))
+        
+        response_string = self.entity_replace(response_string, current_status.keys())
+        response_string = response_string.format(**current_status)
+
+        current_status['$RESPONSE'] = response_string
 
         return current_status
 

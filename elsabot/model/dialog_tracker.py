@@ -58,7 +58,7 @@ class DialogTracker(nn.Module):
                            "hidden_size": hidden_size}
                       }
 
-        encoder_hidden_size = self.config["encoder"]["hidden_size"]
+        encoder_hidden_size = self.config["encoder"].hidden_size
         self.num_hidden_layers = num_hidden_layers
         self.hidden_size = hidden_size
         self.num_responses = num_responses

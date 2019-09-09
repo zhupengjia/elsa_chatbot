@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+import numpy, re
+from fuzzywuzzy import fuzz
 
 """
     Author: Pengjia Zhu (zhupengjia@gmail.com)
@@ -59,4 +61,29 @@ class SkillBase:
                 - current_status: dictionary of status, generated from Dialog_Status module
         """
         return current_status
+
+    def _entity_match(self, regroup, all_entities):
+        """
+        match and replace entity name in text
+        """
+        upper = regroup.group(1).upper()
+        scores = [fuzz.partial_ratio(upper, e) for e in all_entities]
+        max_id = numpy.argmax(scores)
+        max_score = scores[max_id]
+        if max_score > 80:
+            return "{" + all_entities[max_id] +"}"
+        else:
+            return regroup.group(1)
+
+    def entity_replace(self, text, all_entities):
+        """
+        match and replace entity name in text
+        """
+        return re.sub("\{\s*(\w+)\s*\}", lambda x:self._entity_match(x, list(all_entities)), text)
+
+    def get_fallback(self, current_status):
+        '''
+            Get fallback feedback
+        '''
+        return ":)", 1
 

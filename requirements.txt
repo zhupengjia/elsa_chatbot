@@ -11,3 +11,7 @@ spacy
 nltk
 xlrd
 slixmpp
+SymSpell
+fuzzywuzzy
+python-Levenshtein
+symspellpy

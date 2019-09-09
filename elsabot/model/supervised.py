@@ -14,6 +14,7 @@ from ..module.dialog_status import dialog_collate
 from .. import reader as Reader, skills as Skills
 from ..reader import ReaderXLSX
 
+
 '''
     Author: Pengjia Zhu (zhupengjia@gmail.com)
 '''
@@ -62,7 +63,7 @@ class Supervised:
         self.__init_tracker(**tracker_args)
 
     @classmethod
-    def build(cls, config):
+    def build(cls, config, **args):
         """
             construct model from config
 
@@ -76,7 +77,7 @@ class Supervised:
         tokenizer = Tokenizer_BERT(**config.tokenizer)
         vocab = tokenizer.vocab
         sentiment_analyzer = Sentiment()
-        spellcheck = SpellCorrection(**config.spell)
+        spellcheck = SpellCorrection(**config.spell) if "spell" in config else None
 
         # reader and skill class
         if not hasattr(Reader, config.reader.wrapper):
@@ -133,10 +134,10 @@ class Supervised:
                             spell_check=spellcheck,
                             max_seq_len=config.reader.max_seq_len,
                             max_entity_types=max_entity_types,
-                            flat_mode=config.reader.flat_mode)
+                            flat_mode=config.reader.flat_mode if "flat_mode" in config.reader else False)
         reader.read(config.reader.train_data)
 
-        return cls(reader=reader, skill_name=config.skill.name, **config.model)
+        return cls(reader=reader, skill_name=config.skill.name, **config.model, **args)
 
     def __init_tracker(self, **args):
         """
@@ -213,8 +214,8 @@ class Supervised:
 
                 if self.gpu_ids and len(self.gpu_ids) > 1:
                     loss = loss.mean()
-                if self.gradient_accumulation_steps > 1:
-                    loss = loss/self.gradient_accumulation_steps
+                #if self.gradient_accumulation_steps > 1:
+                #    loss = loss/self.gradient_accumulation_steps
 
                 pbar.set_description('loss:{}'.format(loss.item()))
 

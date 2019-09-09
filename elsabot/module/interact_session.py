@@ -17,9 +17,9 @@ from ..reader import ReaderXLSX
 
 class InteractSession:
     def __init__(self, vocab, tokenizer, ner, topic_manager,
-                 sentiment_analyzer, spell_check, max_seq_len=100,
-                 max_entity_types=1024, device='cpu', timeout=300,
-                 log_db="chatlog.db", log_table="log", **args):
+                 sentiment_analyzer, spell_check=None, max_seq_len=100,
+                 max_entity_types=512, device='cpu', timeout=300,
+                 log_db=None, log_table="log", **args):
         """
             General interact session
 
@@ -35,7 +35,7 @@ class InteractSession:
                 - max_entity_types: int, maximum entity types
                 - device: string of torch device, default is "cpu"
                 - timeout: int, seconds to session timeout
-                - log_db: sqlite db file for chat log saving
+                - log_db: sqlite db file for chat log saving, default is None
                 - log_table: sqlite db name for chat log saving
         """
 
@@ -61,17 +61,18 @@ class InteractSession:
         return db, cursor
 
     def _init_logdb(self):
-        db, cursor = self._get_cursor(self.log_db)
-        cmd = '''create table if not exists {} (
-            id integer primary key autoincrement,
-            session text,
-            time int,
-            topic text,
-            utterance text,
-            response text)'''.format(self.log_table)
-        cursor.execute(cmd)
-        db.commit()
-        db.close()
+        if self.log_db:
+            db, cursor = self._get_cursor(self.log_db)
+            cmd = '''create table if not exists {} (
+                id integer primary key autoincrement,
+                session text,
+                time int,
+                topic text,
+                utterance text,
+                response text)'''.format(self.log_table)
+            cursor.execute(cmd)
+            db.commit()
+            db.close()
 
     @classmethod
     def build(cls, config):
@@ -89,7 +90,7 @@ class InteractSession:
             ner_config = None
         vocab = tokenizer.vocab
         sentiment_analyzer = Sentiment()
-        spellcheck = SpellCorrection(**config.spell)
+        spellcheck = SpellCorrection(**config.spell) if "spell" in config else None
 
         shared_layers = {}
 
@@ -115,12 +116,12 @@ class InteractSession:
 
             response = skill_cls(tokenizer=tokenizer, vocab=vocab,
                                  dialogflow=dialogflow,
-                                 max_seq_len=config.model.max_seq_len,
+                                 max_seq_len=config.model_general.max_seq_len,
                                  skill_name=skill_name,
                                  **response_params)
             response.init_model(
                 shared_layers=shared_layers,
-                device=config.model.device,
+                device=config.model_general.device,
                 **response_params)
             response.eval() # set to eval mode
             topic_manager.register(skill_name, response)
@@ -147,7 +148,7 @@ class InteractSession:
                    sentiment_analyzer=sentiment_analyzer,
                    spell_check=spellcheck,
                    timeout=config.timeout,
-                   **config.model)
+                   **config.model_general)
 
     def new_dialog(self, session_id):
         dialog = DialogStatus.new_dialog(self.vocab, self.tokenizer,
@@ -160,11 +161,20 @@ class InteractSession:
 
     def _save_log(self, session_id, dialog_status):
         '''save log'''
+        if not self.log_db:
+            return
         db, cursor = self._get_cursor(self.log_db)
         data = [(d["session"], d["time"], d["topic"], d["utterance"], d["response"]) for d in dialog_status.export_history()]
         cursor.executemany("""insert into {} (session,time,topic,utterance,response) values (?,?,?,?,?)""".format(self.log_table), data)
         db.commit()
         db.close()
+
+    def reset(self, session_id):
+        """
+            reset the session for session_id
+        """
+        if session_id in self.dialog_status:
+            del self.dialog_status[session_id]
 
     def __call__(self, query, session_id="default"):
         """
@@ -185,7 +195,8 @@ class InteractSession:
             self.dialog_status[session_id] = self.new_dialog(session_id)
 
         if len(query) < 1 or self.dialog_status[session_id].add_utterance(query) is None:
-            return session_id, ":)", 0
+            response, score = self.dialog_status[session_id].get_fallback()
+            return session_id, ":)",
 
         #reset SESSION
         self.dialog_status[session_id].current_status["$SESSION"] = session_id

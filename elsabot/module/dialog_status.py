@@ -42,7 +42,7 @@ def dialog_collate(batch):
 
 class DialogStatus:
     def __init__(self, vocab, tokenizer, ner, topic_manager,
-                 sentiment_analyzer, spell_check, max_seq_len=100,
+                 sentiment_analyzer, spell_check=None, max_seq_len=100,
                  max_entity_types=1024, rl_maxloop=20, rl_discount=0.95):
         """
         Maintain the dialog status in a dialog
@@ -71,7 +71,7 @@ class DialogStatus:
             - topic_manager: topic manager instance,
                 see src/module/topic_manager
             - sentiment_analyzer: sentiment analyzer instance
-            - spell_check: spell correction instance
+            - spell_check: spell correction instance, default is None
             - max_seq_len: int, maximum sequence length
             - max_entity_types: int, maximum entity types
 
@@ -155,7 +155,7 @@ class DialogStatus:
 
     @classmethod
     def new_dialog(cls, vocab, tokenizer, ner, topic_manager,
-                   sentiment_analyzer, spell_check, max_seq_len=100,
+                   sentiment_analyzer, spell_check=None, max_seq_len=100,
                    max_entity_types=1024):
         """
             create a new dialog
@@ -199,7 +199,7 @@ class DialogStatus:
         utterance_raw = utterance.strip()
         
         # spell correction
-        utterance = self.spell_check(self.clean_text(utterance_raw))
+        utterance = self.spell_check(self.clean_text(utterance_raw)) if self.spell_check else utterance_raw
         
         if len(utterance) < 1:
             return None
@@ -249,7 +249,7 @@ class DialogStatus:
                 - response: string
         """
         response_raw = response.strip()
-        response = self.spell_check(self.clean_text(response_raw))
+        response = self.spell_check(self.clean_text(response_raw)) if self.spell_check else response_raw
         if len(response) < 1:
             return None
 
@@ -290,6 +290,9 @@ class DialogStatus:
         self.history_status.append(copy.deepcopy(self.current_status))
         return self.current_status['$RESPONSE'], self.current_status['$RESPONSE_SCORE']
 
+    def get_fallback(self, **args):
+        return self.topic_manager.get_fallback(self.current_status)
+
     def export_history(self):
         """
             dialog history export
@@ -318,8 +321,7 @@ class DialogStatus:
         """
         return len(self.history_status)
 
-    def data(self, skill_names=None, status_list=None,
-             turn_start=0):
+    def data(self, skill_names=None, status_list=None):
         """
             return pytorch data for all messages in this dialog
 
@@ -328,8 +330,6 @@ class DialogStatus:
                     default is None to return all available topics
                 - status_list: list status need to predeal,
                     default is None for history status
-                - turn_start: int, which turn loop for first status,
-                    default is 0
         """
         if status_list is None:
             status_list = self.history_status
@@ -340,17 +340,11 @@ class DialogStatus:
                                            'int'),
                   "utterance_mask": numpy.zeros((n_status, self.max_seq_len),
                                                 'int'),
-                  "reward": numpy.zeros((n_status, 1), 'float32'),
                   "sentiment": numpy.zeros((n_status, 2), 'float32')
                   }
 
         if skill_names is None:
             skill_names = self.topic_manager.skills.keys()
-
-        if n_status+turn_start < self.rl_maxloop:
-            reward_base = 1
-        else:
-            reward_base = 0
 
         for i, s in enumerate(status_list):
             if s["$TENSOR_UTTERANCE"] is None:
@@ -360,8 +354,6 @@ class DialogStatus:
             status["utterance_mask"][i] = s["$TENSOR_UTTERANCE_MASK"]
             status["sentiment"][i, 0] = s["$SENTIMENT"]
             status["sentiment"][i, 1] = s["$RESPONSE_SENTIMENT"]
-            status["reward"][i, 0] =\
-                reward_base * self.rl_discount**(i+turn_start)
             for tk in skill_names:
                 for k in ["$TENSOR_RESPONSE_MASK", "$TENSOR_RESPONSE"]:
                     rkey = k+'_'+tk
@@ -378,8 +370,23 @@ class DialogStatus:
                                                        type(s[k][tk]))
                     if rkey in status:
                         status[rkey][i] = s[k][tk]
-        status["reward"] = status["reward"]/(n_status+turn_start)
         return status
+
+    def reward(self, baseline=0):
+        """
+            get rewards
+            Input:
+                - baseline: baseline of reward
+        """
+        n_status = len(self.history_status)
+        reward =  numpy.zeros((n_status, 1), 'float32')
+        if n_status < self.rl_maxloop:
+            reward_base = 1
+        else:
+            reward_base = 0
+        for i, s in enumerate(self.history_status):
+            reward[i, 0] = reward * self.rl_discount**(len(self.history_status)-i-1) - baseline
+        return numpy.cumsum(status["reward"][::-1, :], axis=0)[::-1, :]
 
     def status2data(self, skill_names=None, status=None):
         """
@@ -393,8 +400,12 @@ class DialogStatus:
         """
         if status is None:
             status = self.current_status
-        data = self.data(skill_names, [status], len(self.history_status))
+        data = self.data(skill_names, [status])
         for k in data:
-            data[k] = torch.tensor(data[k])
+            try:
+                data[k] = torch.tensor(data[k])
+            except Exception as err:
+                print(k, err)
+                ipdb.set_trace()
         return dialog_collate([data])
 

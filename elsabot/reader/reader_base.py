@@ -28,7 +28,7 @@ class ReaderBase(Dataset):
     """
 
     def __init__(self, vocab, tokenizer, ner, topic_manager, sentiment_analyzer,
-                 spell_check, max_seq_len=10, max_entity_types=1024, flat_mode=False,
+                 spell_check=None, max_seq_len=10, max_entity_types=1024, flat_mode=False,
                  **args):
         self.tokenizer = tokenizer
         self.ner = ner
@@ -86,6 +86,9 @@ class ReaderBase(Dataset):
         dset.resize(new_shape)
         dset[old_shape[0]:new_shape[0]+1,:] = arr
 
+    def new_dialog(self):
+        return DialogStatus.new_dialog(self.vocab, self.tokenizer, self.ner, self.topic_manager, self.sentiment_analyzer, self.spell_check, self.max_seq_len, self.max_entity_types)
+
     def predeal(self, data, h5file):
         """
             Predeal the dialog. Please use it with your read function.
@@ -115,7 +118,7 @@ class ReaderBase(Dataset):
         n_tot = 0
         for dialog_data in tqdm(data):
             # dialog simulator
-            dialog = DialogStatus.new_dialog(self.vocab, self.tokenizer, self.ner, self.topic_manager, self.sentiment_analyzer, self.spell_check, self.max_seq_len, self.max_entity_types)
+            dialog = self.new_dialog()
             for i_p, pair in enumerate(dialog_data):
                 if dialog.add_utterance(pair[0]) is None:
                     continue

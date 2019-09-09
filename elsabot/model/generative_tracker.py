@@ -115,6 +115,7 @@ class GenerativeTracker(nn.Module):
 
         #combine together
         sequence_out = torch.cat((sequence_out, add_hidden), 2)
+        
         sequence_out = self.activation(self.control_layer(sequence_out))
         
         return sequence_out, encoder_hidden
@@ -226,7 +227,7 @@ class GenerativeTracker(nn.Module):
     def forward(self, dialogs, incre_state=None):
         #encoder
         utterance_mask = dialogs["utterance_mask"]
-        encoder_out, _ = self.dialog_embedding(dialogs['utterance'].data, utterance_mask.data, dialogs["sentiment"].data, dialogs['entity'].data)
+        encoder_out, _ = self.dialog_embedding(dialogs['utterance'].data, utterance_mask.data, dialogs["sentiment"].data, dialogs["entity"].data)
 
         #decoder
         if self.training:

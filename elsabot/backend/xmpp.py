@@ -47,7 +47,7 @@ class XMPPClient(ClientXMPP):
 
 
 class XMPP:
-    def __init__(self, session_config, jid, password, host, port=5222, **args):
+    def __init__(self, session_config, jid, password, host, port=5222, proxy_host=None, proxy_port=None, **args):
         self.xmpp = XMPPClient(jid=jid, password=password, session_config=session_config)
         self.xmpp.register_plugin('xep_0030') # Service Discovery
         self.xmpp.register_plugin('xep_0004') # Data Forms
@@ -56,10 +56,18 @@ class XMPP:
 
         self.host = host
         self.port = port
+        self.proxy_host = proxy_host
+        self.proxy_port = proxy_port
 
     def run(self):
         import logging
         logging.basicConfig(level=logging.WARNING, format='%(levelname)-8s %(message)s')
+        if self.proxy_host:
+            self.xmpp.use_proxy=True
+            self.xmpp.proxy_config = {
+                'host': self.proxy_host,
+                'port': self.proxy_port
+            }
         self.xmpp.connect((self.host, self.port))
         self.xmpp.process(forever=True)
 
