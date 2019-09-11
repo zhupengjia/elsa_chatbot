@@ -346,30 +346,30 @@ class DialogStatus:
         if skill_names is None:
             skill_names = self.topic_manager.skills.keys()
 
-        for i, s in enumerate(status_list):
-            if s["$TENSOR_UTTERANCE"] is None:
+        for i, sts in enumerate(status_list):
+            if sts["$TENSOR_UTTERANCE"] is None:
                 continue
-            status["entity"][i] = s["$TENSOR_ENTITIES"]
-            status["utterance"][i] = s["$TENSOR_UTTERANCE"]
-            status["utterance_mask"][i] = s["$TENSOR_UTTERANCE_MASK"]
-            status["sentiment"][i, 0] = s["$SENTIMENT"]
-            status["sentiment"][i, 1] = s["$RESPONSE_SENTIMENT"]
+            status["entity"][i] = sts["$TENSOR_ENTITIES"]
+            status["utterance"][i] = sts["$TENSOR_UTTERANCE"]
+            status["utterance_mask"][i] = sts["$TENSOR_UTTERANCE_MASK"]
+            status["sentiment"][i, 0] = sts["$SENTIMENT"]
+            status["sentiment"][i, 1] = sts["$RESPONSE_SENTIMENT"]
             for tk in skill_names:
                 for k in ["$TENSOR_RESPONSE_MASK", "$TENSOR_RESPONSE"]:
                     rkey = k+'_'+tk
-                    if tk not in s[k]:
+                    if tk not in sts[k]:
                         continue
                     if rkey not in status:
-                        if isinstance(s[k][tk], numpy.ndarray):
+                        if isinstance(sts[k][tk], numpy.ndarray):
                             status[rkey] = numpy.repeat(
                                 numpy.expand_dims(
-                                    numpy.zeros_like(s[k][tk]), axis=0),
+                                    numpy.zeros_like(sts[k][tk]), axis=0),
                                 n_status, axis=0)
-                        elif isinstance(s[k][tk], (int, float)):
+                        elif isinstance(sts[k][tk], (int, float, numpy.int64, numpy.int32, numpy.int, numpy.float, numpy.float32, numpy.float64)):
                             status[rkey] = numpy.zeros((n_status, 1),
-                                                       type(s[k][tk]))
+                                                       type(sts[k][tk]))
                     if rkey in status:
-                        status[rkey][i] = s[k][tk]
+                        status[rkey][i] = sts[k][tk]
         return status
 
     def reward(self, baseline=0):

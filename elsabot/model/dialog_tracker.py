@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import torch
+import ipdb
 import torch.nn as nn
 from torch.nn.utils.rnn import PackedSequence
 from nlptools.zoo.encoders.transformer import TransformerEncoder
@@ -107,7 +108,7 @@ class DialogTracker(nn.Module):
                 - dialog embedding
         '''
         #utterance embedding
-        sequence_output, pooled_output = self.encoder(utterance, attention_mask=utterance_mask, output_all_encoded_layers=False)
+        sequence_output, pooled_output = self.encoder(utterance, attention_mask=utterance_mask)
 
         #entity name embedding
         entity = self.fc_entity(entity)

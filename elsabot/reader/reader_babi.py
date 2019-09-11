@@ -61,6 +61,7 @@ class ReaderBabi(ReaderBase):
                 if len(conv) > 0:
                     yield conv
         
-        self.data = self.predeal(convs_iter(), cached_data)
+        self.predeal(convs_iter(), cached_data)
+        self.data = h5py.File(cached_data, 'r', libver='latest', swmr=True)
 
 
