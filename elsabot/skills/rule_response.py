@@ -4,6 +4,7 @@
     Response skill for rule-based chatbot
 """
 import numpy, re
+import ipdb
 from nlptools.text.docsim import WMDSim
 from nlptools.text.embedding import Embedding
 from nlptools.text.tokenizer import format_sentence
@@ -137,8 +138,8 @@ class RuleResponse(SkillBase):
         
         # flat the usersays and get embedding
         sentence, sentence_masks, dialog_ids = [], [], []
-        for i, sl in enumerate(user_says_series.dropna().tolist()):
-            for s in sl:
+        for i in user_says_series.dropna().index:
+            for s in user_says_series.loc[i]:
                 _tmp = format_sentence(s,
                                        vocab=self.vocab,
                                        tokenizer=self.tokenizer,
@@ -146,7 +147,7 @@ class RuleResponse(SkillBase):
                 if _tmp is None: continue
                 sentence.append(_tmp[0])
                 sentence_masks.append(_tmp[1])
-                dialog_ids.append(user_says_series.index[i])
+                dialog_ids.append(i)
         self.usersays_index = {"user_emb":self.similarity(sentence, sentence_masks),
                                "ids":numpy.array(dialog_ids),
                                "fallback": fallback_says}
@@ -185,7 +186,6 @@ class RuleResponse(SkillBase):
             return self.get_fallback(current_status)
 
         utterance, utterance_mask = status_data["utterance"].data, status_data["utterance_mask"].data
-
         # filter ids by tfidf
         if self.usersays_index["ids"].shape[0] > self.prefilter:
             utterance_ids = utterance[0].cpu().detach().numpy()[utterance_mask[0].cpu().detach().numpy().astype("bool_")]
@@ -204,6 +204,7 @@ class RuleResponse(SkillBase):
 
         filtered_data = {"user_emb":self.usersays_index["user_emb"][response_mask*filter_idx],
                          "ids":self.usersays_index["ids"][response_mask*filter_idx]}
+
         if len(filtered_data["ids"]) < 1:
             return self.get_fallback(current_status)
 

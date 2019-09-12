@@ -16,6 +16,6 @@ class Shell(BackendBase):
             print(response)
     
     def query(self, text):
-        _, response, score = self.session(text.strip())
+        _, response, score = self.session(text)
         print(response)
 

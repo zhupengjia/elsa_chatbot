@@ -291,7 +291,8 @@ class DialogStatus:
         return self.current_status['$RESPONSE'], self.current_status['$RESPONSE_SCORE']
 
     def get_fallback(self, **args):
-        return self.topic_manager.get_fallback(self.current_status)
+        self.current_status = self.topic_manager.get_fallback(self.current_status)
+        return self.current_status['$RESPONSE'], self.current_status['$RESPONSE_SCORE']
 
     def export_history(self):
         """

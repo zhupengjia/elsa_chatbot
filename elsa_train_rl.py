@@ -1,14 +1,22 @@
 #!/usr/bin/env python
+import argparse, sys
 
-from src.model.policy_gradiant import Policy_Gradiant
-from src.hook.behaviors import Behaviors
-from src.hook.babi_gensays import Babi_GenSays
-from src.reader.reader_babi import Reader_Babi
+parser = argparse.ArgumentParser(description='Training script for chatbot using user simulator and policy gradiant')
+parser.add_argument('-c', '--config', dest='config', help='yaml configuration file')
+
+args = parser.parse_args()
+
+if len(sys.argv) < 2:
+    parser.print_help()
+    parser.exit()
+
+from elsabot.model.policy_gradiant import PolicyGradiant
 from nlptools.utils import Config
+import torch
 
-cfg = Config("config/babi.yml")
-hook = Behaviors()
-ad_hook = Babi_GenSays(cfg.rule_based.hook_keywords) 
-model = Policy_Gradiant.build(cfg, Reader_Babi, hook, ad_hook)
+print(args.config)
+
+cfg = Config(args.config)
+model = PolicyGradiant.build(cfg)
 model.train()
 

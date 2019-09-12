@@ -147,7 +147,7 @@ class InteractSession:
                    topic_manager=topic_manager,
                    sentiment_analyzer=sentiment_analyzer,
                    spell_check=spellcheck,
-                   timeout=config.timeout,
+                   timeout=config.timeout if "timeout" in config else 300,
                    **config.model_general)
 
     def new_dialog(self, session_id):
@@ -196,7 +196,7 @@ class InteractSession:
 
         if len(query) < 1 or self.dialog_status[session_id].add_utterance(query) is None:
             response, score = self.dialog_status[session_id].get_fallback()
-            return session_id, ":)",
+            return session_id, response, score
 
         #reset SESSION
         self.dialog_status[session_id].current_status["$SESSION"] = session_id

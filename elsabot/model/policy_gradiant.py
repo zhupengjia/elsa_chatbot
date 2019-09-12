@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import torch, numpy, math, os, copy
 import torch.optim as optim
+import ipdb
 from torch.utils.data import DataLoader
 from tqdm import tqdm, trange
 from pytorch_transformers.optimization import AdamW, WarmupLinearSchedule
@@ -18,7 +19,7 @@ from .supervised import Supervised
 
 
 class PolicyGradiant(Supervised):
-    def __init__(self, simulator, **args):
+    def __init__(self, simulator, maxloop=20, discount=0.95, **args):
         """
             Policy Gradiant for chatbot
 
@@ -27,6 +28,9 @@ class PolicyGradiant(Supervised):
         """
         self.simulator = simulator
         self.simulator_id = "USERSIMULATOR"
+        self.baseline = 0
+        self.maxloop = maxloop
+        self.discount = discount
         super().__init__(**args)
 
     @classmethod
@@ -55,7 +59,7 @@ class PolicyGradiant(Supervised):
             dialog_status = self.reader.new_dialog()
             # dialog loop
             for loop in range(self.maxloop):
-                dialog_status.add_utterance(utterance)
+                dialog_status.add_utterance(utterance[1])
                 response, score = dialog_status.get_response(response_sentiment=0, device=self.device)
 
                 if dialog_status.current_status["$SESSION_RESET"]:
@@ -63,13 +67,15 @@ class PolicyGradiant(Supervised):
                     break
 
                 # get new utterance
-                utterance = self.simulator.get_reply(response, self.simulator_id)
+                utterance = self.simulator(response, self.simulator_id)
+                ipdb.set_trace()
             dialogs.append(dialog_status) 
 
         # convert to torch variable
-        dialogs = [d.data() for d in dialogs]
-        dialogs = dialog_collate([[torch.tensor(d[k]) for k in d] for d in dialogs])
-        return dialogs, float(N_true)/self.reader.batch_size
+        dialogs_reward = [d.reward(self.baseline) for d in dialogs]
+        dialogs_data = [d.data() for d in dialogs]
+        dialogs_data = dialog_collate([[torch.tensor(d[k]) for k in d] for d in dialogs_data])
+        return dialogs_data, float(N_true)/self.reader.batch_size
 
     def train(self):
         """
