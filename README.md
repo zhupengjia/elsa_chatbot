@@ -1,6 +1,6 @@
 ## This repo is for ElsaBot. 
 
-ElsaBot is a general purpose chatbot as a human-machine dialogue interface for other services. It allows people to interact with each backend service via natural language. Elsa chatbot not only allows to do several different types of jobs at a time, but also allows to reply a human-like emotional response. An easy-to-use dialog-design system can also be used for designing to do a custom job. Elsa chatbot can be embedded into several different business scenarios, such like customer service, recommondation, investment assistant, risk alert, system monitor.
+#### ElsaBot is a general purpose chatbot as a human-machine dialogue interface for other services. It allows people to interact with each backend service via natural language. Elsa chatbot not only allows to do several different types of jobs at a time, but also allows to reply a human-like emotional response. An easy-to-use dialog-design system can also be used for designing to do a custom job. Elsa chatbot can be embedded into several different business scenarios, such like customer service, recommondation, investment assistant, risk alert, system monitor.
 
 ## Model
 The general framework is: 
@@ -62,6 +62,8 @@ A simple demo:
 ElsaBot has a flexible framework that support to use other chatbot engines via restful api. User can easily extend the ability of chatbot and get better user experience. Also it is easier to extend the load capacity of chatbot with the usage of container service.
 
 ## IT Architecture
-TODO
-
+ElsaBot uses container technology, it can be easily deployed via docker swarm or kubernetes. The whole IT architecture:
+![ITArchitecture](https://github.com/zhupengjia/elsa_chatbot/blob/develop/docs/img/chatbot_it.png?raw=true)
+For interaction interface, ElsaBot can be integrated to existed IM softwares, such like Wechat, Telegram, etc. User can also use self-hosted XMPP server and related clients in each platform, or use a self-designed web server. ElsaBot can also provide restful api for further integration.
+ 
 
